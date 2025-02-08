@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Carousel.css';
 
 
-const TWEEN_FACTOR_BASE = 0.1;
+const TWEEN_FACTOR_BASE = 0.5;
 
 const numberWithinRange = (number, min, max) =>
   Math.min(Math.max(number, min), max);
