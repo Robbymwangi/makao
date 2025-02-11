@@ -109,10 +109,10 @@ const LandingHeader = () => {
 
           {/* Buttons - Large devices */}
           <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
-            <Button colorScheme="blue" variant="outline">
+            <Button variant="outline">
               Log In
             </Button>
-            <Button colorScheme="blue">Sign Up</Button>
+            <Button >Sign Up</Button>
             <ColorModeButton />
           </HStack>
 

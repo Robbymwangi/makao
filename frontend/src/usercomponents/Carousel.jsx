@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Carousel.css';
 
 
-const TWEEN_FACTOR_BASE = 0.5;
+const TWEEN_FACTOR_BASE = 0.3;
 
 const numberWithinRange = (number, min, max) =>
   Math.min(Math.max(number, min), max);
@@ -22,7 +22,7 @@ const CarouselSection = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'center',
     containScroll: 'keepSnaps',
-    dragFree: false,
+    dragFree: true,
     loop: true,
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -139,7 +139,7 @@ const CarouselSection = () => {
             <Box
               key={item.id}
               className="embla__slide"
-              flex={`0 0 ${isMobile ? '80%' : '350px'}`}
+              flex={`0 0 ${isMobile ? '70%' : '400px'}`}
               minW="8"
               position="relative"
               sx={{
