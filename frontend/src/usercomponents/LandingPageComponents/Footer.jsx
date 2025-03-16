@@ -3,9 +3,10 @@ import { Box, Flex, Text, Link, Stack, useBreakpointValue } from "@chakra-ui/rea
 
 const Footer = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const currentYear = new Date().getFullYear();
 
   return (
-    <Box as="footer" bg="white" color="black" py={10} px={6} borderTop="1px solid #ddd">
+    <Box as="footer" bg="white" color="black" py={10} px={6} borderTop="1px solid #ddd" mt={40}>
       <Flex 
         direction={isMobile ? "column" : "row"} 
         justify={isMobile ? "center" : "space-between"} 
@@ -45,9 +46,9 @@ const Footer = () => {
       </Flex>
 
       {/* Copyright */}
-      <Text mt={10} textAlign="center" fontSize="sm" color="gray.500">
+      <Text mt={15} textAlign="center" fontSize="sm" color="gray.500">
         All rights reserved. All trademarks, logos, and brand names are the property of their respective owners. <br />
-        Makao LLC © 2024
+        Makao LLC © {currentYear}
       </Text>
     </Box>
   );

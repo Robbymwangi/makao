@@ -9,6 +9,7 @@ import {
   VStack,
   DrawerFooter,
 } from '@chakra-ui/react';
+import {useNavigate} from 'react-router';
 
 "use client";
 import {
@@ -35,6 +36,15 @@ const navLinks = [
 
 const LandingHeader = () => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
+  const handleSignUpClick = () => {
+    navigate('/signup');
+  };
 
   return (
     <>
@@ -48,7 +58,7 @@ const LandingHeader = () => {
         zIndex="overlay"
         backdropFilter={open ? 'blur(10px)' : 'none'}
         bg={open ? 'rgba(255, 255, 255, 0.5)' : 'transparent'}
-        pointerEvents={open ? 'auto' : 'none'} // Allow clicks only when open
+        pointerEvents={open ? 'auto' : 'none'}
       />
 
       {/* Header */}
@@ -109,10 +119,10 @@ const LandingHeader = () => {
 
           {/* Buttons - Large devices */}
           <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleLoginClick}>
               Log In
             </Button>
-            <Button >Sign Up</Button>
+            <Button onClick={handleSignUpClick}>Sign Up</Button>
             <ColorModeButton />
           </HStack>
 
@@ -150,8 +160,8 @@ const LandingHeader = () => {
                 <DrawerFooter>
                   <VStack spacing={4} width="100%">
                     <ColorModeButton />
-                    <Button width="100%" variant={"outline"}>Sign Up</Button>
-                    <Button width="100%">Log In</Button>
+                    <Button width="100%" variant={"outline"} onClick={handleSignUpClick}>Sign Up</Button>
+                    <Button width="100%" onClick={handleLoginClick}>Log In</Button>
                   </VStack>
                 </DrawerFooter>
                 <DrawerCloseTrigger />

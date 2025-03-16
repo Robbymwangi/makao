@@ -96,7 +96,7 @@ const Testimonials = () => {
         size="lg"
         _hover={{ bg: 'gray.800' }}
       >
-        SHARE YOUR EXPERIENCE
+        Share your experience
       </Button>
     </Box>
   );

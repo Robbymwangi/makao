@@ -5,13 +5,11 @@ import {
   Flex,
   Heading,
   Text,
-  IconButton,
   useBreakpointValue,
   Image
 } from '@chakra-ui/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Carousel.css';
-
 
 const TWEEN_FACTOR_BASE = 0.3;
 
@@ -41,7 +39,6 @@ const CarouselSection = () => {
   const tweenNodes = useRef([]);
 
   const setTweenNodes = useCallback((emblaApi) => {
-    // For each slide, we look for the inner element that we want to tween.
     tweenNodes.current = emblaApi.slideNodes().map((slideNode) => {
       return slideNode.querySelector('.embla__slide__tween');
     });
@@ -89,8 +86,13 @@ const CarouselSection = () => {
     });
   }, []);
 
-  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -133,7 +135,7 @@ const CarouselSection = () => {
         </Text>
       </Box>
 
-      <Box position="flex" className="embla" ref={emblaRef}>
+      <Box className="embla" position="relative" ref={emblaRef}>
         <Flex className="embla__container" minH="100px">
           {carouselItems.map((item, index) => (
             <Box
@@ -147,7 +149,7 @@ const CarouselSection = () => {
                 transition: 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
               }}
             >
-              {/* This inner container is the tweenable element */}
+              {/* Tweenable inner element */}
               <Box className="embla__slide__tween">
                 <Box
                   bg="gray.100"
@@ -194,28 +196,39 @@ const CarouselSection = () => {
           ))}
         </Flex>
 
-        <IconButton 
-          aria-label="Previous slide" 
-          icon={<ChevronLeft />} 
-          position="absolute" 
-          left={{ base: 2, md: 4 }} 
-          top="50%" 
-          transform="translateY(-50%)" 
-          size={{ base: 'md', md: 'lg' }} 
-          borderRadius="full" 
-          onClick={scrollPrev} 
-        />
-        <IconButton 
-          aria-label="Next slide" 
-          icon={<ChevronRight />} 
-          position="absolute" 
-          right={{ base: 2, md: 4 }} 
-          top="50%" 
-          transform="translateY(-50%)" 
-          size={{ base: 'md', md: 'lg' }} 
-          borderRadius="full" 
-          onClick={scrollNext} 
-        />
+        {/* Navigation buttons with responsive positioning */}
+        <Box
+          as="button"
+          onClick={scrollPrev}
+          position="absolute"
+          left={{ base: 2, md: '-80px' }}  // Outside carousel on larger screens
+          top="50%"
+          transform="translateY(-50%)"
+          fontSize={{ base: '24px', md: '32px' }}
+          p={2}
+          borderRadius="full"
+          bg="whiteAlpha.700"
+          zIndex={2}
+          _hover={{ bg: 'whiteAlpha.900' }}
+        >
+          <ChevronLeft />
+        </Box>
+        <Box
+          as="button"
+          onClick={scrollNext}
+          position="absolute"
+          right={{ base: 2, md: '-80px' }}  // Outside carousel on larger screens
+          top="50%"
+          transform="translateY(-50%)"
+          fontSize={{ base: '24px', md: '32px' }}
+          p={2}
+          borderRadius="full"
+          bg="whiteAlpha.700"
+          zIndex={2}
+          _hover={{ bg: 'whiteAlpha.900' }}
+        >
+          <ChevronRight />
+        </Box>
       </Box>
     </Box>
   );

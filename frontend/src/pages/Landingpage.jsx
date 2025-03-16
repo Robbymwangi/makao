@@ -1,15 +1,14 @@
 import React from "react";
 import { Container } from "@chakra-ui/react";
-import HeroSection from "../usercomponents/HeroSection";
-import Carousel from "../usercomponents/Carousel";
-import AgentSection from "../usercomponents/AgentSection";
-import ClientShowcase from "../usercomponents/ClientShowcase";
-import Testimonials from "@/usercomponents/Testimonials";
-import FAQ from "@/usercomponents/FAQ";
-import LatestArticles from "@/usercomponents/Articles";
-import EmailList from "@/usercomponents/EmailList";
-import Footer from "@/usercomponents/Footer";
-
+import HeroSection from "../usercomponents/LandingPageComponents/HeroSection";
+import Carousel from "../usercomponents/LandingPageComponents/Carousel";
+import AgentSection from "../usercomponents/LandingPageComponents/AgentSection";
+import ClientShowcase from "../usercomponents/LandingPageComponents/ClientShowcase";
+import Testimonials from "../usercomponents/LandingPageComponents/Testimonials";
+import FAQ from "../usercomponents/LandingPageComponents/FAQ";
+import LatestArticles from "../usercomponents/LandingPageComponents/Articles";
+import EmailList from "../usercomponents/LandingPageComponents/EmailList";
+import Footer from "../usercomponents/LandingPageComponents/Footer";
 
 const Landingpage = () => {
   return (
