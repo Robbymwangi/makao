@@ -35,7 +35,7 @@ const AgentSection = () => {
             _hover={{ bg: "gray.700" }}
             fontWeight="bold"
           >
-            View our agent pool
+            View our partners and experts
           </Button>
         </Flex>
 
@@ -70,7 +70,7 @@ const AgentSection = () => {
         {/* Bottom Text */}
         <Box mt={6} p={6} textAlign="center">
           <Text fontSize="xl" fontFamily="'Playfair Display', serif">
-            With over 7 years of experience, these veterans are the very best of the African real estate scene.*
+            With over 4 years of experience, our entire team of real estate experts are the very best at what they do.*
           </Text>
         </Box>
       </Flex>
@@ -88,7 +88,7 @@ const AgentSection = () => {
             Best part - You have an agent at your fingertips, ready to help you whenever - from curation to aftersales.
           </Text>
           <Button mt={4} bg="black" color="white" _hover={{ bg: "gray.700" }} fontWeight="bold">
-            View our agent pool
+            View our partners and experts
           </Button>
         </Box>
 
@@ -135,7 +135,7 @@ const AgentSection = () => {
         {/* Right: Text Block */}
         <Box p={6}> 
           <Text fontSize="2xl" fontFamily="'Playfair Display', serif" mt={{ base: 4, md: 8 }}>
-            With over 7 years* of experience, these veterans are the very best of the African real estate scene.
+            With over 4 years of experience, our entire team of real estate experts are the very best at what they do.*
           </Text>
         </Box>
       </Grid>

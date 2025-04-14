@@ -127,11 +127,11 @@ const CarouselSection = () => {
     <Box py={20} position="relative" overflow="hidden">
       <Box maxW="7xl" mx="auto" px={4} mb={12} textAlign="center">
         <Heading fontSize="3xl" mb={4} fontFamily="'Playfair Display', serif">
-          We get it, Househunting is a nightmare.
+          We get it, Building your dream home can be a nightmare.
         </Heading>
         <Text fontSize="xl" maxW="2xl" mx="auto" fontFamily="'Playfair Display', serif">
-          That's why at Makao, we're dedicated to helping you find a home that's not only
-          budget-friendly but also perfectly reflects your personality and lifestyle.
+         That is why at Makao, we make building your own home simple, stress-free, and tailored to your needs. 
+         And for those looking for inspiration, our team of experts will help you get exactly what you want, with no fuss.
         </Text>
       </Box>
 

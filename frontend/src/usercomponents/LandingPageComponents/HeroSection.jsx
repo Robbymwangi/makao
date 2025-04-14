@@ -222,12 +222,11 @@ const HeroSection = () => {
               fontSize={{ base: "xl", md: "2xl" }}
               maxW={{ base: "90%", lg: "70%" }}
             >
-              Welcome to Makao, a marketplace to find a home that fits all your
-              needs!
+              Welcome to Makao, an experience where we will help curate, build and manage the home of your dreams, anywhere and anytime.
             </Text>
 
-            <Button colorScheme="blackAlpha" size="lg" fontWeight="bold" mt={4}>
-              Start your search now
+            <Button colorScheme="blackAlpha" size="lg" fontWeight={"bold"}  mt={4}>
+              Click to start your journey
             </Button>
           </VStack>
         </Box>

@@ -26,11 +26,11 @@ const FAQ = () => {
         color="gray.600"
         textAlign="center"
       >
-        Find answers to common questions about buying homes with Makao.
+        Find answers to common questions about building with Makao.
       </Box>
 
       <AccordionRoot multiple defaultValue={["item1"]}>
-        <Box mb={4}>
+        <Box mb={6}>
           <AccordionItem value="item1">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
@@ -50,7 +50,7 @@ const FAQ = () => {
           </AccordionItem>
         </Box>
 
-        <Box mb={4}>
+        <Box mb={6}>
           <AccordionItem value="item2">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
@@ -70,7 +70,7 @@ const FAQ = () => {
           </AccordionItem>
         </Box>
 
-        <Box mb={4}>
+        <Box mb={6}>
           <AccordionItem value="item3">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
@@ -90,7 +90,7 @@ const FAQ = () => {
           </AccordionItem>
         </Box>
 
-        <Box mb={4}>
+        <Box mb={6}>
           <AccordionItem value="item4">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
@@ -110,7 +110,7 @@ const FAQ = () => {
           </AccordionItem>
         </Box>
 
-        <Box mb={4}>
+        <Box mb={6}>
           <AccordionItem value="item5">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
