@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Text,
@@ -9,16 +9,41 @@ import {
   Flex,
   PinInput,
   usePinInput,
+  createSystem,
+  defaultConfig,
 } from "@chakra-ui/react";
 import AuthHeader from "@/usercomponents/Auth/AuthHeader";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useNavigate, useLocation } from "react-router";
+
+// Create a custom system with a cursor theme
+export const system = createSystem(defaultConfig, {
+  theme: {
+    tokens: {
+      cursor: {
+        button: { value: "pointer" }, // Custom cursor for buttons
+      },
+    },
+  },
+});
 
 const OTPChallengeResp = () => {
   const store = usePinInput(); // Use Chakra's PinInput store
   const navigate = useNavigate();
   const location = useLocation();
   const otpMethod = location.state?.otpMethod || "email"; // Default to email if not provided
+
+  const [resendTimer, setResendTimer] = useState(30); // Countdown timer for resend
+  const [canResend, setCanResend] = useState(false); // Resend button state
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResend(true); // Enable the resend button when the timer lapses
+    }
+  }, [resendTimer]);
 
   const handleVerifyOTP = () => {
     const otp = store.value.join(""); // Combine the entered OTP values into a single string
@@ -43,6 +68,37 @@ const OTPChallengeResp = () => {
         duration: 5000,
       });
     }
+  };
+
+  const handleResendOTP = () => {
+    if (!canResend) return; // Prevent execution if the button is disabled
+
+    // Simulate OTP sending process with a promise
+    const otpPromise = new Promise((resolve) => {
+      setTimeout(() => resolve(true), 2000); // Simulate a 2-second delay
+    });
+
+    toaster.promise(otpPromise, {
+      loading: {
+        title: "Sending OTP",
+        description: "Please wait while we send your verification code",
+      },
+      success: {
+        title: "OTP Sent!",
+        description: `Code sent to ${
+          otpMethod === "email" ? "e***@example.com" : "+123-xxx-xxxx"
+        }`,
+      },
+      error: {
+        title: "Failed to Send",
+        description: "Please try again or contact support",
+      },
+    });
+
+    otpPromise.then(() => {
+      setResendTimer(30); // Reset the timer
+      setCanResend(false); // Disable the button again
+    });
   };
 
   return (
@@ -75,9 +131,7 @@ const OTPChallengeResp = () => {
           </Text>
 
           {/* OTP Input */}
-          <PinInput.RootProvider value={store}
-           size={"2xl"}
-           paddingBottom={4}>
+          <PinInput.RootProvider value={store} size={"2xl"} paddingBottom={4}>
             <PinInput.Control>
               <PinInput.Input index={0} />
               <PinInput.Input index={1} />
@@ -96,8 +150,15 @@ const OTPChallengeResp = () => {
           >
             Verify OTP
           </Button>
-          <Button variant="outline" w="full" onClick={() => navigate("/login")}>
-            Return to Login
+
+          {/* Resend OTP Button */}
+          <Button
+            variant="outline"
+            w="full"
+            onClick={handleResendOTP}
+            disabled={!canResend} // Disable the button if the timer hasn't lapsed 
+          >
+            {canResend ? "Send Another OTP" : `Send Another OTP in ${resendTimer}s`}
           </Button>
         </VStack>
       </Flex>

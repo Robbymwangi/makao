@@ -225,7 +225,7 @@ const HeroSection = () => {
               Welcome to Makao, an experience where we will help curate, build and manage the home of your dreams, anywhere and anytime.
             </Text>
 
-            <Button colorScheme="blackAlpha" size="lg" fontWeight={"bold"}  mt={4}>
+            <Button colorScheme="blackAlpha" size="lg"  mt={4}>
               Click to start your journey
             </Button>
           </VStack>
