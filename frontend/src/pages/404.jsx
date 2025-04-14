@@ -47,7 +47,7 @@ const NotFound = () => {
           _hover={{ bg: "gray.700" }}
           _active={{ bg: "gray.800" }}
         >
-          Back to Home
+          Back to Login
         </Button>
        
       </VStack>
