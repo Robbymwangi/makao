@@ -14,7 +14,7 @@ import { keyframes } from "@emotion/react";
 
 
 // Create a MotionBox component from Chakra UI's Box
-const MotionBox = motion(Box);
+const MotionBox = motion.create(Box);
 
 // Define a simple blinking animation for the cursor
 const blink = keyframes`

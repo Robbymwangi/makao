@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -9,23 +7,11 @@ import {
   Flex,
   PinInput,
   usePinInput,
-  createSystem,
-  defaultConfig,
 } from "@chakra-ui/react";
 import AuthHeader from "@/usercomponents/Auth/AuthHeader";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useNavigate, useLocation } from "react-router";
-
-// Create a custom system with a cursor theme
-export const system = createSystem(defaultConfig, {
-  theme: {
-    tokens: {
-      cursor: {
-        button: { value: "pointer" }, // Custom cursor for buttons
-      },
-    },
-  },
-});
+import PageTransition from "@/usercomponents/PageTransition/pagetransition";
 
 const OTPChallengeResp = () => {
   const store = usePinInput(); // Use Chakra's PinInput store
@@ -65,6 +51,7 @@ const OTPChallengeResp = () => {
         title: "Invalid OTP",
         description: "The OTP you entered is incorrect. Please try again.",
         type: "error",
+        max: 3,
         duration: 5000,
       });
     }
@@ -108,59 +95,61 @@ const OTPChallengeResp = () => {
         <AuthHeader />
       </Box>
       <Flex flex="1" align="center" justify="center">
-        <VStack
-          spacing={10}
-          bg="white"
-          p={{ base: 4, md: 8 }}
-          borderRadius="lg"
-          boxShadow="0px 2px 4px rgba(0, 0, 0, 0.1)"
-          w="full"
-          maxW="400px"
-          border="1px solid"
-          borderColor="gray.300"
-          transition="all 0.25s ease-in-out"
-        >
-          <Text fontSize="2xl" fontWeight="bold" textAlign={"center"} mt={4} paddingBottom={2}>
-            Kindly enter your OTP
-          </Text>
-
-          <Text fontSize="md" textAlign={"center"} paddingBottom={2} color="gray.600">
-            {otpMethod === "email"
-              ? "An OTP has been sent to your registered email address."
-              : "An OTP has been sent to your registered phone number."}
-          </Text>
-
-          {/* OTP Input */}
-          <PinInput.RootProvider value={store} size={"2xl"} paddingBottom={4}>
-            <PinInput.Control>
-              <PinInput.Input index={0} />
-              <PinInput.Input index={1} />
-              <PinInput.Input index={2} />
-              <PinInput.Input index={3} />
-            </PinInput.Control>
-          </PinInput.RootProvider>
-
-          <Button
-            bg="black"
-            color="white"
+        <PageTransition>
+          <VStack
+            spacing={10}
+            bg="white"
+            p={{ base: 4, md: 8 }}
+            borderRadius="lg"
+            boxShadow="0px 2px 4px rgba(0, 0, 0, 0.1)"
             w="full"
-            _hover={{ bg: "gray.700" }}
-            _active={{ bg: "gray.800" }}
-            onClick={handleVerifyOTP}
+            maxW="400px"
+            borderWidth="1px"
+            borderColor="gray.300"
+            transition="all 0.25s ease-in-out"
           >
-            Verify OTP
-          </Button>
+            <Text fontSize="2xl" fontWeight="bold" textAlign={"center"} mt={4} paddingBottom={2}>
+              Kindly enter your OTP
+            </Text>
 
-          {/* Resend OTP Button */}
-          <Button
-            variant="outline"
-            w="full"
-            onClick={handleResendOTP}
-            disabled={!canResend} // Disable the button if the timer hasn't lapsed 
-          >
-            {canResend ? "Send Another OTP" : `Send Another OTP in ${resendTimer}s`}
-          </Button>
-        </VStack>
+            <Text fontSize="md" textAlign={"center"} paddingBottom={2} color="gray.600">
+              {otpMethod === "email"
+                ? "An OTP has been sent to your registered email address."
+                : "An OTP has been sent to your registered phone number."}
+            </Text>
+
+            {/* OTP Input */}
+            <PinInput.RootProvider value={store} size={"2xl"} paddingBottom={4}>
+              <PinInput.Control>
+                <PinInput.Input index={0} />
+                <PinInput.Input index={1} />
+                <PinInput.Input index={2} />
+                <PinInput.Input index={3} />
+              </PinInput.Control>
+            </PinInput.RootProvider>
+
+            <Button
+              bg="black"
+              color="white"
+              w="full"
+              _hover={{ bg: "gray.700" }}
+              _active={{ bg: "gray.800" }}
+              onClick={handleVerifyOTP}
+            >
+              Verify OTP
+            </Button>
+
+            {/* Resend OTP Button */}
+            <Button
+              variant="outline"
+              w="full"
+              onClick={handleResendOTP}
+              disabled={!canResend} // Disable the button if the timer hasn't lapsed
+            >
+              {canResend ? "Send Another OTP" : `Send Another OTP in ${resendTimer}s`}
+            </Button>
+          </VStack>
+        </PageTransition>
       </Flex>
     </Flex>
   );

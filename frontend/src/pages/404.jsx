@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 
 
-const MotionBox = motion(Box);
+const MotionBox = motion.create(Box);
 
 const NotFound = () => {
   const navigate = useNavigate();
