@@ -23,12 +23,13 @@ import {
   Settings,
   LogOut,
   X,
+  ArrowDown,
 } from "lucide-react";
 import { useLocation } from "react-router";
 import { Squash as Hamburger } from 'hamburger-react';
 
 const DashLayout = ({ children, userType = "user", userName = "Makao User" }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const location = useLocation();
@@ -76,23 +77,24 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
         )}
       </HStack>
 
-      <VStack align="stretch" spacing={4}>
+      <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
         {menuItems[userType].map(({ label, icon: Icon }, idx) => (
           <HStack
             key={idx}
             as="button"
             spacing={3}
-            px={collapsed ? 0 : 3}
+            px={isMobile ? 3 : (collapsed ? 0 : 3)}
             py={2}
             borderRadius="md"
             _hover={{ bg: "gray.100" }}
-            justify={collapsed ? "center" : "flex-start"}
+            justify={isMobile ? "flex-start" : (collapsed ? "center" : "flex-start")}
             onClick={isMobile ? onClose : undefined}
             transition="all 0.2s ease-in-out"
+            w="full"
           >
             <Icon size={20} />
-            {!collapsed && (
-              <Text transition="opacity 0.2s ease-in-out">
+            {(isMobile || !collapsed) && (
+              <Text transition="opacity 0.2s ease-in-out" whiteSpace="nowrap">
                 {label}
               </Text>
             )}
@@ -100,20 +102,21 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
         ))}
       </VStack>
 
-      <Box mt="auto">
+      <Box mt="auto" pt={4}>
         <HStack
           as="button"
           spacing={3}
-          px={collapsed ? 0 : 3}
+          px={isMobile ? 3 : (collapsed ? 0 : 3)}
           py={2}
           borderRadius="md"
           _hover={{ bg: "gray.100" }}
-          justify={collapsed ? "center" : "flex-start"}
+          justify={isMobile ? "flex-start" : (collapsed ? "center" : "flex-start")}
           onClick={isMobile ? onClose : undefined}
           transition="all 0.2s ease-in-out"
+          w="full"
         >
           <LogOut size={20} />
-          {!collapsed && (
+          {(isMobile || !collapsed) && (
             <Text transition="opacity 0.2s ease-in-out">Logout</Text>
           )}
         </HStack>
@@ -139,16 +142,58 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
 
       <Box flex="1" overflow="auto" p={6}>
         <Box bg="white" boxShadow="md" borderRadius="lg" p={6} minH="100%">
-          <Flex justify="space-between" align="center" mb={6}>
-            <VStack align="start" spacing={1}>
-              <Text fontSize="xl" color="gray.600">
+          <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap">
+            {/* Left: Welcome Text */}
+            <VStack align="start" spacing={1} flex="1" minW="0">
+              <Text fontSize={{ base: "md", md: "xl" }} color="gray.600" isTruncated>
                 Welcome back, {userName}!
               </Text>
-              <Text fontSize="2xl" fontWeight="bold">
+              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold" isTruncated>
                 Dashboard Overview
               </Text>
             </VStack>
 
+            {/* Center: Project Selector */}
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <HStack
+                  spacing={3}
+                  px={4}
+                  py={2}
+                  borderRadius="full"
+                  boxShadow="sm"
+                  _hover={{ bg: "gray.200" }}
+                  align="center"
+                  justify="center"
+                  cursor="pointer"
+                  flexShrink={0}
+                >
+                  <VStack spacing={0} align="start" minW="0">
+                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" isTruncated>
+                      Selected Project
+                    </Text>
+                    <Text fontSize="xs" color="gray.500" isTruncated>
+                      Casa Du Papel
+                    </Text>
+                  </VStack>
+                  <Box p={1} borderRadius="full">
+                    <ArrowDown size={16} />
+                  </Box>
+                </HStack>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content minW="200px" boxShadow="xl">
+                    <Menu.Item value="project1">Casa Du Papel</Menu.Item>
+                    <Menu.Item value="project2">Project Alpha</Menu.Item>
+                    <Menu.Item value="project3">Skyline Tower</Menu.Item>
+                    <Menu.Item value="project4">Ocean View</Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+
+            {/* Right: Avatar and Menu Drawer */}
             <HStack spacing={4}>
               {isMobile && (
                 <Drawer.Root open={isOpen} onClose={onClose} placement="start">
@@ -160,7 +205,12 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
                   <Portal>
                     <Drawer.Backdrop />
                     <Drawer.Positioner>
-                      <Drawer.Content w="250px">
+                      <Drawer.Content w="250px" maxW="100vw">
+                        <Drawer.Header p={4} borderBottomWidth="1px">
+                          <Text fontSize="xl" fontWeight="bold" fontFamily={"Playfair Display, Serif"} >
+                            Dashboard
+                          </Text>
+                        </Drawer.Header>
                         <Drawer.Body p={0}>
                           <SidebarContent onClose={onClose} isMobile />
                         </Drawer.Body>
@@ -169,7 +219,7 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
                   </Portal>
                 </Drawer.Root>
               )}
-              
+
               <Menu.Root
                 positioning={{ getAnchorRect: () => avatarRef.current?.getBoundingClientRect() }}
               >

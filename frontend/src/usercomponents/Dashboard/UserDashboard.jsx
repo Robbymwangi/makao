@@ -12,6 +12,8 @@ import {
   useBreakpointValue,
   FormatNumber,
   Timeline,
+  Menu,
+  Portal,
 } from "@chakra-ui/react";
 import { 
   Check, 
@@ -19,6 +21,7 @@ import {
   DollarSign, 
   Image, 
   Link2, 
+  LucideMenu, 
   MessageSquare,
   Plus,
   TrendingUp
@@ -93,7 +96,36 @@ const UserDashboard = () => {
             borderRadius="xl" 
             flex="1"
           >
-            <Text fontSize="lg" fontWeight="semibold" mb={4}>Financial Overview</Text>
+            <Flex justify="space-between" align="center" mb={4}>
+              <Text fontSize="lg" fontWeight="semibold">Financial Overview</Text>
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <Flex
+                    as="button"
+                    align="center"
+                    gap={2}
+                    px={4}
+                    py={2}
+                    borderRadius="md"
+                    _hover={{ bg: "gray.100" }}
+                    boxShadow={"0 2px 4px rgba(0, 0, 0, 0.1)"}
+                  >
+                    <LucideMenu size={16} />
+                    <Text>Select Range</Text>
+                  </Flex>
+                </Menu.Trigger>
+                <Portal>
+                  <Menu.Positioner>
+                    <Menu.Content minW="200px" boxShadow="xl">
+                      <Menu.Item value="lastMonth">Last Month</Menu.Item>
+                      <Menu.Item value="last30Days">Last 30 Days</Menu.Item>
+                      <Menu.Item value="last3Months">Last 3 Months</Menu.Item>
+                      <Menu.Item value="lastYear">Last Year</Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Portal>
+              </Menu.Root>
+            </Flex>
             <HStack mb={4}>
               <Stat.ValueText fontSize="2xl">
                 <FormatNumber value={84560} style="currency" currency="USD" />
@@ -114,7 +146,7 @@ const UserDashboard = () => {
                 data={chartData}
                 width={isMobile ? 300 : 600} 
                 height={200}
-                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
@@ -136,7 +168,7 @@ const UserDashboard = () => {
           </Stat.Root>
           
           {/* Timeline */}
-          <Box p={4} h={"334px"} borderWidth="1px" borderRadius="xl" flex="1">
+          <Box p={4} h={"345px"} borderWidth="1px" borderRadius="xl" flex="1">
             <Text fontSize="lg" fontWeight="semibold" mb={6}>Project Timeline</Text>
             <Timeline.Root variant="subtle">
               <Timeline.Item>
