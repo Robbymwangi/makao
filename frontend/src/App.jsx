@@ -16,6 +16,10 @@ import Login from "./usercomponents/Auth/Login.jsx";
 import SignUp from "./usercomponents/Auth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/ForgotPassword.jsx";
 
+// Dashboard
+import UserDashboard from "./usercomponents/Dashboard/UserDashboard.jsx";
+import DashLayout from "./pages/DashLayout.jsx";
+
 function App() {
   return (
     <Box>
@@ -26,6 +30,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/otp-challengesend" element={<OTPChallengeSend />} />
         <Route path="/otp-challengeresp" element={<OTPChallengeResp />} />
+        <Route path="/dashboard" element={<UserDashboard />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />
