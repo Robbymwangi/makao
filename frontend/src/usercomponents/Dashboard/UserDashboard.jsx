@@ -280,7 +280,7 @@ const UserDashboard = () => {
           borderWidth="1px" 
           borderRadius="xl" 
           w="full" 
-          h="220px" 
+          h="250px" 
           display="flex" 
           flexDirection="column" 
           justifyContent="center" 
@@ -301,7 +301,7 @@ const UserDashboard = () => {
           </Flex>
           
           <HStack spacing={6} align="start" mt={4}> 
-            <MessageSquare size={20} />
+            <MessageSquare size={isMobile ? 35 : 20} />
             <Text textAlign="center">
               Foundation work is progressing well. Ensure proper curing process 
               is maintained for the next 72 hours.
