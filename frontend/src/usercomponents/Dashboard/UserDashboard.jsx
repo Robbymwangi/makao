@@ -1,4 +1,5 @@
 "use client";
+import React, { useState } from "react";
 import { 
   Box, 
   Text, 
@@ -32,6 +33,7 @@ import { AreaChart, Area, CartesianGrid, XAxis, Tooltip } from "recharts";
 
 const UserDashboard = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const [activeRange, setActiveRange] = useState("Monthly"); // State to track the active range
   const chartData = [
     { value: 65, month: "Jan" },
     { value: 78, month: "Feb" },
@@ -111,16 +113,27 @@ const UserDashboard = () => {
                     boxShadow={"0 2px 4px rgba(0, 0, 0, 0.1)"}
                   >
                     <LucideMenu size={16} />
-                    <Text>Select Range</Text>
+                    <Text>{activeRange}</Text> {/* Display the active range */}
                   </Flex>
                 </Menu.Trigger>
                 <Portal>
                   <Menu.Positioner>
                     <Menu.Content minW="200px" boxShadow="xl">
-                      <Menu.Item value="lastMonth">Last Month</Menu.Item>
-                      <Menu.Item value="last30Days">Last 30 Days</Menu.Item>
-                      <Menu.Item value="last3Months">Last 3 Months</Menu.Item>
-                      <Menu.Item value="lastYear">Last Year</Menu.Item>
+                      <Menu.Item onClick={() => setActiveRange("Last Month")}>
+                        Last Month
+                      </Menu.Item>
+                      <Menu.Item onClick={() => setActiveRange("Last 30 Days")}>
+                        Last 30 Days
+                      </Menu.Item>
+                      <Menu.Item onClick={() => setActiveRange("Last 3 Months")}>
+                        Last 3 Months
+                      </Menu.Item>
+                      <Menu.Item onClick={() => setActiveRange("Last Year")}>
+                        Last Year
+                      </Menu.Item>
+                      <Menu.Item onClick={() => setActiveRange("Monthly")}>
+                        Monthly
+                      </Menu.Item>
                     </Menu.Content>
                   </Menu.Positioner>
                 </Portal>
