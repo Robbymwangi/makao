@@ -48,7 +48,7 @@ const UserDashboard = () => {
       <VStack spacing={{ base: 8, md: 12 }} align="fill">
         {/* Stats Cards */}
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={{ base: 6, md: 8 }}>
-          <Stat.Root p={4} borderWidth="1px" borderRadius="xl">
+          <Stat.Root p={4} borderWidth="1px" borderRadius="xl" boxShadow="xl">
             <HStack spacing={4} mb={3}>
               <Clock size={20} />
               <Stat.Label>Current Phase</Stat.Label>
@@ -57,7 +57,7 @@ const UserDashboard = () => {
             <Stat.HelpText mt={2}>Due in 14 days</Stat.HelpText>
           </Stat.Root>
 
-          <Stat.Root p={4} borderWidth="1px" borderRadius="xl">
+          <Stat.Root p={4} borderWidth="1px" borderRadius="xl" boxShadow="xl">
             <HStack spacing={4} mb={3}>
               <Check size={20} />
               <Stat.Label>Next Milestone</Stat.Label>
@@ -66,7 +66,7 @@ const UserDashboard = () => {
             <Stat.HelpText mt={2}>80% completed</Stat.HelpText>
           </Stat.Root>
 
-          <Stat.Root p={4} borderWidth="1px" borderRadius="xl">
+          <Stat.Root p={4} borderWidth="1px" borderRadius="xl" boxShadow="xl">
             <HStack spacing={4} mb={3}>
               <Check size={20} />
               <Stat.Label>Financial Health</Stat.Label>
@@ -97,6 +97,7 @@ const UserDashboard = () => {
             borderWidth="1px" 
             borderRadius="xl" 
             flex="1"
+            boxShadow="2xl" // Increased shadow
           >
             <Flex justify="space-between" align="center" mb={4}>
               <Text fontSize="lg" fontWeight="semibold">Financial Overview</Text>
@@ -181,7 +182,7 @@ const UserDashboard = () => {
           </Stat.Root>
           
           {/* Timeline */}
-          <Box p={4} h={"345px"} borderWidth="1px" borderRadius="xl" flex="1">
+          <Box p={4} h={"345px"} borderWidth="1px" borderRadius="xl" flex="1" boxShadow="2xl">
             <Text fontSize="lg" fontWeight="semibold" mb={6}>Project Timeline</Text>
             <Timeline.Root variant="subtle">
               <Timeline.Item>
@@ -216,7 +217,7 @@ const UserDashboard = () => {
         </HStack>
 
         {/* Photo Progress */}
-        <Box p={4} borderWidth="1px" borderRadius="xl" w="full" mt={12} mb={12}>
+        <Box p={4} borderWidth="1px" borderRadius="xl" w="full" mt={12} mb={12} boxShadow="2xl">
           <Flex justify="space-between" align="center" mb={4}>
             <Text fontSize="lg" fontWeight="semibold">Photo Progress</Text>
             <Flex
@@ -241,6 +242,7 @@ const UserDashboard = () => {
                 borderRadius="xl"
                 p={4} 
                 flexShrink={0}
+                boxShadow="xl"
               >
                 <Box bg="gray.100" h="160px" borderRadius="md" mb={4} /> 
                 <HStack spacing={2}>
@@ -279,6 +281,7 @@ const UserDashboard = () => {
                 align="center"
                 gap={4}
                 _hover={{ bg: "gray.50" }}
+                boxShadow="xl"
               >
                 <Link2 size={20} />
                 <Text>Document {i}</Text>
@@ -298,6 +301,7 @@ const UserDashboard = () => {
           flexDirection="column" 
           justifyContent="center" 
           alignItems="start" 
+          boxShadow="2xl"
         >
           <Text fontSize="lg" fontWeight="semibold" mb={4} alignSelf="start">Agent's Summary</Text>
           <Flex gap={6} direction={{ base: "column", md: "row" }} align="start">
