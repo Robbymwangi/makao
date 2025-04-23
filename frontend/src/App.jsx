@@ -17,8 +17,7 @@ import SignUp from "./usercomponents/Auth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/ForgotPassword.jsx";
 
 // Dashboard
-import UserDashboard from "./usercomponents/Dashboard/UserDashboard.jsx";
-import DashLayout from "./pages/DashLayout.jsx";
+import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
 
 function App() {
   return (
