@@ -54,11 +54,14 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
 
   const SidebarContent = ({ onClose, isMobile = false }) => (
     <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : (collapsed ? 2 : 4)}>
+      {/* Header */}
       <HStack justify="space-between" mb={8}>
         {!collapsed && (
-          <Text fontSize="xl" fontWeight="bold" fontFamily="Playfair Display">
-            Dashboard
-          </Text>
+          <VStack align="start" spacing={0}>
+            <Text fontSize="lg" fontWeight="bold" fontFamily="Playfair Display">
+              Makao <span style={{ fontWeight: "normal", color: "GrayText"}}>Kurunzi</span>
+            </Text>
+          </VStack>
         )}
         {isMobile ? (
           <Drawer.CloseTrigger asChild>
@@ -77,6 +80,7 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
         )}
       </HStack>
 
+      {/* Menu Items */}
       <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
         {menuItems[userType].map(({ label, icon: Icon }, idx) => (
           <HStack
@@ -102,24 +106,32 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
         ))}
       </VStack>
 
+      {/* Footer */}
       <Box mt="auto" pt={4}>
-        <HStack
-          as="button"
-          spacing={3}
-          px={isMobile ? 3 : (collapsed ? 0 : 3)}
-          py={2}
-          borderRadius="md"
-          _hover={{ bg: "gray.100" }}
-          justify={isMobile ? "flex-start" : (collapsed ? "center" : "flex-start")}
-          onClick={isMobile ? onClose : undefined}
-          transition="all 0.2s ease-in-out"
-          w="full"
-        >
-          <LogOut size={20} />
-          {(isMobile || !collapsed) && (
-            <Text transition="opacity 0.2s ease-in-out">Logout</Text>
+        <VStack align="stretch" spacing={2}>
+          <HStack
+            as="button"
+            spacing={3}
+            px={isMobile ? 3 : (collapsed ? 0 : 3)}
+            py={2}
+            borderRadius="md"
+            _hover={{ bg: "gray.100" }}
+            justify={isMobile ? "flex-start" : (collapsed ? "center" : "flex-start")}
+            onClick={isMobile ? onClose : undefined}
+            transition="all 0.2s ease-in-out"
+            w="full"
+          >
+            <LogOut size={20} />
+            {(isMobile || !collapsed) && (
+              <Text transition="opacity 0.2s ease-in-out">Logout</Text>
+            )}
+          </HStack>
+          {!collapsed && (
+            <Text fontSize="xs" color="gray.500" textAlign="center">
+              Version 1.0
+            </Text>
           )}
-        </HStack>
+        </VStack>
       </Box>
     </Flex>
   );
