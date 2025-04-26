@@ -24,6 +24,8 @@ import {
   LogOut,
   X,
   ArrowDown,
+  User,
+  BadgeHelp,
 } from "lucide-react";
 import { useLocation } from "react-router";
 import { Squash as Hamburger } from 'hamburger-react';
@@ -44,11 +46,12 @@ const DashLayout = ({ children, userType = "user", userName = "Makao User" }) =>
   const menuItems = {
     user: [
       { label: "Home", icon: Home },
-      { label: "Progress", icon: ClipboardList },
+      { label: "Milestones", icon: ClipboardList },
       { label: "Reports", icon: BarChart },
-      { label: "Expenses", icon: Building },
+      { label: "Projects", icon: Building },
       { label: "Messages", icon: MessageCircle },
-      { label: "Support", icon: Settings },
+      { label: "Agent", icon: User },
+      { label: "Help", icon: BadgeHelp },
     ],
   };
 
