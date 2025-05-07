@@ -1,3 +1,4 @@
+// src/pages/DashLayout.jsx
 import React, { useState, useRef } from "react";
 import {
   Box,
@@ -5,39 +6,41 @@ import {
   Text,
   VStack,
   HStack,
-  Avatar,
-  Stack,
   useDisclosure,
   useBreakpointValue,
-  Menu,
   Drawer,
-  Portal,
 } from "@chakra-ui/react";
-import {
-  Menu as LucideMenu,
-  LogOut,
-  X,
-} from "lucide-react";
+import { useNavigate } from "react-router";
+import { LogOut, X } from "lucide-react";
 import { Squash as Hamburger } from "hamburger-react";
 
 const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(true);
-  const [selectedMenu, setSelectedMenu] = useState(menuItems[0]?.label || ""); // Default to the first menu item
+  const [selectedMenu, setSelectedMenu] = useState(menuItems[0]?.label || "");
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
-  const avatarRef = useRef(null);
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
+  const handleLogout = () => {
+    navigate("/login");
+  };
+
   const SidebarContent = ({ onClose, isMobile = false }) => (
-    <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
+    <Flex
+      direction="column"
+      h="100%"
+      justify="space-between"
+      py={4}
+      px={isMobile ? 4 : collapsed ? 2 : 4}
+    >
       <HStack justify="space-between" mb={8}>
         {!collapsed && (
-          <VStack align="start" spacing={0}>
-            <Text fontSize="lg" fontWeight="bold" fontFamily="Playfair Display">
-              Makao <span style={{ fontWeight: "normal", color: "GrayText"}}>Kurunzi</span>
-            </Text>
-          </VStack>
+          <Text fontSize="xl" fontWeight="bold" fontFamily="Playfair Display">
+            Dashboard
+          </Text>
         )}
         {isMobile ? (
           <Drawer.CloseTrigger asChild>
@@ -46,11 +49,16 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
             </Box>
           </Drawer.CloseTrigger>
         ) : (
-          <Hamburger toggled={!collapsed} toggle={toggleSidebar} size={20} duration={0.3} easing="ease-in-out" />
+          <Hamburger
+            toggled={!collapsed}
+            toggle={toggleSidebar}
+            size={20}
+            duration={0.3}
+            easing="ease-in-out"
+          />
         )}
       </HStack>
 
-      {/* Menu Items */}
       <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
         {menuItems.map(({ label, icon: Icon }, idx) => (
           <HStack
@@ -62,8 +70,9 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
             borderRadius="md"
             _hover={{ bg: "gray.100" }}
             justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
+            bg={selectedMenu === label ? "gray.100" : "transparent"}
             onClick={() => {
-              setSelectedMenu(label); // Update selected menu item
+              setSelectedMenu(label);
               if (isMobile) onClose();
             }}
             transition="all 0.2s ease-in-out"
@@ -79,7 +88,6 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
         ))}
       </VStack>
 
-      {/* Footer */}
       <Box mt="auto" pt={4}>
         <HStack
           as="button"
@@ -89,7 +97,7 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
           borderRadius="md"
           _hover={{ bg: "gray.100" }}
           justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
-          onClick={isMobile ? onClose : undefined}
+          onClick={handleLogout}
           transition="all 0.2s ease-in-out"
           w="full"
         >
@@ -104,7 +112,8 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
 
   return (
     <Flex h="100vh" bg="gray.50">
-      {!isMobile && (
+      {/* Sidebar */}
+      {!isOpen && !isMobile && (
         <Box
           as="aside"
           bg="white"
@@ -117,17 +126,18 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
           <SidebarContent onClose={toggleSidebar} />
         </Box>
       )}
+      {/* Mobile Drawer */}
+      {isMobile && (
+        <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
+          <SidebarContent isMobile onClose={onClose} />
+        </Drawer>
+      )}
 
-
+      {/* Main Content */}
       <Box flex="1" overflow="auto" p={6}>
         <Box bg="white" boxShadow="md" borderRadius="lg" p={6} minH="100%">
-          <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap">
-          </Flex>
-
-          {/* Render Content Based on Selected Menu */}
-          <Stack spacing={6}>
-            {renderContent ? renderContent(selectedMenu) : defaultContent}
-          </Stack>
+          <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
+          {renderContent ? renderContent(selectedMenu) : defaultContent}
         </Box>
       </Box>
     </Flex>
