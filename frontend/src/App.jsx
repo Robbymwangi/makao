@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Box } from "@chakra-ui/react";
-import { Route, Routes } from "react-router";
+import { Route, Routes, useLocation, useNavigate } from "react-router";
 
 // Pages
 import Landingpage from "./pages/Landingpage.jsx";
@@ -19,7 +19,23 @@ import ForgotPassword from "./usercomponents/Auth/ForgotPassword.jsx";
 // Dashboard
 import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
 
-function App() {
+const App = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Save the current route to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("currentRoute", location.pathname);
+  }, [location]);
+
+  // Restore the route on app load
+  useEffect(() => {
+    const savedRoute = localStorage.getItem("currentRoute");
+    if (savedRoute && savedRoute !== location.pathname) {
+      navigate(savedRoute);
+    }
+  }, [navigate, location.pathname]);
+
   return (
     <Box>
       <Routes>
@@ -36,6 +52,6 @@ function App() {
       </Routes>
     </Box>
   );
-}
+};
 
 export default App;

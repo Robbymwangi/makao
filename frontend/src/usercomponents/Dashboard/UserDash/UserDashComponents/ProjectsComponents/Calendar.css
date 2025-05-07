@@ -1,0 +1,176 @@
+.custom-calendar {
+  font-family: 'Inter', sans-serif;
+  border: 1px solid #E2E8F0; /* Chakra gray.200 */
+  border-radius: 8px; /* Chakra radii.lg */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Chakra shadows.md */
+  width: 100%;
+  padding: 1rem;
+  background: white;
+}
+
+.custom-calendar .react-calendar__navigation {
+  display: flex;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.custom-calendar .react-calendar__navigation button {
+  color: #4A5568; /* Chakra gray.700 */
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px; /* Chakra radii.md */
+  transition: all 0.2s ease;
+}
+
+.custom-calendar .react-calendar__navigation button:hover {
+  background: #EDF2F7; /* Chakra gray.100 */
+}
+
+.custom-calendar .react-calendar__navigation button:disabled {
+  background: transparent;
+  color: #A0AEC0; /* Chakra gray.400 */
+}
+
+.custom-calendar .react-calendar__month-view__weekdays {
+  margin-bottom: 0.5rem;
+}
+
+.custom-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  color: #718096; /* Chakra gray.600 */
+  text-transform: uppercase;
+}
+
+.custom-calendar .react-calendar__tile {
+  padding: 0.75rem;
+  border-radius: 4px; /* Chakra radii.md */
+  font-weight: 500;
+  color: #4A5568; /* Chakra gray.700 */
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.custom-calendar .react-calendar__tile:hover {
+  background: #EBF8FF; /* Chakra blue.50 */
+}
+
+.custom-calendar .react-calendar__tile--active {
+  background: #3182CE; /* Chakra blue.500 */
+  color: white;
+  font-weight: 600;
+}
+
+.custom-calendar .react-calendar__tile--active:hover {
+  background: #2B6CB0; /* Chakra blue.600 */
+}
+
+.custom-calendar .react-calendar__tile--now {
+  background: #EBF8FF; /* Chakra blue.100 */
+  border: 2px solid #BEE3F8; /* Chakra blue.200 */
+}
+
+.custom-calendar .react-calendar__tile--hasActive {
+  background: #EBF8FF; /* Chakra blue.100 */
+}
+
+.custom-calendar .react-calendar__tile__dot {
+  height: 6px;
+  width: 6px;
+  background: #3182CE; /* Chakra blue.500 */
+  bottom: 6px;
+}/* Calendar Container */
+.custom-calendar {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  border: 1px solid #E2E8F0; /* gray.200 */
+  border-radius: 12px; /* xl */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  background: white;
+  padding: 16px;
+  width: 100%;
+}
+
+/* Navigation */
+.react-calendar__navigation {
+  display: flex;
+  height: 40px;
+  margin-bottom: 16px;
+}
+
+.react-calendar__navigation button {
+  color: #2D3748; /* gray.800 */
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px; /* md */
+  padding: 0 12px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.react-calendar__navigation button:hover {
+  background: #EDF2F7; /* gray.100 */
+}
+
+.react-calendar__navigation button:disabled {
+  background: transparent;
+  color: #CBD5E0; /* gray.300 */
+}
+
+/* Weekdays */
+.react-calendar__month-view__weekdays {
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  color: #718096; /* gray.500 */
+  font-size: 0.875rem; /* sm */
+  font-weight: 600;
+  padding: 8px;
+}
+
+/* Days */
+.react-calendar__tile {
+  padding: 12px;
+  border-radius: 6px; /* md */
+  border: 1px solid transparent;
+  color: #2D3748; /* gray.800 */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.react-calendar__tile:hover {
+  background: #EBF8FF; /* blue.50 */
+  border-color: #BEE3F8; /* blue.100 */
+}
+
+.react-calendar__tile--active {
+  background: #3182CE; /* blue.600 */
+  color: white !important;
+  font-weight: 600;
+}
+
+.react-calendar__tile--now {
+  background: #BEE3F8; /* blue.100 */
+  border-color: #63B3ED; /* blue.300 */
+}
+
+/* Event Dots */
+.react-calendar__tile--hasActive {
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.react-calendar__tile__dot {
+  background: #3182CE; /* blue.600 */
+  height: 4px;
+  width: 4px;
+  bottom: 8px;
+}
+
+/* Year/Month View */
+.react-calendar__year-view .react-calendar__tile,
+.react-calendar__decade-view .react-calendar__tile,
+.react-calendar__century-view .react-calendar__tile {
+  padding: 24px 8px;
+}
