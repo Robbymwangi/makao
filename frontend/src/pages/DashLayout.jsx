@@ -9,6 +9,9 @@ import {
   useDisclosure,
   useBreakpointValue,
   Drawer,
+  CloseButton,
+  Portal,
+  Button
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings } from "lucide-react";
@@ -142,11 +145,26 @@ const DashLayout = () => {
           <SidebarContent onClose={toggleSidebar} />
         </Box>
       )}
-      {/* Mobile Drawer */}
-      {isMobile && (
-        <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
-          <SidebarContent isMobile onClose={onClose} />
-        </Drawer>
+            {/* Mobile Drawer */}
+            {isMobile && (
+        <Drawer.Root open={isOpen} onOpenChange={open => open ? onOpen() : onClose()} placement="left">
+          <Portal>
+            <Drawer.Backdrop />
+            <Drawer.Positioner>
+              <Drawer.Content>
+                <Drawer.Header>
+                  <Drawer.Title>Menu</Drawer.Title>
+                  <Drawer.CloseTrigger asChild>
+                    <CloseButton size="sm" />
+                  </Drawer.CloseTrigger>
+                </Drawer.Header>
+                <Drawer.Body p={0}>
+                  <SidebarContent isMobile onClose={onClose} />
+                </Drawer.Body>
+              </Drawer.Content>
+            </Drawer.Positioner>
+          </Portal>
+        </Drawer.Root>
       )}
 
       {/* Main Content */}

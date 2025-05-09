@@ -11,7 +11,7 @@ import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/
 const UserDashboard = () => {
   return (
     <VStack spacing={6} align="stretch">
-      <Text fontSize="2xl" fontWeight="bold">Welcome to the Dashboard</Text>
+      <Text fontSize="2xl" fontWeight="bold">Welcome back</Text>
       <VStack spacing={{ base: 8, md: 12 }} align="fill">
         {/* Stats Cards */}
         <StatsCards />
