@@ -1,5 +1,5 @@
-// src/pages/DashLayout.jsx
-import React, { useState, useRef } from "react";
+"use client";
+import React, { useState } from "react";
 import {
   Box,
   Flex,
@@ -10,17 +10,33 @@ import {
   useBreakpointValue,
   Drawer,
 } from "@chakra-ui/react";
-import { useNavigate } from "react-router";
-import { LogOut, X } from "lucide-react";
+import { useNavigate, Outlet, useLocation } from "react-router";
+import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings } from "lucide-react";
 import { Squash as Hamburger } from "hamburger-react";
 
-const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
-  const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(true);
-  const [selectedMenu, setSelectedMenu] = useState(menuItems[0]?.label || "");
+const menuItems = [
+  { label: "Home", icon: Home, route: "/dashboard" },
+  { label: "My Projects", icon: Building, route: "/dashboard/myprojects" },
+  { label: "Reports", icon: ClipboardList, route: "/dashboard/reports" },
+  { label: "Expenses", icon: Building, route: "/dashboard/expenses" },
+  { label: "Messages", icon: MessageCircle, route: "/dashboard/messages" },
+  { label: "Support", icon: Settings, route: "/dashboard/support" },
+];
 
+const DashLayout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
+
+  // Determine selected menu based on current route
+  const selectedMenu =
+    menuItems.find((item) =>
+      location.pathname === "/dashboard"
+        ? item.route === "/dashboard"
+        : location.pathname.startsWith(item.route)
+    )?.label || "";
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
@@ -60,7 +76,7 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
       </HStack>
 
       <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
-        {menuItems.map(({ label, icon: Icon }, idx) => (
+        {menuItems.map(({ label, icon: Icon, route }, idx) => (
           <HStack
             key={idx}
             as="button"
@@ -72,7 +88,7 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
             justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
             bg={selectedMenu === label ? "gray.100" : "transparent"}
             onClick={() => {
-              setSelectedMenu(label);
+              navigate(route);
               if (isMobile) onClose();
             }}
             transition="all 0.2s ease-in-out"
@@ -137,7 +153,7 @@ const DashLayout = ({ userName, menuItems, defaultContent, renderContent }) => {
       <Box flex="1" overflow="auto" p={6}>
         <Box bg="white" boxShadow="md" borderRadius="lg" p={6} minH="100%">
           <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
-          {renderContent ? renderContent(selectedMenu) : defaultContent}
+          <Outlet />
         </Box>
       </Box>
     </Flex>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import Calendar from "react-calendar";
 import 'react-calendar/dist/Calendar.css';
 import {
@@ -8,40 +9,38 @@ import {
   Text,
   VStack,
   HStack,
-  Grid,
-  GridItem,
   Badge,
   Button,
   Heading,
-  List,
-  ListItem,
   Avatar,
-  IconButton,
-  SimpleGrid,
   Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
   Card,
   Image,
   Timeline,
   Stack,
+  CloseButton,
+  Dialog,
+  Portal,
+  ProgressCircle,
 } from "@chakra-ui/react";
-import { ChevronRight, FileText, Plus, Construction, Check } from "lucide-react";
-import { LuCheck, LuPackage, LuShip } from "react-icons/lu";
+import { ChevronRight, FileText, Construction, Check, Package, Ship } from "lucide-react";
 
 const MyProjects = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [project, setProject] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState([]);
-  const [milestones, setMilestones] = useState([]);
   const [fileUploads, setFileUploads] = useState([]);
-  const [dayActivities, setDayActivities] = useState([]);
+  const [filter, setFilter] = useState("All");
 
-  // Simulated events
+  // Demo events for the calendar
   const events = {
     "2025-05-07": ["Team meeting at 10:00 AM", "Review design documents"],
     "2025-05-08": ["Submit project proposal", "Client feedback session"],
   };
 
-  // Format the selected date to match the keys in the `events` object
   const formatDate = (date) => {
     if (!date) return null;
     const year = date.getFullYear();
@@ -53,68 +52,86 @@ const MyProjects = () => {
   const formattedDate = formatDate(selectedDate);
   const eventList = events[formattedDate] || null;
 
+  // Simulate fetching project data based on the ID
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        setProjects([
-          {
-            id: 1,
-            name: "Residential Casa du Panel",
-            locations: ["Madrid", "Lisbon"],
-            progress: 65,
-          },
-        ]);
-        setMilestones([
-          {
-            id: 1,
-            phase: "Phase 1",
-            startDate: "21/2/23",
-            endDate: "4/4/23",
-            progress: 70,
-          },
-        ]);
-        setFileUploads([
-          {
-            id: 1,
-            name: "Project Brief",
-            date: "1/1/23",
-            source: "Metano",
-          },
-        ]);
-        setDayActivities([
-          {
-            id: 1,
-            date: 23,
-            activities: ["Team meeting at 10:00 AM", "Review design documents"],
-          },
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const projects = [
+      { id: 1, name: "Residential Casa du Panel", description: "A modern residential project." },
+      { id: 2, name: "Urban Skyline Apartments", description: "Luxury apartments in the city." },
+    ];
+    // Convert both to string for comparison
+    const selectedProject = projects.find((p) => String(p.id) === String(id));
+    setProject(selectedProject);
+  }, [id]);
 
-    fetchData();
-  }, []);
+  // Demo milestones
+  const milestonesData = [
+    {
+      id: 1,
+      phase: "Phase 1 Started",
+      date: "21st February 2023",
+      description: "Initial phase of the project began with planning and design.",
+      icon: Ship,
+    },
+    {
+      id: 2,
+      phase: "Phase 1 Completed",
+      date: "4th April 2023",
+      description: "Phase 1 completed with 70% progress achieved.",
+      icon: Check,
+    },
+    {
+      id: 3,
+      phase: "Next Phase Preparation",
+      date: "Ongoing",
+      description: "Preparing for the next phase of the project.",
+      icon: Package,
+    },
+  ];
+
+  const filteredMilestones =
+    filter === "All"
+      ? milestonesData
+      : milestonesData.filter((milestone) =>
+          milestone.phase.toLowerCase().includes(filter.toLowerCase())
+        );
+
+  if (!project) {
+    return (
+      <VStack spacing={4} align="center" justify="center" minH="300px">
+        <ProgressCircle.Root value={null} size="md" aria-label="Loading project details">
+          <ProgressCircle.Circle>
+            <ProgressCircle.Track />
+            <ProgressCircle.Range />
+          </ProgressCircle.Circle>
+        </ProgressCircle.Root>
+        <Text>Loading project details...</Text>
+      </VStack>
+    );
+  }
 
   return (
     <VStack spacing={6} align="stretch">
-      {/* Header Section */}
-      <Box>
-        <Breadcrumb.Root size={"lg"} variant={"underline"}>
-          <Breadcrumb.List>
-            <Breadcrumb.Item>
-              <Breadcrumb.Link href="#">My Projects</Breadcrumb.Link>
-            </Breadcrumb.Item>
-            <Breadcrumb.Separator />
-            <Breadcrumb.Item>
-              <Breadcrumb.CurrentLink>Milestones</Breadcrumb.CurrentLink>
-            </Breadcrumb.Item>
-          </Breadcrumb.List>
-        </Breadcrumb.Root>
+      {/* Breadcrumb */}
+      <Breadcrumb.Root>
+        <Breadcrumb.List>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link 
+            href="/dashboard/myprojects" >My Projects
+            </Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.CurrentLink>
+            {project.name}
+            </Breadcrumb.CurrentLink>
+          </Breadcrumb.Item>
+        </Breadcrumb.List>
+      </Breadcrumb.Root>
+      <Heading>{project.name}</Heading>
+      <Text>{project.description}</Text>
 
+      {/* Project Card */}
+      <Box>
         <Flex justify="space-between" align="center" mt={4} gap={4} wrap="wrap">
           <VStack align="start" spacing={1} flex="1" minW="0">
             <Text fontSize="2xl" fontWeight="bold">
@@ -128,7 +145,7 @@ const MyProjects = () => {
 
         <Card.Root w="100%" position="relative" mt={10} borderRadius="lg" overflow="hidden">
           <Image
-            src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80"
+            src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80"
             alt="Residential Casa du Panel"
             objectFit="cover"
             w="100%"
@@ -149,12 +166,11 @@ const MyProjects = () => {
             borderBottomRadius="lg"
           >
             <Text fontSize="lg" fontWeight="bold" mb={2}>
-              Residential Casa du Panel
+              {project.name}
             </Text>
             <Text fontSize="md" color="gray.300" mb={4}>
               Madrid, Lisbon
             </Text>
-
             <Stack direction="row" spacing={2} mb={4}>
               <Badge colorPalette="green" fontSize="sm">
                 <Construction />
@@ -173,7 +189,64 @@ const MyProjects = () => {
       <Box p={4} borderWidth="1px" borderRadius="lg" boxShadow="md" mb={6} mt={4}>
         <Flex justify="space-between" align="center" mb={4}>
           <Heading size="xl">Milestones</Heading>
-          <Button size="sm">Expand</Button>
+          <Dialog.Root size="cover" placement="center" motionPreset="slide-in-bottom">
+            <Dialog.Trigger asChild>
+              <Button variant="outline" size="sm">
+                View Full Timeline
+              </Button>
+            </Dialog.Trigger>
+            <Portal>
+              <Dialog.Backdrop />
+              <Dialog.Positioner>
+                <Dialog.Content>
+                  <Dialog.Header>
+                    <Dialog.Title>Project Timeline</Dialog.Title>
+                    <Dialog.CloseTrigger asChild>
+                      <CloseButton size="sm" />
+                    </Dialog.CloseTrigger>
+                  </Dialog.Header>
+                  <Dialog.Body>
+                    {/* Filter Buttons */}
+                    <Box mb={4}>
+                      <Button
+                        size="sm"
+                        variant={filter === "All" ? "solid" : "outline"}
+                        onClick={() => setFilter("All")}
+                        mr={2}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={filter === "Phase 1" ? "solid" : "outline"}
+                        onClick={() => setFilter("Phase 1")}
+                      >
+                        Phase 1
+                      </Button>
+                    </Box>
+                    {/* Timeline Content */}
+                    <Timeline.Root>
+                      {filteredMilestones.map((milestone) => (
+                        <Timeline.Item key={milestone.id}>
+                          <Timeline.Connector>
+                            <Timeline.Separator />
+                            <Timeline.Indicator>
+                              <milestone.icon />
+                            </Timeline.Indicator>
+                          </Timeline.Connector>
+                          <Timeline.Content>
+                            <Timeline.Title>{milestone.phase}</Timeline.Title>
+                            <Timeline.Description>{milestone.date}</Timeline.Description>
+                            <Text textStyle="sm">{milestone.description}</Text>
+                          </Timeline.Content>
+                        </Timeline.Item>
+                      ))}
+                    </Timeline.Root>
+                  </Dialog.Body>
+                </Dialog.Content>
+              </Dialog.Positioner>
+            </Portal>
+          </Dialog.Root>
         </Flex>
         <Box maxH="300px" overflowY="auto" pr={2}>
           <Timeline.Root>
@@ -181,7 +254,7 @@ const MyProjects = () => {
               <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator>
-                  <LuShip />
+                  <Ship />
                 </Timeline.Indicator>
               </Timeline.Connector>
               <Timeline.Content>
@@ -192,12 +265,11 @@ const MyProjects = () => {
                 </Text>
               </Timeline.Content>
             </Timeline.Item>
-
             <Timeline.Item>
               <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator>
-                  <LuCheck />
+                  <Check />
                 </Timeline.Indicator>
               </Timeline.Connector>
               <Timeline.Content>
@@ -208,12 +280,11 @@ const MyProjects = () => {
                 </Text>
               </Timeline.Content>
             </Timeline.Item>
-
             <Timeline.Item>
               <Timeline.Connector>
                 <Timeline.Separator />
                 <Timeline.Indicator>
-                  <LuPackage />
+                  <Package />
                 </Timeline.Indicator>
               </Timeline.Connector>
               <Timeline.Content>
@@ -256,7 +327,6 @@ const MyProjects = () => {
                 }}
               />
             </Box>
-
             {/* Event Display on the right */}
             <Box
               w={{ base: "100%", md: "60%" }}
@@ -309,22 +379,19 @@ const MyProjects = () => {
           {/* Company Avatar */}
           <Avatar.Root>
             <Avatar.Fallback name="Metano Construction" />
-            <Avatar.Image src="https://via.placeholder.com/150" /> {/* Replace with actual company logo */}
+            <Avatar.Image src="https://via.placeholder.com/150" />
           </Avatar.Root>
-
-          {/* Company and Agent Details */}
           <Text fontSize="lg" fontWeight="bold" mt={4}>
             Metano Construction
           </Text>
           <Text fontSize="sm" color="gray.500" mt={2}>
             Current Contractor
           </Text>
-
           {/* Makao Agent Section */}
           <Box mt={6} textAlign="center">
             <Avatar.Root>
               <Avatar.Fallback name="Makao Agent" />
-              <Avatar.Image src="https://via.placeholder.com/150" /> {/* Replace with actual agent image */}
+              <Avatar.Image src="https://via.placeholder.com/150" />
             </Avatar.Root>
             <Text fontSize="lg" fontWeight="bold" mt={4}>
               Jane Smith
@@ -338,10 +405,9 @@ const MyProjects = () => {
 
       {/* File Uploads Section */}
       <Box>
-        
         <Box p={4} borderWidth="1px" borderRadius="lg" boxShadow="md">
           <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="xl">File Uploads</Heading>
+            <Heading size="xl">Project Documents</Heading>
           </Flex>
           {fileUploads.length > 0 ? (
             <VStack spacing={4} align="stretch">

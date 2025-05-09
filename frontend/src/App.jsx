@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Box } from "@chakra-ui/react";
-import { Route, Routes, useLocation, useNavigate } from "react-router";
+import { Routes, Route, useLocation, useNavigate } from "react-router";
 
 // Pages
 import Landingpage from "./pages/Landingpage.jsx";
@@ -17,7 +17,10 @@ import SignUp from "./usercomponents/Auth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/ForgotPassword.jsx";
 
 // Dashboard
+import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
 import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
+import ProjectSelection from "./usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectSelect.jsx";
+import MyProjects from "./usercomponents/Dashboard/UserDash/UserDashView/MyProjects.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -39,13 +42,20 @@ const App = () => {
   return (
     <Box>
       <Routes>
+        {/* Landing Page */}
         <Route path="/" element={<><LandingHeader /><Landingpage /></>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/otp-challengesend" element={<OTPChallengeSend />} />
         <Route path="/otp-challengeresp" element={<OTPChallengeResp />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
+
+        {/* Dashboard with Nested Routes */}
+        <Route path="/dashboard" element={<DashLayout />}>
+          <Route index element={<UserDashboard />} /> {/* dashboard home */}
+          <Route path="myprojects" element={<ProjectSelection />} /> {/* Project selection */}
+          <Route path="myprojects/:id" element={<MyProjects />} /> {/* Project details */}
+        </Route>
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />
