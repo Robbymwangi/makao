@@ -21,6 +21,7 @@ import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
 import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
 import ProjectSelection from "./usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectSelect.jsx";
 import MyProjects from "./usercomponents/Dashboard/UserDash/UserDashView/MyProjects.jsx";
+import Reports from "./usercomponents/Dashboard/UserDash/UserDashView/Reports.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -55,6 +56,7 @@ const App = () => {
           <Route index element={<UserDashboard />} /> {/* dashboard home */}
           <Route path="myprojects" element={<ProjectSelection />} /> {/* Project selection */}
           <Route path="myprojects/:id" element={<MyProjects />} /> {/* Project details */}
+          <Route path="reports" element=  {<Reports />} /> {/* Reports */}
         </Route>
 
         {/* Fallback Route */}
