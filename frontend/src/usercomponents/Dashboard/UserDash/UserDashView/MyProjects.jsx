@@ -110,9 +110,9 @@ const MyProjects = () => {
   }
 
   return (
-    <VStack spacing={6} align="stretch">
+    <VStack spacing={6} align="stretch" >
       {/* Breadcrumb */}
-      <Breadcrumb.Root>
+      <Breadcrumb.Root mb={2}>
         <Breadcrumb.List>
           <Breadcrumb.Item>
             <Breadcrumb.Link 
@@ -132,17 +132,6 @@ const MyProjects = () => {
 
       {/* Project Card */}
       <Box>
-        <Flex justify="space-between" align="center" mt={4} gap={4} wrap="wrap">
-          <VStack align="start" spacing={1} flex="1" minW="0">
-            <Text fontSize="2xl" fontWeight="bold">
-              My Projects
-            </Text>
-            <Text fontSize="md" color="gray.500">
-              Overview of your projects and milestones
-            </Text>
-          </VStack>
-        </Flex>
-
         <Card.Root w="100%" position="relative" mt={10} borderRadius="lg" overflow="hidden">
           <Image
             src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80"

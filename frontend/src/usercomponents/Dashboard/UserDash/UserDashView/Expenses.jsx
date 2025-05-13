@@ -6,7 +6,7 @@ const Expenses = () => {
   return (
     <VStack spacing={4} align="stretch" p={{ base: 4, md: 6 }} minH="50vh">
       {/* Page Title */}
-      <Heading size="2xl" mb={6} color="gray.700" textAlign="left" fontWeight="bold">
+      <Heading size="2xl" mb={6} color="gray.700" textAlign="left" fontWeight="bold" >
         Expenses Dashboard
       </Heading>
 

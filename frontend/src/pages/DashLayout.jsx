@@ -11,11 +11,12 @@ import {
   Drawer,
   CloseButton,
   Portal,
-  Button
+  Avatar,
+  Stack,
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
-import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings } from "lucide-react";
-import { Squash as Hamburger } from "hamburger-react";
+import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
+import { Squash as Hamburger, Squash } from "hamburger-react";
 
 const menuItems = [
   { label: "Home", icon: Home, route: "/dashboard" },
@@ -33,7 +34,6 @@ const DashLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // Determine selected menu based on current route
   const selectedMenu =
     menuItems.find((item) =>
       location.pathname === "/dashboard"
@@ -56,41 +56,32 @@ const DashLayout = () => {
       px={isMobile ? 4 : collapsed ? 2 : 4}
     >
       <HStack justify="space-between" mb={8}>
-        {!collapsed && (
+        {!collapsed && !isMobile && (
           <Text fontSize="xl" fontWeight="bold" fontFamily="Playfair Display">
             Dashboard
           </Text>
         )}
-        {isMobile ? (
-          <Drawer.CloseTrigger asChild>
-            <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-              <X size={20} />
+        {/* Conditionally render the X or Hamburger button depending on collapsed state, only if the screen size is not small */}
+          {!isMobile && (
+            <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
+              <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
             </Box>
-          </Drawer.CloseTrigger>
-        ) : (
-          <Hamburger
-            toggled={!collapsed}
-            toggle={toggleSidebar}
-            size={20}
-            duration={0.3}
-            easing="ease-in-out"
-          />
-        )}
-      </HStack>
+          )}
+              </HStack>
 
-      <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
-        {menuItems.map(({ label, icon: Icon, route }, idx) => (
-          <HStack
-            key={idx}
-            as="button"
-            spacing={3}
-            px={isMobile ? 3 : collapsed ? 0 : 3}
-            py={2}
-            borderRadius="md"
-            _hover={{ bg: "gray.100" }}
-            justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
-            bg={selectedMenu === label ? "gray.100" : "transparent"}
-            onClick={() => {
+              <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
+          {menuItems.map(({ label, icon: Icon, route }, idx) => (
+            <HStack
+              key={idx}
+              as="button"
+              spacing={3}
+              px={isMobile ? 3 : collapsed ? 0 : 3}
+              py={2}
+              borderRadius="md"
+              _hover={{ bg: "gray.100" }}
+              justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
+              bg={selectedMenu === label ? "gray.100" : "transparent"}
+              onClick={() => {
               navigate(route);
               if (isMobile) onClose();
             }}
@@ -145,31 +136,77 @@ const DashLayout = () => {
           <SidebarContent onClose={toggleSidebar} />
         </Box>
       )}
-            {/* Mobile Drawer */}
-            {isMobile && (
-        <Drawer.Root open={isOpen} onOpenChange={open => open ? onOpen() : onClose()} placement="left">
-          <Portal>
-            <Drawer.Backdrop />
-            <Drawer.Positioner>
-              <Drawer.Content>
-                <Drawer.Header>
-                  <Drawer.Title>Menu</Drawer.Title>
-                  <Drawer.CloseTrigger asChild>
-                    <CloseButton size="sm" />
-                  </Drawer.CloseTrigger>
-                </Drawer.Header>
-                <Drawer.Body p={0}>
-                  <SidebarContent isMobile onClose={onClose} />
-                </Drawer.Body>
-              </Drawer.Content>
-            </Drawer.Positioner>
-          </Portal>
-        </Drawer.Root>
-      )}
+
+      {/* Header Bar */}
+      <Box
+        as="header"
+        bg="white"
+        boxShadow="sm"
+        w="100%"
+        h="60px"
+        position="fixed"
+        top="0"
+        left="0"
+        zIndex="9"
+      >
+        <Flex align="center" justify="space-between" h="100%" px={6}>
+          {isMobile && (
+            <>
+              {/* Mobile Drawer */}
+              <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+                <Drawer.Trigger asChild>
+                  <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                    <Menu size={20} />
+                  </Box>
+                </Drawer.Trigger>
+                <Portal>
+                  <Drawer.Backdrop />
+                  <Drawer.Positioner>
+                    <Drawer.Content>
+                      <Drawer.Header>
+                        <Drawer.Title>Menu</Drawer.Title>
+                        <Drawer.CloseTrigger asChild>
+                          <CloseButton size="sm" />
+                        </Drawer.CloseTrigger>
+                      </Drawer.Header>
+                      <Drawer.Body p={0}>
+                        <SidebarContent isMobile={isMobile} onClose={onClose} />
+                      </Drawer.Body>
+                    </Drawer.Content>
+                  </Drawer.Positioner>
+                </Portal>
+              </Drawer.Root>
+            </>
+          )}
+          <Text
+            fontSize="2xl"
+            fontWeight="bold"            
+            ml={{ base: collapsed ? "60px" : "250px" } }
+            transition="margin-left 0.3s ease-in-out"
+            fontFamily="Playfair Display , serif"
+          >
+            Makao Manager
+          </Text>
+          <HStack spacing={4}>
+            <Avatar.Root>
+              <Avatar.Fallback name="Joel Miller" />
+              <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
+              </Avatar.Root>
+              <Stack gap={0}>
+                <Text fontSize="sm" fontWeight="bold">
+                  Joel Miller
+                </Text>
+                <Text fontSize="xs" color="gray.500">
+                  joel.miller@example.com
+                </Text>
+              </Stack>
+              </HStack>
+        </Flex>
+      </Box>
 
       {/* Main Content */}
-      <Box flex="1" overflow="auto" p={6}>
-        <Box bg="white" boxShadow="md" borderRadius="lg" p={6} minH="100%">
+      <Box flex="1" overflow="auto" mt="60px">
+        <Box bg="white" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
           <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
           <Outlet />
         </Box>
