@@ -4,7 +4,7 @@ import { Image, Plus } from "lucide-react";
 
 const PhotoProgress = () => {
   return (
-    <Box p={4} borderWidth="1px" borderRadius="xl" boxShadow="xl" mt={4}>
+    <Box p={4} borderWidth="1px" borderRadius="xl" boxShadow="sm" mt={4}>
       <Flex justify="space-between" align="center" mb={4}>
         <Text fontSize="lg" fontWeight="semibold">Photo Progress</Text>
         <Flex as="button" align="center" gap={2} px={4} py={2} borderRadius="md" _hover={{ bg: "gray.100" }}>

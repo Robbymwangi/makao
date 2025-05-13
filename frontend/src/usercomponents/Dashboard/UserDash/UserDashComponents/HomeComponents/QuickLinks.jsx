@@ -4,7 +4,7 @@ import { Link2, Plus } from "lucide-react";
 
 const QuickLinks = () => {
   return (
-    <Box p={4} borderWidth="1px" borderRadius="lg" boxShadow="lg" mt={6}>
+    <Box p={4} borderWidth="1px" borderRadius="lg" boxShadow="sm" mt={6}>
       <Flex justify="space-between" align="center" mb={4}>
         <Text fontSize="lg" fontWeight="semibold">Quick Links</Text>
         <Flex as="button" align="center" gap={2} px={4} py={2} borderRadius="md" _hover={{ bg: "gray.100" }}>

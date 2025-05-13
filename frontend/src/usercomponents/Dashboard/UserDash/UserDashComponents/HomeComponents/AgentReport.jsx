@@ -5,7 +5,7 @@ import { MessageSquare } from "lucide-react";
 
 const AgentReport = () => {
   return (
-    <Box p={6} borderWidth="1px" borderRadius="xl" boxShadow="xl" mt={8}>
+    <Box p={6} borderWidth="1px" borderRadius="xl" boxShadow="sm" mt={8}>
       <Text fontSize="lg" fontWeight="semibold" mb={4}>Agent's Summary</Text>
       <Flex gap={6} direction={{ base: "column", md: "row" }} align="start">
         <HStack spacing={4} flex={1}>

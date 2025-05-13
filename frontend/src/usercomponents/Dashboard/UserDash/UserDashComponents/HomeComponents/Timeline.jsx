@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 
 const ProjectTimeline = () => {
   return (
-    <Box p={4} h={"360px"} borderWidth="1px" borderRadius="lg" flex="1" boxShadow="lg">
+    <Box p={4} h={"360px"} borderWidth="1px" borderRadius="lg" flex="1" boxShadow="sm">
       <Text fontSize="lg" fontWeight="semibold" mb={6}>Project Timeline</Text>
       <Timeline.Root variant="subtle">
         <Timeline.Item>
