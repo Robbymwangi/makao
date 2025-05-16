@@ -57,8 +57,8 @@ const DashLayout = () => {
     >
       <HStack justify="space-between" mb={8}>
         {!collapsed && !isMobile && (
-          <Text fontSize="xl" fontWeight="bold" fontFamily="Playfair Display">
-            Dashboard
+          <Text fontSize="xl" fontFamily="Playfair Display">
+            Menu
           </Text>
         )}
         {/* Conditionally render the X or Hamburger button depending on collapsed state, only if the screen size is not small */}
@@ -153,58 +153,60 @@ const DashLayout = () => {
           {isMobile && (
             <>
               {/* Mobile Drawer */}
-              <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
-                <Drawer.Trigger asChild>
-                  <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-                    <Menu size={20} />
+                      <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+                      <Drawer.Trigger asChild>
+                        <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                        <Menu size={20} />
+                        </Box>
+                      </Drawer.Trigger>
+                      <Portal>
+                        <Drawer.Backdrop />
+                        <Drawer.Positioner>
+                        <Drawer.Content>
+                          <Drawer.Header>
+                          <Drawer.Title>Menu</Drawer.Title>
+                          <Drawer.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Drawer.CloseTrigger>
+                          </Drawer.Header>
+                          <Drawer.Body p={0}>
+                          <SidebarContent isMobile={isMobile} onClose={onClose} />
+                          </Drawer.Body>
+                        </Drawer.Content>
+                        </Drawer.Positioner>
+                      </Portal>
+                      </Drawer.Root>
+                    </>
+                    )}
+                    <Text
+                    fontSize="2xl"            
+                    ml={{ base: collapsed ? "60px" : "250px" } }
+                    transition="margin-left 0.3s ease-in-out"
+                    fontFamily="Playfair Display , serif"
+                    cursor={"pointer"}
+                    onClick={() => navigate("/dashboard")}
+                    >
+                    <Box as="span" fontWeight="bold">Makao </Box>
+                    <Box as="span" fontWeight="normal">Manager</Box>
+                    </Text>
+                    <HStack spacing={4}>
+                    <Avatar.Root>
+                      <Avatar.Fallback name="Joel Miller" />
+                      <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
+                      </Avatar.Root>
+                      <Stack gap={0}>
+                      <Text fontSize="sm" fontWeight="bold">
+                        Joel Miller
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        joel.miller@example.com
+                      </Text>
+                      </Stack>
+                      </HStack>
+                  </Flex>
                   </Box>
-                </Drawer.Trigger>
-                <Portal>
-                  <Drawer.Backdrop />
-                  <Drawer.Positioner>
-                    <Drawer.Content>
-                      <Drawer.Header>
-                        <Drawer.Title>Menu</Drawer.Title>
-                        <Drawer.CloseTrigger asChild>
-                          <CloseButton size="sm" />
-                        </Drawer.CloseTrigger>
-                      </Drawer.Header>
-                      <Drawer.Body p={0}>
-                        <SidebarContent isMobile={isMobile} onClose={onClose} />
-                      </Drawer.Body>
-                    </Drawer.Content>
-                  </Drawer.Positioner>
-                </Portal>
-              </Drawer.Root>
-            </>
-          )}
-          <Text
-            fontSize="2xl"
-            fontWeight="bold"            
-            ml={{ base: collapsed ? "60px" : "250px" } }
-            transition="margin-left 0.3s ease-in-out"
-            fontFamily="Playfair Display , serif"
-          >
-            Makao Manager
-          </Text>
-          <HStack spacing={4}>
-            <Avatar.Root>
-              <Avatar.Fallback name="Joel Miller" />
-              <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
-              </Avatar.Root>
-              <Stack gap={0}>
-                <Text fontSize="sm" fontWeight="bold">
-                  Joel Miller
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  joel.miller@example.com
-                </Text>
-              </Stack>
-              </HStack>
-        </Flex>
-      </Box>
 
-      {/* Main Content */}
+                  {/* Main Content */}
       <Box flex="1" overflow="auto" mt="60px">
         <Box bg="white" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
           <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />

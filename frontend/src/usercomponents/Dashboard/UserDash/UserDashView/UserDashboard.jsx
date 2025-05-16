@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { VStack, HStack, Text } from "@chakra-ui/react";
+import React, { useEffect, useState } from "react";
+import { VStack, HStack, Text, Heading } from "@chakra-ui/react";
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
 import ProjectTimeline from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Timeline";
@@ -8,10 +8,30 @@ import PhotoProgress from "@/usercomponents/Dashboard/UserDash/UserDashComponent
 import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/QuickLinks";
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
 
+// Mock function to simulate fetching user data
+const fetchUser = () =>
+  new Promise((resolve) =>
+    setTimeout(() => resolve({ name: "Joel Miller" }), 500)
+  );
+
 const UserDashboard = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetchUser().then((data) => setUser(data));
+  }, []);
+
   return (
     <VStack spacing={6} align="stretch">
-      <Text fontSize="2xl" fontWeight="bold" paddingBottom={"8"}>Welcome back</Text>
+      <Heading
+        fontSize="4xl"
+        fontWeight="bold"
+        paddingBottom={"8"}
+        fontFamily={"Playfair display"}
+      >
+        {user ? `Welcome back, ${user.name}` : "Welcome back"}
+      </Heading>
+
       <VStack spacing={{ base: 8, md: 12 }} align="fill">
         {/* Stats Cards */}
         <StatsCards />

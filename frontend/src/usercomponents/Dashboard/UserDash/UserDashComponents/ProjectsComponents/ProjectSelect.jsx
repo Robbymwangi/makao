@@ -24,7 +24,7 @@ const ProjectSelection = () => {
 
   return (
     <VStack spacing={6} align="stretch" p={4}>
-      <Text fontSize="2xl" fontWeight="bold" mb={8}>
+      <Text fontSize="2xl" fontWeight="bold" mb={8} fontFamily={"Playfair Display, serif"}>
         Select a Project
       </Text>
       {projects.map((project) => (
