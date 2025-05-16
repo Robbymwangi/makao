@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { VStack, HStack, Text, Heading } from "@chakra-ui/react";
+import { VStack, HStack, Text, Heading, useBreakpointValue } from "@chakra-ui/react";
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
 import ProjectTimeline from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Timeline";
@@ -28,6 +28,7 @@ const UserDashboard = () => {
         fontWeight="bold"
         paddingBottom={"8"}
         fontFamily={"Playfair display"}
+        textAlign={useBreakpointValue({ base: "center", md: "left" })} // Center on smaller screens
       >
         {user ? `Welcome back, ${user.name}` : "Welcome back"}
       </Heading>

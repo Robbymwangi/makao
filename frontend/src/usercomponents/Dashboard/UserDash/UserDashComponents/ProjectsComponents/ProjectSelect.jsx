@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Text, VStack, Image, Badge, Stack } from "@chakra-ui/react";
+import { Box, Text, VStack, Image, Badge, Stack, useBreakpointValue } from "@chakra-ui/react";
 import { useNavigate } from "react-router";
 
 const ProjectSelection = () => {
@@ -23,8 +23,18 @@ const ProjectSelection = () => {
   ];
 
   return (
-    <VStack spacing={6} align="stretch" p={4}>
-      <Text fontSize="2xl" fontWeight="bold" mb={8} fontFamily={"Playfair Display, serif"}>
+    <VStack
+      spacing={6}
+      align={useBreakpointValue({ base: "center", md: "stretch" })} // Center on smaller screens
+      p={4}
+    >
+      <Text
+        fontSize="4xl"
+        fontWeight="bold"
+        mb={8}
+        fontFamily={"Playfair Display, serif"}
+        textAlign={useBreakpointValue({ base: "center", md: "left" })} // Center title on smaller screens
+      >
         Select a Project
       </Text>
       {projects.map((project) => (
@@ -36,6 +46,8 @@ const ProjectSelection = () => {
           boxShadow="md"
           onClick={() => navigate(`/dashboard/myprojects/${project.id}`)}
           cursor="pointer"
+          marginBottom={4}
+          w={useBreakpointValue({ base: "100%", md: "100%" })} 
         >
           <Image src={project.image} alt={project.name} objectFit="cover" w="100%" h="200px" />
           <Box p={4}>
