@@ -23,7 +23,7 @@ import {
   DrawerRoot,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { Menu } from 'lucide-react';
+import { ExternalLink, Menu } from 'lucide-react';
 import { ColorModeButton } from '@/components/ui/color-mode';
 
 // Add this CSS in the same file or in your global CSS
@@ -473,15 +473,21 @@ const LandingHeader = () => {
           </HStack>
 
           {/* Buttons - Large devices */}
-          <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
-            <Button variant="outline" onClick={handleLoginClick}>
-              Log In
-            </Button>
-            <Button onClick={handleSignUpClick}>Sign Up</Button>
-            <ColorModeButton />
-          </HStack>
+                <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
+                <Button
+                  variant="outline"
+                  color="black"
+                  borderColor="black"
+                  _hover={{ bg: "black", color: "white", borderColor: "black" }}
+                  onClick={handleLoginClick}
+                >
+                  Go To PMP
+                  <ExternalLink/>
+                </Button>
+                <ColorModeButton />
+                </HStack>
 
-          {/* Navigation Links - Small devices (Drawer) */}
+                {/* Navigation Links - Small devices (Drawer) */}
           <Box display={{ base: 'block', lg: 'none' }}>
             <DrawerRoot open={open} onOpenChange={(e) => setOpen(e.open)}>
               <DrawerBackdrop />
