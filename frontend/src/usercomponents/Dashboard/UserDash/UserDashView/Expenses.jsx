@@ -13,12 +13,13 @@ import {
   Flex,
   Grid,
   GridItem,
+  SimpleGrid,
 } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 
 const Expenses = () => {
   const [activeMenu, setActiveMenu] = useState("Overview");
-  const isMobile = useBreakpointValue({ base: true, md: false }); // Determine if the screen is small
+  const isMobile = useBreakpointValue({ base: true, md: false }); 
 
   const menuItems = [
     { label: "Overview", value: "overview" },
@@ -29,7 +30,13 @@ const Expenses = () => {
 
   return (
     <>
-      <VStack spacing={4} align="stretch" p={{ base: 4, md: 6 }} minH="50vh">
+      <VStack 
+        spacing={4} 
+        align="stretch" 
+        p={{ base: 4, md: 6 }} 
+        pt={{ base: 1, md: 1 }} 
+        minH="50vh"
+      >
         {/* Top Section */}
         <Flex
           justifyContent="space-between"
@@ -50,14 +57,14 @@ const Expenses = () => {
 
           {/* Menu Section */}
           {isMobile ? (
-            // Dropdown for smaller screens
+            
             <Menu.Root>
               <Menu.Trigger asChild>
                 <Button
                   variant="outline"
                   size="lg"
                   w="50%"
-                  mt={4} // Add margin-top for spacing on smaller screens
+                  mt={4} 
                 >
                   {activeMenu}
                   {<ChevronDown size={16} />}
@@ -108,13 +115,14 @@ const Expenses = () => {
         <Flex direction={{ base: "column", md: "row" }} gap={4} alignItems="flex-start">
           {/* Main Box */}
           <Box
-            flex="1"
+            flex={{ base: "none", md: "1" }} 
+            w={{ base: "100%", md: "auto" }}
             p={4}
             bg="gray.100"
             borderRadius="md"
             boxShadow="sm"
             textAlign="center"
-            h="400px"
+            h="450px"
           >
             <Text fontSize="md" color="gray.700">
               Additional information or content can go here.
@@ -130,7 +138,7 @@ const Expenses = () => {
               borderRadius="md"
               boxShadow="sm"
               textAlign="center"
-              h="400px" // Set a fixed height for the right box
+              h="450px" 
             >
               <Text fontSize="md" color="gray.700">
                 This is the right box, visible only on larger screens.
@@ -140,88 +148,85 @@ const Expenses = () => {
         </Flex>
 
         {/* Grid Section */}
-        <Grid
-          templateRows="repeat(2, 1fr)" // Two rows
-          templateColumns="repeat(4, 1fr)" // Four columns
-          gap={6} // Spacing between grid items
+        <SimpleGrid 
+          columns={{ base: 1, md: 3 }} 
+          columnGap={6} 
+          rowGap={6} 
           mt={8}
         >
           {/* First Box */}
-          <GridItem colSpan={1}>
-            <Box
-              bg="blue.100"
-              p={6}
-              borderRadius="md"
-              boxShadow="sm"
-              textAlign="center"
-              h="210px"
-              w="100%" // Ensure it spans the grid column width
-            >
-              <Text fontSize="lg" fontWeight="bold">
-                Summary 1
-              </Text>
-              <Text fontSize="sm" color="gray.600">
-                Details about summary 1.
-              </Text>
-            </Box>
-          </GridItem>
+          <Box
+            bg="blue.100"
+            p={6}
+            borderRadius="md"
+            boxShadow="sm"
+            textAlign="center"
+            h={{ base: "150px", md: "400px" }} 
+            w="100%"
+            minWidth={{ base: "250px", md: "350px" }} 
+          >
+            <Text fontSize="lg" fontWeight="bold">
+              Summary 1
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              Details about summary 1.
+            </Text>
+          </Box>
 
           {/* Second Box */}
-          <GridItem colSpan={1}>
-            <Box
-              bg="yellow.100"
-              p={6}
-              borderRadius="md"
-              boxShadow="sm"
-              textAlign="center"
-              h="210px"
-              w="100%"
-            >
-              <Text fontSize="lg" fontWeight="bold">
-                Summary 3
-              </Text>
-              <Text fontSize="sm" color="gray.600">
-                Details about summary 3.
-              </Text>
-            </Box>
-          </GridItem>
+          <Box
+            bg="yellow.100"
+            p={6}
+            borderRadius="md"
+            boxShadow="sm"
+            textAlign="center"
+            h={{ base: "150px", md: "400px" }} 
+            w="100%"
+            minWidth={{ base: "250px", md: "350px" }} 
+          >
+            <Text fontSize="lg" fontWeight="bold">
+              Summary 3
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              Details about summary 3.
+            </Text>
+          </Box>
 
           {/* Third Box */}
-          <GridItem colSpan={2}>
-            <Box
-              bg="red.100"
-              p={6}
-              borderRadius="md"
-              boxShadow="sm"
-              textAlign="center"
-              h="210px"
-              w="100%"
-            >
-              <Text fontSize="lg" fontWeight="bold">
-                Advertisement
-              </Text>
-              <Text fontSize="sm" color="gray.600">
-                This space can be used for advertising or other important information.
-              </Text>
-            </Box>
-          </GridItem>
-        </Grid>
+          <Box
+            bg="red.100"
+            p={6}
+            borderRadius="md"
+            boxShadow="sm"
+            textAlign="center"
+            h={{ base: "150px", md: "400px" }} 
+            w="100%"
+            minWidth={{ base: "250px", md: "350px" }} 
+          >
+            <Text fontSize="lg" fontWeight="bold">
+              Advertisement
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              This space can be used for advertising or other important information.
+            </Text>
+          </Box>
+        </SimpleGrid>
 
-        {/* Full-Width Box */}
+        {/* New Box after Grid */}
         <Box
           bg="green.100"
-          p={8}
+          p={6}
           borderRadius="md"
           boxShadow="sm"
           textAlign="center"
-          mt={4} // Smaller margin-top to bring it closer to the grid
-          w="100%" // Occupy the entire width
+          mt={10} // Ensure even spacing with the grid above
+          h="400px"
         >
           <Text fontSize="lg" fontWeight="bold">
-            Full-Width Section
+            Additional Information
           </Text>
           <Text fontSize="sm" color="gray.600">
-            This is a full-width box added below the grid.
+            This is a new box added after the grid section with some important content.
           </Text>
         </Box>
       </VStack>

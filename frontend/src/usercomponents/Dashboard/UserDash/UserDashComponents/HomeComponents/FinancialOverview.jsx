@@ -16,7 +16,7 @@ const FinancialHealth = () => {
   ];
 
 
-  const chartWidth = useBreakpointValue({ base: 300, md: 600 });
+  const chartWidth = useBreakpointValue({ base: 370, md: 600 });
 
   return (
     <Stat.Root p={4} borderWidth="1px" borderRadius="sm" flex="1" boxShadow="sm">

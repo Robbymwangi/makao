@@ -28,7 +28,7 @@ const StatsCards = () => {
   ];
 
   return (
-    <SimpleGrid columns={{ base: 1, md: 4 }} columnGap="2" rowGap="4">
+    <SimpleGrid columns={{ base: 1, md: 4 }} columnGap="4" rowGap="4">
       {stats.map((stat, idx) => (
         <Stat.Root
           key={stat.label}
