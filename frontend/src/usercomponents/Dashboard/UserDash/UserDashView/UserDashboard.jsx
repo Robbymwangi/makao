@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { VStack, HStack, Text, Heading, useBreakpointValue } from "@chakra-ui/react";
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
@@ -18,11 +18,12 @@ const fetchUser = () =>
 const UserDashboard = () => {
   const [user, setUser] = useState(null);
   const [showName, setShowName] = useState(false);
+  const headingRef = useRef(null); // Create a ref for the heading
 
   useEffect(() => {
     fetchUser().then((data) => {
       setUser(data);
-      setShowName(true); 
+      setShowName(true); // Trigger the fade-in effect
     });
   }, []);
 
@@ -52,8 +53,10 @@ const UserDashboard = () => {
           timeout={500} // Duration of the fade-in effect
           classNames="fade"
           unmountOnExit
+          nodeRef={headingRef} // Pass the ref to CSSTransition
         >
           <Heading
+            ref={headingRef} // Attach the ref to the element
             fontSize="4xl"
             fontWeight="bold"
             paddingBottom={"8"}
