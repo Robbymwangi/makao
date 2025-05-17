@@ -39,8 +39,8 @@ const AgentSection = () => {
           </Button>
         </Flex>
 
-        {/* Images arranged in one row (3 columns) */}
-        <Grid templateColumns="repeat(3, 1fr)" gap={4} w="100%" justifyContent="center">
+        {/* One Image for smaller columns */}
+        <Grid templateColumns="repeat(1, 1fr)" gap={4} w="100%" justifyContent="center">
           <Image
             src="https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa"
             alt="Agent 1"
@@ -49,26 +49,10 @@ const AgentSection = () => {
             h="400px"
             borderRadius={"sm"}
           />
-          <Image
-            src="https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa"
-            alt="Agent 2"
-            objectFit="cover"
-            w="100%"
-            h="400px"
-            borderRadius={"sm"}
-          />
-          <Image
-            src="https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa"
-            alt="Agent 3"
-            objectFit="cover"
-            w="100%"
-            h="400px"
-            borderRadius={"sm"}
-          />
         </Grid>
 
         {/* Bottom Text */}
-        <Box mt={6} p={6} textAlign="center">
+        <Box mt={2} p={6} textAlign="center">
           <Text fontSize="xl" fontFamily="'Playfair Display', serif">
             With over 4 years of experience, our entire team of real estate experts are the very best at what they do.*
           </Text>

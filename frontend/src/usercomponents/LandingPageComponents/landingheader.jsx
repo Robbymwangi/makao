@@ -384,9 +384,6 @@ const LandingHeader = () => {
     navigate('/login');
   };
 
-  const handleSignUpClick = () => {
-    navigate('/signup');
-  };
 
   return (
     <>
@@ -473,21 +470,15 @@ const LandingHeader = () => {
           </HStack>
 
           {/* Buttons - Large devices */}
-                <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
-                <Button
-                  variant="outline"
-                  color="black"
-                  borderColor="black"
-                  _hover={{ bg: "black", color: "white", borderColor: "black" }}
-                  onClick={handleLoginClick}
-                >
-                  Go To PMP
-                  <ExternalLink/>
-                </Button>
-                <ColorModeButton />
-                </HStack>
+          <HStack spacing={8} display={{ base: 'none', lg: 'flex' }} paddingRight={{ base: '0', lg: '114px' }}>
+            <Button variant="outline" onClick={handleLoginClick}>
+              Go To PMP
+              <ExternalLink/>
+            </Button>
+            <ColorModeButton />
+          </HStack>
 
-                {/* Navigation Links - Small devices (Drawer) */}
+          {/* Navigation Links - Small devices (Drawer) */}
           <Box display={{ base: 'block', lg: 'none' }}>
             <DrawerRoot open={open} onOpenChange={(e) => setOpen(e.open)}>
               <DrawerBackdrop />
@@ -509,9 +500,9 @@ const LandingHeader = () => {
                         fontFamily="'Playfair Display', serif"
                         fontSize="xl"
                         color="black"
-                        _hover={{ color: 'gray.600' }}
+                        _hover={{ color: '.8gray00' }}
                         paddingBlock={15}
-                        onClick={() => setOpen(false)} // Close drawer on link click
+                        onClick={() => setOpen(false)} 
                       >
                         {link.label}
                       </Link>
@@ -520,9 +511,15 @@ const LandingHeader = () => {
                 </DrawerBody>
                 <DrawerFooter>
                   <VStack spacing={4} width="100%">
+                    <Button
+                      variant="outline"
+                      width="100%"
+                      onClick={handleLoginClick} 
+                    >
+                      Go To PMP
+                      {<ExternalLink />}
+                    </Button>
                     <ColorModeButton />
-                    <Button width="100%" variant={"outline"} onClick={handleSignUpClick}>Sign Up</Button>
-                    <Button width="100%" onClick={handleLoginClick}>Log In</Button>
                   </VStack>
                 </DrawerFooter>
                 <DrawerCloseTrigger />
