@@ -17,6 +17,7 @@ import {
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
 import { Squash as Hamburger, Squash } from "hamburger-react";
+import { ColorModeButton } from "@/components/ui/color-mode"; // Import the ColorModeButton
 
 const menuItems = [
   { label: "Home", icon: Home, route: "/dashboard" },
@@ -180,21 +181,22 @@ const DashLayout = () => {
             </>
           )}
           <Text
-  fontSize="2xl"
-  ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
-  textAlign={useBreakpointValue({ base: "center", md: "left" })}
-  position={useBreakpointValue({ base: "absolute", md: "relative" })}
-  left={useBreakpointValue({ base: "50%", md: "auto" })}
-  transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
-  transition="margin-left 0.3s ease-in-out"
-  fontFamily="Playfair Display , serif"
-  cursor={"pointer"}
-  onClick={() => navigate("/dashboard")}
->
-  <Box as="span" fontWeight="bold">Makao </Box>
-  <Box as="span" fontWeight="normal">Manager</Box>
-</Text>
+    fontSize="2xl"
+    ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
+    textAlign={useBreakpointValue({ base: "center", md: "left" })}
+    position={useBreakpointValue({ base: "absolute", md: "relative" })}
+    left={useBreakpointValue({ base: "50%", md: "auto" })}
+    transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
+    transition="margin-left 0.3s ease-in-out"
+    fontFamily="Playfair Display , serif"
+    cursor={"pointer"}
+    onClick={() => navigate("/dashboard")}
+  >
+    <Box as="span" fontWeight="bold">Makao </Box>
+    <Box as="span" fontWeight="normal">Manager</Box>
+  </Text>
           <HStack spacing={4}>
+            <ColorModeButton /> {/* Add the dark mode toggle button here */}
             <Avatar.Root>
               <Avatar.Fallback name="Joel Miller" />
               <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
