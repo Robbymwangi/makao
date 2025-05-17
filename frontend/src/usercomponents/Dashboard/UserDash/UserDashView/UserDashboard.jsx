@@ -12,7 +12,7 @@ import { CSSTransition } from "react-transition-group";
 // Mock function to simulate fetching user data
 const fetchUser = () =>
   new Promise((resolve) =>
-    setTimeout(() => resolve({ name: "Joel Miller" }), 500)
+    setTimeout(() => resolve({ name: "Joel Miller" }), 1500)
   );
 
 const UserDashboard = () => {
