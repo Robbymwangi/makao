@@ -29,17 +29,23 @@ const FAQ = () => {
         Find answers to common questions about building with Makao.
       </Box>
 
-      <AccordionRoot multiple defaultValue={["item1"]}>
+      <AccordionRoot multiple defaultValue={["item1"]} variant={"outline"}>
         <Box mb={6}>
           <AccordionItem value="item1">
             <AccordionItemTrigger 
               fontFamily="'Playfair Display', serif" 
               fontWeight="bold" 
               fontSize={{ base: "lg", md: "xl" }}
+              cursor="pointer"
             >
               How do I search for a property?
             </AccordionItemTrigger>
-            <AccordionItemContent>
+            <AccordionItemContent
+              style={{
+                transition: "max-height 0.3s ease, opacity 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
               <Text
                 fontFamily="'Playfair Display', serif"
                 fontSize={{ base: "md", md: "lg" }}
@@ -56,10 +62,16 @@ const FAQ = () => {
               fontFamily="'Playfair Display', serif" 
               fontWeight="bold" 
               fontSize={{ base: "lg", md: "xl" }}
+              cursor="pointer"
             >
               What are the costs involved in buying a home?
             </AccordionItemTrigger>
-            <AccordionItemContent>
+            <AccordionItemContent
+              style={{
+                transition: "max-height 0.3s ease, opacity 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
               <Text
                 fontFamily="'Playfair Display', serif"
                 fontSize={{ base: "md", md: "lg" }}
@@ -76,10 +88,16 @@ const FAQ = () => {
               fontFamily="'Playfair Display', serif" 
               fontWeight="bold" 
               fontSize={{ base: "lg", md: "xl" }}
+              cursor="pointer"
             >
               How can I schedule a viewing?
             </AccordionItemTrigger>
-            <AccordionItemContent>
+            <AccordionItemContent
+              style={{
+                transition: "max-height 0.3s ease, opacity 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
               <Text
                 fontFamily="'Playfair Display', serif"
                 fontSize={{ base: "md", md: "lg" }}
@@ -96,10 +114,16 @@ const FAQ = () => {
               fontFamily="'Playfair Display', serif" 
               fontWeight="bold" 
               fontSize={{ base: "lg", md: "xl" }}
+              cursor="pointer"
             >
               What should I look for during a home inspection?
             </AccordionItemTrigger>
-            <AccordionItemContent>
+            <AccordionItemContent
+              style={{
+                transition: "max-height 0.3s ease, opacity 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
               <Text
                 fontFamily="'Playfair Display', serif"
                 fontSize={{ base: "md", md: "lg" }}
@@ -116,10 +140,16 @@ const FAQ = () => {
               fontFamily="'Playfair Display', serif" 
               fontWeight="bold" 
               fontSize={{ base: "lg", md: "xl" }}
+              cursor="pointer"
             >
               How do I make an offer on a property?
             </AccordionItemTrigger>
-            <AccordionItemContent>
+            <AccordionItemContent
+              style={{
+                transition: "max-height 0.3s ease, opacity 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
               <Text
                 fontFamily="'Playfair Display', serif"
                 fontSize={{ base: "md", md: "lg" }}
