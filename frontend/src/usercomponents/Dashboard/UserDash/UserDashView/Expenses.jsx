@@ -47,7 +47,6 @@ const Expenses = () => {
           {/* Page Title */}
           <Heading
             size="4xl"
-            color="gray.700"
             textAlign={isMobile ? "center" : "left"} 
             fontWeight="bold"
             fontFamily={"Playfair Display, Serif"}
