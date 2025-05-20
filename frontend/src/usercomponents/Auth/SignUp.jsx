@@ -22,7 +22,7 @@ const SignUp = () => {
         <Box mb={6} w="100%">
           <AuthHeader />
         </Box>
-        <Text fontSize="2xl" fontWeight="bold">Sign Up to Makao</Text>
+        <Text fontSize="2xl" fontWeight="bold">Sign Up for Makao</Text>
         <Input placeholder="Full Name" />
         <Input placeholder="Email" />
         <Input placeholder="Password" type="password" />

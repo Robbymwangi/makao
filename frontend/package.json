@@ -28,7 +28,8 @@
     "react-router": "^7.1.5",
     "react-transition-group": "^4.4.5",
     "recharts": "^2.15.3",
-    "router": "^2.0.0"
+    "router": "^2.0.0",
+    "simple-icons": "^14.14.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
