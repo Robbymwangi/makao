@@ -289,9 +289,9 @@ const Expenses = () => {
                     content={<Chart.Tooltip hideLabel />}
                   />
                   <Pie
-                    isAnimationActive={true} // Enable animation
-                    animationDuration={1000} // Set animation duration (in milliseconds)
-                    animationEasing="ease-in-out" // Set easing function
+                    isAnimationActive={true} 
+                    animationDuration={800} 
+                    animationEasing="ease-in-out" 
                     data={pieChartData}
                     dataKey="value"
                     nameKey="name"
