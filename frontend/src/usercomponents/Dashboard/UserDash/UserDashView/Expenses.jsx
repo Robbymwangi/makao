@@ -13,6 +13,14 @@ import {
   Flex,
   SimpleGrid,
   Stat,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Badge,
+  Progress,
 } from "@chakra-ui/react";
 import {
   Area,
@@ -25,438 +33,168 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
 } from "recharts";
 import { Chart, useChart } from "@chakra-ui/charts";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Download, Filter } from "lucide-react";
 
 const Expenses = () => {
   const [activeMenu, setActiveMenu] = useState("Overview");
-  const [selectedFilter, setSelectedFilter] = useState("This Month"); // Track selected filter
+  const [selectedFilter, setSelectedFilter] = useState("This Month");
   const isMobile = useBreakpointValue({ base: true, md: false });
 
   const menuItems = [
     { label: "Overview", value: "overview" },
-    { label: "Monthly Breakdown", value: "monthly-breakdown" },
-    { label: "Yearly Trends", value: "yearly-trends" },
-    { label: "Custom Reports", value: "custom-reports" },
+    { label: "Budget Analysis", value: "budget" },
+    { label: "Cost Breakdown", value: "costs" },
+    { label: "Forecasting", value: "forecast" },
   ];
 
-  const chart = useChart({
-    data: [
-      { labor: 5000, materials: 8000, equipment: 3000, month: "January" },
-      { labor: 4500, materials: 7500, equipment: 2800, month: "February" },
-      { labor: 5200, materials: 8200, equipment: 3100, month: "March" },
-      { labor: 4800, materials: 7700, equipment: 2900, month: "April" },
-      { labor: 5300, materials: 8500, equipment: 3200, month: "May" },
-    ],
-    series: [
-      { name: "labor", color: "teal.solid" },
-      { name: "materials", color: "purple.solid" },
-      { name: "equipment", color: "blue.solid" },
-    ],
-  });
-
-  const pieChartData = [
-    { name: "Labor", value: 5000 + 4500 + 5200 + 4800 + 5300, color: "#319795" },
-    { name: "Materials", value: 8000 + 7500 + 8200 + 7700 + 8500, color: "#805AD5" },
-    { name: "Equipment", value: 3000 + 2800 + 3100 + 2900 + 3200, color: "#3182CE" },
+  // Sample data for charts
+  const monthlyData = [
+    { month: "Jan", actual: 50000, planned: 45000 },
+    { month: "Feb", actual: 48000, planned: 45000 },
+    { month: "Mar", actual: 52000, planned: 45000 },
+    { month: "Apr", actual: 47000, planned: 45000 },
+    { month: "May", actual: 53000, planned: 45000 },
+    { month: "Jun", actual: 49000, planned: 45000 },
   ];
+
+  const expenseCategories = [
+    { name: "Materials", value: 35000, color: "#319795" },
+    { name: "Labor", value: 25000, color: "#805AD5" },
+    { name: "Equipment", value: 15000, color: "#3182CE" },
+    { name: "Permits", value: 8000, color: "#DD6B20" },
+    { name: "Other", value: 5000, color: "#38A169" },
+  ];
+
+  const recentTransactions = [
+    { date: "2024-03-15", description: "Construction Materials", amount: 12500, status: "completed" },
+    { date: "2024-03-14", description: "Labor Costs", amount: 8000, status: "pending" },
+    { date: "2024-03-13", description: "Equipment Rental", amount: 5000, status: "completed" },
+    { date: "2024-03-12", description: "Permits", amount: 2000, status: "completed" },
+  ];
+
+  const budgetProgress = {
+    total: 150000,
+    spent: 88000,
+    remaining: 62000,
+    percentageUsed: (88000 / 150000) * 100,
+  };
 
   return (
-    <>
-      <VStack
-        spacing={4}
-        align="stretch"
-        p={{ base: 4, md: 6 }}
-        pt={{ base: 1, md: 1 }}
-        minH="50vh"
-      >
-        {/* Top Section */}
-        <Flex
-          justifyContent="space-between"
-          alignItems="center"
-          mb={6}
-          direction={isMobile ? "column" : "row"}
-        >
-          {/* Page Title */}
-          <Heading
-            size="4xl"
-            textAlign={isMobile ? "center" : "left"}
-            fontWeight="bold"
-            fontFamily={"Playfair Display, Serif"}
-          >
-            Expenses Dashboard
-          </Heading>
+    <VStack spacing={6} align="stretch">
+      {/* Header Section */}
+      <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
+        <Heading size="lg" fontFamily="Playfair Display">Financial Dashboard</Heading>
+        <HStack spacing={4}>
+          <Button leftIcon={<Filter size={20} />} variant="outline">
+            Filter
+          </Button>
+          <Button leftIcon={<Download size={20} />} variant="outline">
+            Export
+          </Button>
+        </HStack>
+      </Flex>
 
-          {/* Menu Section */}
-          {isMobile ? (
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button variant="outline" size="lg" w="50%" mt={4}>
-                  {activeMenu}
-                  {<ChevronDown size={16} />}
-                </Button>
-              </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content>
-                    {menuItems.map((item) => (
-                      <Menu.Item
-                        key={item.value}
-                        value={item.value}
-                        onClick={() => setActiveMenu(item.label)}
-                      >
-                        {item.label}
-                      </Menu.Item>
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
-            </Menu.Root>
-          ) : (
-            <Flex justifyContent="flex-end" ml={4}>
-              <HStack align="center">
-                {menuItems.map((item) => (
-                  <Text
-                    key={item.value}
-                    fontSize="sm"
-                    fontWeight={activeMenu === item.label ? "bold" : "normal"}
-                    color={activeMenu === item.label ? "black.500" : "gray.600"}
-                    cursor="pointer"
-                    px={2}
-                    onClick={() => setActiveMenu(item.label)}
-                    _hover={{
-                      textDecoration: "underline",
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                ))}
-              </HStack>
-            </Flex>
-          )}
-        </Flex>
+      {/* Budget Overview Cards */}
+      <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
+        <Stat.Root p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Stat.Label>Total Budget</Stat.Label>
+          <Stat.ValueText fontSize="2xl">${budgetProgress.total.toLocaleString()}</Stat.ValueText>
+        </Stat.Root>
+        <Stat.Root p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Stat.Label>Spent</Stat.Label>
+          <Stat.ValueText fontSize="2xl" color="red.500">
+            ${budgetProgress.spent.toLocaleString()}
+          </Stat.ValueText>
+        </Stat.Root>
+        <Stat.Root p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Stat.Label>Remaining</Stat.Label>
+          <Stat.ValueText fontSize="2xl" color="green.500">
+            ${budgetProgress.remaining.toLocaleString()}
+          </Stat.ValueText>
+        </Stat.Root>
+        <Stat.Root p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Stat.Label>Budget Utilized</Stat.Label>
+          <VStack align="stretch" spacing={2}>
+            <Stat.ValueText fontSize="2xl">{budgetProgress.percentageUsed.toFixed(1)}%</Stat.ValueText>
+            <Progress value={budgetProgress.percentageUsed} colorScheme="blue" borderRadius="full" />
+          </VStack>
+        </Stat.Root>
+      </SimpleGrid>
 
-        {/* Main Content Section */}
-        <Flex direction={{ base: "column", md: "row" }} gap={4} alignItems="flex-start">
-          {/* Main Box (Area Chart) */}
-          <Box
-            flex={{ base: "none", md: "1" }}
-            w={{ base: "100%", md: "auto" }}
-            p={4}
-            bg="white.600"
-            borderRadius="lg"
-            boxShadow="sm"
-            textAlign="center"
-            h="450px"
-            borderWidth="2px"
-          >
-            {/* Chart Title and Filter Button */}
-            <Flex justifyContent="space-between" alignItems="center" mb={8}>
-              <Text fontSize="xl" fontWeight="bold" textAlign={"left"}>
-                Construction Expenses Overview
-              </Text>
-
-              {/* Filter Menu Button */}
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <Flex
-                    as="button"
-                    align="center"
-                    gap={2}
-                    px={4}
-                    py={2}
-                    borderRadius="md"
-                    _hover={{ bg: "gray.100" }}
-                    boxShadow="sm"
-                  >
-                    <ChevronDown size={16} />
-                    <Text>{selectedFilter}</Text> {/* Display selected filter */}
-                  </Flex>
-                </Menu.Trigger>
-                <Portal>
-                  <Menu.Positioner>
-                    <Menu.Content minW="200px" boxShadow="xl">
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("This Month")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        This Month
-                      </Menu.Item>
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("Quarterly")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        Quarterly
-                      </Menu.Item>
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("Yearly")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        Yearly
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Portal>
-              </Menu.Root>
-            </Flex>
-
-            {/* Area Chart */}
-            <Chart.Root maxH="xs" chart={chart}>
-              <AreaChart
-                data={chart.data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-              >
-                <CartesianGrid
-                  stroke={chart.color("border")}
-                  vertical={true}
-                  horizontal={true}
-                  strokeDasharray="3 3"
-                />
-                <XAxis
-                  dataKey={chart.key("month")}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip
-                  cursor={false}
-                  animationDuration={100}
-                  content={<Chart.Tooltip />}
-                />
-                <Legend content={<Chart.Legend />} />
-
-                {chart.series.map((item) => (
-                  <defs key={item.name}>
-                    <Chart.Gradient
-                      id={`${item.name}-gradient`}
-                      stops={[
-                        { offset: "0%", color: item.color, opacity: 0.3 },
-                        { offset: "100%", color: item.color, opacity: 0.05 },
-                      ]}
-                    />
-                  </defs>
-                ))}
-
-                {chart.series.map((item) => (
-                  <Area
-                    key={item.name}
-                    type="natural"
-                    isAnimationActive={true}
-                    animationDuration={1000}
-                    animationEasing="ease-in-out"
-                    dataKey={chart.key(item.name)}
-                    fill={`url(#${item.name}-gradient)`}
-                    stroke={chart.color(item.color)}
-                    strokeWidth={2}
-                    stackId="a"
-                  />
-                ))}
-              </AreaChart>
-            </Chart.Root>
-          </Box>
-
-          {/* Right Box (Hidden on smaller displays) */}
-          {!isMobile && (
-            <Box
-              w="300px"
-              p={5}
-              bg="white.600"
-              textAlign="center"
-              h="auto"
-              position="relative"
-              borderWidth="2px"
-              borderRadius="md"
-            >
-              {/* Pie Chart Heading */}
-              <Text fontSize="lg" fontWeight="bold" mb={3}>
-                Expense Distribution
-              </Text>
-
-              {/* Pie Chart */}
-              <Chart.Root
-                boxSize="200px"
-                position="relative"
-                mx="auto"
-                chart={chart}
-              >
-                <PieChart>
-                  <Tooltip
-                    cursor={false}
-                    animationDuration={100}
-                    content={<Chart.Tooltip hideLabel />}
-                  />
-                  <Pie
-                    isAnimationActive={true} 
-                    animationDuration={800} 
-                    animationEasing="ease-in-out" 
-                    data={pieChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    labelLine={{ stroke: chart.color("border.emphasized") }}
-                    label={{
-                      fill: chart.color("fg.muted"),
-                      style: { fontWeight: "600" },
-                    }}
-                  >
-                    {pieChartData.map((item) => (
-                      <Cell key={item.name} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    layout="horizontal"
-                    align="center"
-                    verticalAlign="bottom"
-                    wrapperStyle={{
-                      fontSize: "12px",
-                      marginTop: "10px",
-                    }}
-                    formatter={(value, entry) => (
-                      <span style={{ color: entry.color, fontWeight: "bold" }}>
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </Chart.Root>
-
-              {/* Stat Elements Below the Chart */}
-              <Box mt={6}>
-                <SimpleGrid
-                  columns={{ base: 1, md: 2 }}
-                  spacing={4}
-                  textAlign="center"
-                >
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Labor Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$25,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Material Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$39,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={1}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Equipment Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$15,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Expenses
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$79,000</Stat.ValueText>
-                  </Stat.Root>
-                </SimpleGrid>
-              </Box>
-            </Box>
-          )}
-        </Flex>
-
-        {/* Grid Section */}
-        <SimpleGrid columns={{ base: 1, md: 3 }} columnGap={6} rowGap={6} mt={8}>
-          {/* First Box */}
-          <Box
-            bg="blue.100"
-            p={6}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="center"
-            h={{ base: "150px", md: "400px" }}
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-          >
-            <Text fontSize="lg" fontWeight="bold">
-              Summary 1
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              Details about summary 1.
-            </Text>
-          </Box>
-
-          {/* Third Box */}
-          <Box
-            bg="yellow.100"
-            p={6}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="center"
-            h={{ base: "150px", md: "400px" }}
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-          >
-            <Text fontSize="lg" fontWeight="bold">
-              Summary 3
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              Details about summary 3.
-            </Text>
-          </Box>
-
-          {/* Fourth Box */}
-          <Box
-            bg="red.100"
-            p={6}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="center"
-            h={{ base: "150px", md: "400px" }}
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-          >
-            <Text fontSize="lg" fontWeight="bold">
-              Advertisement
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              This space can be used for advertising or other important information.
-            </Text>
-          </Box>
-        </SimpleGrid>
-
-        {/* New Box after Grid */}
-        <Box
-          bg="green.100"
-          p={6}
-          borderRadius="md"
-          boxShadow="sm"
-          textAlign="center"
-          mt={10}
-          h="400px"
-        >
-          <Text fontSize="lg" fontWeight="bold">
-            Additional Information
-          </Text>
-          <Text fontSize="sm" color="gray.600">
-            This is a new box added after the grid section with some important content.
-          </Text>
+      {/* Charts Section */}
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+        {/* Monthly Expenses Trend */}
+        <Box p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Heading size="sm" mb={4}>Monthly Expenses Trend</Heading>
+          <AreaChart width={500} height={300} data={monthlyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Area type="monotone" dataKey="actual" stroke="#3182CE" fill="#3182CE" fillOpacity={0.3} />
+            <Area type="monotone" dataKey="planned" stroke="#805AD5" fill="#805AD5" fillOpacity={0.3} />
+          </AreaChart>
         </Box>
-      </VStack>
-    </>
+
+        {/* Expense Categories */}
+        <Box p={6} bg="white" borderRadius="lg" boxShadow="sm">
+          <Heading size="sm" mb={4}>Expense Categories</Heading>
+          <PieChart width={500} height={300}>
+            <Pie
+              data={expenseCategories}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              label
+            >
+              {expenseCategories.map((entry, index) => (
+                <Cell key={index} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </Box>
+      </SimpleGrid>
+
+      {/* Recent Transactions */}
+      <Box p={6} bg="white" borderRadius="lg" boxShadow="sm">
+        <Heading size="sm" mb={4}>Recent Transactions</Heading>
+        <Table>
+          <Thead>
+            <Tr>
+              <Th>Date</Th>
+              <Th>Description</Th>
+              <Th isNumeric>Amount</Th>
+              <Th>Status</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {recentTransactions.map((transaction, index) => (
+              <Tr key={index}>
+                <Td>{transaction.date}</Td>
+                <Td>{transaction.description}</Td>
+                <Td isNumeric>${transaction.amount.toLocaleString()}</Td>
+                <Td>
+                  <Badge
+                    colorScheme={transaction.status === "completed" ? "green" : "yellow"}
+                  >
+                    {transaction.status}
+                  </Badge>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
+    </VStack>
   );
 };
 
