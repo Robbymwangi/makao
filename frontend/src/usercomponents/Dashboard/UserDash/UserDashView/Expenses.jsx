@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import {
   Box,
   Heading,
@@ -25,10 +25,197 @@ import {
   PieChart,
   Pie,
   Cell,
+  Bar,
+  BarChart,
 } from "recharts";
-import { Chart, useChart } from "@chakra-ui/charts";
-import { ChevronDown } from "lucide-react";
+import { Chart, useChart, BarSegment } from "@chakra-ui/charts";
+import { ChevronDown, Expand } from "lucide-react";
 
+// ExpensesList component for Team Expenses (color bullets)
+const ExpensesList = memo(({ data }) => (
+  <VStack mt={6} align="start" w="100%">
+    {data.map((item) => (
+      <HStack
+        key={item.name}
+        spacing={4}
+        align="center"
+        w="100%"
+        px={2}
+        py={1}
+      >
+        <Box
+          w="12px"
+          h="12px"
+          borderRadius="full"
+          bg={item.color}
+        />
+        <Text fontSize="sm" fontWeight="normal" color="gray.700">
+          {item.name}
+        </Text>
+        <Text
+          fontSize="sm"
+          fontWeight="bold"
+          color="gray.700"
+          ml="auto"
+          px={2}
+          py={1}
+        >
+          ${item.value.toLocaleString()}
+        </Text>
+      </HStack>
+    ))}
+  </VStack>
+));
+
+// ReceiptsList component for Receipts (with additional columns)
+const ReceiptsList = memo(({ data }) => {
+  const isMobile = useBreakpointValue({ base: true, md: false }); // Check screen size
+
+  return (
+    <VStack mt={6} align="start" w="100%">
+      {/* Table Header */}
+      {isMobile ? (
+        // Mobile View: Only show Invoice ID and Cost headings
+        <HStack
+          spacing={4}
+          align="center"
+          w="100%"
+          px={2}
+          py={1}
+          borderBottom="1px solid black" 
+        >
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="1">
+            Invoice ID
+          </Text>
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="1" textAlign="right">
+            Cost
+          </Text>
+        </HStack>
+      ) : (
+        // Desktop View: Show all headings
+        <HStack
+          spacing={4}
+          align="center"
+          w="100%"
+          px={2}
+          py={1}
+          borderBottom="1px solid black" 
+        >
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="1">
+            Invoice ID
+          </Text>
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="2">
+            Company
+          </Text>
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="2">
+            Date
+          </Text>
+          <Text fontSize="sm" fontWeight="bold" color="gray.600" flex="1" textAlign="right">
+            Cost
+          </Text>
+        </HStack>
+      )}
+
+      {/* Table Rows */}
+      {data.map((item) => (
+        <HStack
+          key={item.invoiceId}
+          spacing={4}
+          align="center"
+          w="100%"
+          px={2}
+          py={1}
+          borderBottom="1px solid black" 
+        >
+          {/* Invoice ID */}
+          <Text fontSize="sm" fontWeight="normal" color="gray.700" flex="1">
+            {item.invoiceId}
+          </Text>
+
+          {/* Company and Date (hidden on mobile) */}
+          {!isMobile && (
+            <>
+              <Text fontSize="sm" fontWeight="normal" color="gray.700" flex="2">
+                {item.company}
+              </Text>
+              <Text fontSize="sm" fontWeight="normal" color="gray.700" flex="2">
+                {item.date}
+              </Text>
+            </>
+          )}
+
+          {/* Cost */}
+          <Text
+            fontSize="sm"
+            fontWeight="bold"
+            color="gray.700"
+            flex="1"
+            textAlign="right"
+          >
+            ${item.cost.toLocaleString()}
+          </Text>
+        </HStack>
+      ))}
+    </VStack>
+  );
+});
+
+// Add this above the Expenses component or in a suitable place in the file
+const estimatedActualChart = (selectedFilter) => {
+  // Example data for estimated vs actual expenses per month
+  // You can replace this with real data or fetch based on selectedFilter
+  const data = [
+    { month: "Jan", estimated: 12000, actual: 11000 },
+    { month: "Feb", estimated: 15000, actual: 14000 },
+    { month: "Mar", estimated: 17000, actual: 17500 },
+    { month: "Apr", estimated: 16000, actual: 15500 },
+    { month: "May", estimated: 18000, actual: 18500 },
+  ];
+
+  const chart = useChart({
+    data,
+    series: [
+      { name: "estimated", color: "blue.solid" },
+      { name: "actual", color: "green.solid" },
+    ],
+  });
+
+  return (
+    <Chart.Root maxH="sm" chart={chart}>
+      <BarChart data={chart.data}>
+        <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
+        <XAxis
+          tickLine={false}
+          dataKey={chart.key("month")}
+          stroke={chart.color("border")}
+        />
+        <YAxis tickLine={false} stroke={chart.color("border")} />
+        <Tooltip
+          cursor={{ fill: chart.color("bg.muted") }}
+          animationDuration={100}
+          content={<Chart.Tooltip />}
+        />
+        <Legend
+          layout="vertical"
+          align="right"
+          verticalAlign="top"
+          wrapperStyle={{ paddingLeft: 30 }}
+          content={<Chart.Legend orientation="vertical" />}
+        />
+        {chart.series.map((item) => (
+          <Bar
+            isAnimationActive={false}
+            key={item.name}
+            dataKey={chart.key(item.name)}
+            fill={chart.color(item.color)}
+          />
+        ))}
+      </BarChart>
+    </Chart.Root>
+  );
+};
+
+// Main Expenses component
 const Expenses = () => {
   const [activeMenu, setActiveMenu] = useState("Overview");
   const [selectedFilter, setSelectedFilter] = useState("This Month"); // Track selected filter
@@ -60,6 +247,44 @@ const Expenses = () => {
     { name: "Labor", value: 5000 + 4500 + 5200 + 4800 + 5300, color: "#319795" },
     { name: "Materials", value: 8000 + 7500 + 8200 + 7700 + 8500, color: "#805AD5" },
     { name: "Equipment", value: 3000 + 2800 + 3100 + 2900 + 3200, color: "#3182CE" },
+  ];
+
+  const barChartData = useChart({
+    sort: { by: "value", direction: "desc" },
+    data: [
+      { name: "Construction", value: 45000, color: "teal.solid" },
+      { name: "Landscaping", value: 30000, color: "green.solid" },
+      { name: "Electrical", value: 20000, color: "yellow.solid" },
+      { name: "Plumbing", value: 15000, color: "blue.solid" },
+      { name: "Other", value: 10000, color: "purple.solid" },
+    ],
+  });
+
+  const receiptsData = [
+    {
+      invoiceId: "#001",
+      company: "ABC Manufacturing",
+      date: "2025-05-01",
+      cost: 1200,
+    },
+    {
+      invoiceId: "#002",
+      company: "XYZ Supplies",
+      date: "2025-05-10",
+      cost: 950,
+    },
+    {
+      invoiceId: "#003",
+      company: "Global Tech",
+      date: "2025-05-15",
+      cost: 2100,
+    },
+    {
+      invoiceId: "#004",
+      company: "Home Builders Inc.",
+      date: "2025-05-20",
+      cost: 1800,
+    },
   ];
 
   return (
@@ -380,45 +605,69 @@ const Expenses = () => {
 
         {/* Grid Section */}
         <SimpleGrid columns={{ base: 1, md: 3 }} columnGap={6} rowGap={6} mt={8}>
-          {/* First Box */}
+          {/* Team Expenses */}
           <Box
-            bg="blue.100"
+            bg="white.600"
+            p={6}
+            borderRadius="md"
+            boxShadow="sm"
+            textAlign="left"
+            h="auto"
+            minH="150px"
+            w="100%"
+            minWidth={{ base: "250px", md: "350px" }}
+          >
+            <Flex justifyContent="space-between" alignItems="center" mb={6}>
+              <Heading size="lg" fontWeight="bold">
+                Team Expenses
+              </Heading>
+              <Button
+                variant="ghost"
+                size="sm"
+                px={2}
+                py={1}
+                fontWeight="normal"
+                color="black.700"
+                _hover={{ textDecoration: "underline", bg: "transparent" }}
+                _active={{ bg: "transparent" }}
+                boxShadow="none"
+                bg="transparent"
+              >
+                <Expand size={20} />
+              </Button>
+            </Flex>
+            {/* BarSegment Chart */}
+            <BarSegment.Root chart={barChartData}>
+              <BarSegment.Content>
+                <BarSegment.Bar gap="0.5" />
+              </BarSegment.Content>
+            </BarSegment.Root>
+            {/* Expenses List */}
+            <ExpensesList data={barChartData.data} />
+          </Box>
+
+          {/* Receipts */}
+          <Box
+            bg="white.600"
             p={6}
             borderRadius="md"
             boxShadow="sm"
             textAlign="center"
             h={{ base: "150px", md: "400px" }}
+            minH="300px"
             w="100%"
             minWidth={{ base: "250px", md: "350px" }}
           >
-            <Text fontSize="lg" fontWeight="bold">
-              Summary 1
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              Details about summary 1.
-            </Text>
+            <Flex justifyContent="space-between" alignItems="center" mb={6}>
+              <Heading size="lg" fontWeight="bold">
+                Receipts
+              </Heading>
+            </Flex>
+            {/* Receipts List */}
+            <ReceiptsList data={receiptsData} />
           </Box>
 
-          {/* Third Box */}
-          <Box
-            bg="yellow.100"
-            p={6}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="center"
-            h={{ base: "150px", md: "400px" }}
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-          >
-            <Text fontSize="lg" fontWeight="bold">
-              Summary 3
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              Details about summary 3.
-            </Text>
-          </Box>
-
-          {/* Fourth Box */}
+          {/* Advertisements */}
           <Box
             p={0}
             borderRadius="md"
@@ -520,19 +769,69 @@ const Expenses = () => {
 
         {/* New Box after Grid */}
         <Box
-          bg="green.100"
+          bg="white"
           p={6}
           borderRadius="md"
           boxShadow="sm"
           textAlign="center"
           mt={10}
-          h="400px"
+          h="auto"
+          minH="400px"
         >
-          <Text fontSize="lg" fontWeight="bold">
-            Additional Information
-          </Text>
-          <Text fontSize="sm" color="gray.600">
-            This is a new box added after the grid section with some important content.
+          <Flex justifyContent="space-between" alignItems="center" mb={6}>
+            <Text fontSize="lg" fontWeight="bold">
+              Estimated vs Actual Expenses
+            </Text>
+            {/* Timeframe Filter Button */}
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  px={4}
+                  py={2}
+                  borderRadius="md"
+                  fontWeight="normal"
+                  color="black.700"
+                  _hover={{ textDecoration: "underline", bg: "gray.100" }}
+                  _active={{ bg: "gray.100" }}
+                  boxShadow="none"
+                  bg="transparent"
+                >
+                  {selectedFilter}
+                  <ChevronDown size={16} style={{ marginLeft: 8 }} />
+                </Button>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content minW="200px" boxShadow="xl">
+                    <Menu.Item
+                      onClick={() => setSelectedFilter("This Month")}
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      This Month
+                    </Menu.Item>
+                    <Menu.Item
+                      onClick={() => setSelectedFilter("Quarterly")}
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      Quarterly
+                    </Menu.Item>
+                    <Menu.Item
+                      onClick={() => setSelectedFilter("Yearly")}
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      Yearly
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+          </Flex>
+          {/* Bar Chart */}
+          {estimatedActualChart(selectedFilter)}
+          <Text fontSize="sm" color="gray.600" mt={6}>
+            This chart shows the estimated versus actual expenses per month for your project.
           </Text>
         </Box>
       </VStack>

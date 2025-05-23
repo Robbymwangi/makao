@@ -174,7 +174,7 @@ const CarouselSection = () => {
                   borderRadius="xs" // Decreased corner radius
                   overflow="hidden"
                   position="relative"
-                  boxShadow="xl" // Enhanced shadow for depth on white bg
+                  boxShadow="4xl" // Enhanced shadow for depth on white bg
                 >
                   <ChakraImage
                     className="embla__slide__img" 
