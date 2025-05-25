@@ -32,40 +32,51 @@ import { Chart, useChart, BarSegment } from "@chakra-ui/charts";
 import { ChevronDown, Expand } from "lucide-react";
 
 // ExpensesList component for Team Expenses (color bullets)
-const ExpensesList = memo(({ data }) => (
-  <VStack mt={6} align="start" w="100%">
-    {data.map((item) => (
-      <HStack
-        key={item.name}
-        spacing={4}
-        align="center"
-        w="100%"
-        px={2}
-        py={1}
-      >
-        <Box
-          w="12px"
-          h="12px"
-          borderRadius="full"
-          bg={item.color}
-        />
-        <Text fontSize="sm" fontWeight="normal" color="gray.700">
-          {item.name}
-        </Text>
-        <Text
-          fontSize="sm"
-          fontWeight="bold"
-          color="gray.700"
-          ml="auto"
-          px={2}
-          py={1}
-        >
-          ${item.value.toLocaleString()}
-        </Text>
-      </HStack>
-    ))}
-  </VStack>
-));
+const ExpensesList = memo(({ data }) => {
+  // Calculate total for percentage calculation
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  return (
+    <VStack mt={6} align="start" w="100%">
+      {data.map((item) => {
+        const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
+        return (
+          <HStack
+            key={item.name}
+            spacing={4}
+            align="center"
+            w="100%"
+            px={2}
+            py={1}
+          >
+            <Box
+              w="12px"
+              h="12px"
+              borderRadius="full"
+              bg={item.color}
+            />
+            <Text fontSize="sm" fontWeight="normal" color="gray.700">
+              {item.name}
+            </Text>
+            <Text
+              fontSize="sm"
+              fontWeight="bold"
+              color="gray.700"
+              ml="auto"
+              px={2}
+              py={1}
+            >
+              ${item.value.toLocaleString()}{" "}
+              <Text as="span" fontWeight="normal" color="gray.500" fontSize="xs">
+                ({percent}%)
+              </Text>
+            </Text>
+          </HStack>
+        );
+      })}
+    </VStack>
+  );
+});
 
 // ReceiptsList component for Receipts (with additional columns)
 const ReceiptsList = memo(({ data }) => {
@@ -163,7 +174,6 @@ const ReceiptsList = memo(({ data }) => {
 // Add this above the Expenses component or in a suitable place in the file
 const estimatedActualChart = (selectedFilter) => {
   // Example data for estimated vs actual expenses per month
-  // You can replace this with real data or fetch based on selectedFilter
   const data = [
     { month: "Jan", estimated: 12000, actual: 11000 },
     { month: "Feb", estimated: 15000, actual: 14000 },
@@ -181,7 +191,7 @@ const estimatedActualChart = (selectedFilter) => {
   });
 
   return (
-    <Chart.Root maxH="sm" chart={chart}>
+    <Chart.Root maxH="md" chart={chart}>
       <BarChart data={chart.data}>
         <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
         <XAxis
@@ -195,12 +205,13 @@ const estimatedActualChart = (selectedFilter) => {
           animationDuration={100}
           content={<Chart.Tooltip />}
         />
+        {/* Move Legend to the bottom and make it horizontal */}
         <Legend
-          layout="vertical"
-          align="right"
-          verticalAlign="top"
-          wrapperStyle={{ paddingLeft: 30 }}
-          content={<Chart.Legend orientation="vertical" />}
+          layout="horizontal"
+          align="center"
+          verticalAlign="bottom"
+          wrapperStyle={{ paddingTop: 16 }}
+          content={<Chart.Legend orientation="horizontal" />}
         />
         {chart.series.map((item) => (
           <Bar
@@ -208,6 +219,8 @@ const estimatedActualChart = (selectedFilter) => {
             key={item.name}
             dataKey={chart.key(item.name)}
             fill={chart.color(item.color)}
+            barSize={58} // Decrease the width of the bars only
+            radius={[4, 4, 0, 0]}
           />
         ))}
       </BarChart>
@@ -637,7 +650,7 @@ const Expenses = () => {
               </Button>
             </Flex>
             {/* BarSegment Chart */}
-            <BarSegment.Root chart={barChartData}>
+            <BarSegment.Root chart={barChartData} barSize="3">
               <BarSegment.Content>
                 <BarSegment.Bar gap="0.5" />
               </BarSegment.Content>
@@ -658,10 +671,25 @@ const Expenses = () => {
             w="100%"
             minWidth={{ base: "250px", md: "350px" }}
           >
+
             <Flex justifyContent="space-between" alignItems="center" mb={6}>
               <Heading size="lg" fontWeight="bold">
                 Receipts
               </Heading>
+              <Button
+                variant="ghost"
+                size="sm"
+                px={2}
+                py={1}
+                fontWeight="normal"
+                color="black.700"
+                _hover={{ textDecoration: "underline", bg: "transparent" }}
+                _active={{ bg: "transparent" }}
+                boxShadow="none"
+                bg="transparent"
+              >
+                <Expand size={20} />
+              </Button>
             </Flex>
             {/* Receipts List */}
             <ReceiptsList data={receiptsData} />
@@ -770,7 +798,7 @@ const Expenses = () => {
         {/* New Box after Grid */}
         <Box
           bg="white"
-          p={6}
+          p={10}
           borderRadius="md"
           boxShadow="sm"
           textAlign="center"
@@ -778,7 +806,7 @@ const Expenses = () => {
           h="auto"
           minH="400px"
         >
-          <Flex justifyContent="space-between" alignItems="center" mb={6}>
+          <Flex justifyContent="space-between" alignItems="center" mb={10}>
             <Text fontSize="lg" fontWeight="bold">
               Estimated vs Actual Expenses
             </Text>

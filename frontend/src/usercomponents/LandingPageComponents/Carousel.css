@@ -21,7 +21,7 @@
 @media (min-width: 1024px) {
   :root {
     --slide-size: 18%; /* Aim for 5+ slides on large screens, allowing for spacing */
-     --slide-height: 30rem;
+     --slide-height: 35rem;
   }
 }
 
