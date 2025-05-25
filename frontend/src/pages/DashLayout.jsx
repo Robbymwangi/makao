@@ -216,7 +216,7 @@ const DashLayout = () => {
       </Box>
 
       {/* Main Content */}
-      <Box flex="1" overflow="auto" mt="60px">
+      <Box flex="1" overflow="auto" mt="50px">
         <Box bg="white" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
           <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
           <Outlet />

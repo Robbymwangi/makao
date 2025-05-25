@@ -23,6 +23,7 @@ import ProjectSelection from "./usercomponents/Dashboard/UserDash/UserDashCompon
 import MyProjects from "./usercomponents/Dashboard/UserDash/UserDashView/MyProjects.jsx";
 import Expenses from "./usercomponents/Dashboard/UserDash/UserDashView/Expenses.jsx";
 import Reports from "./usercomponents/Dashboard/UserDash/UserDashView/Reports.jsx";
+import Messages from "./usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Messages.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -54,11 +55,12 @@ const App = () => {
 
         {/* Dashboard with Nested Routes */}
         <Route path="/dashboard" element={<DashLayout />}>
-          <Route index element={<UserDashboard />} /> {/* dashboard home */}
-          <Route path="myprojects" element={<ProjectSelection />} /> {/* Project selection */}
-          <Route path="myprojects/:id" element={<MyProjects />} /> {/* Project details */}
-          <Route path="reports" element={<Reports />} /> {/* Reports page */}
-          <Route path="Expenses" element={<Expenses />} /> {/* Expenses */}
+          <Route index element={<UserDashboard />} />
+          <Route path="myprojects" element={<ProjectSelection />} />
+          <Route path="myprojects/:id" element={<MyProjects />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="Expenses" element={<Expenses />} />
+          <Route path="messages" element={<Messages />} />
         </Route>
 
         {/* Fallback Route */}

@@ -162,7 +162,7 @@ const FileTransferUI = () => {
               variant={item.variant}
               onClick={item.onClick}
               fontSize="lg"
-              fontWeight="normal"
+              fontWeight="semibold"
               h="80px"
               minW="170px"
               px={8}
@@ -205,7 +205,13 @@ const FileTransferUI = () => {
               bg="white"
               borderRadius="md"
               boxShadow="sm"
-              _hover={{ boxShadow: "md", cursor: "pointer" }}
+              transition="all 0.2s"
+              _hover={{
+                boxShadow: "lg",
+                cursor: "pointer",
+                transform: "translateY(-24px) scale(1.03)",
+                zIndex: 1,
+              }}
               spacing={4}
               align="center"
             >
