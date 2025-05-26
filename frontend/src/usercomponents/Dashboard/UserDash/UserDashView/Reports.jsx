@@ -209,7 +209,7 @@ const FileTransferUI = () => {
               _hover={{
                 boxShadow: "lg",
                 cursor: "pointer",
-                transform: "translateY(-24px) scale(1.03)",
+                transform: "translateY(-2px) scale(1.03)",
                 zIndex: 1,
               }}
               spacing={4}
@@ -366,7 +366,11 @@ const FileTransferUI = () => {
               bg="white"
               borderRadius="md"
               boxShadow="sm"
-              _hover={{ boxShadow: "md", cursor: "pointer" }}
+              _hover={{ 
+                boxShadow: "md", 
+                cursor: "pointer", 
+                transform: "translateY(-2px) scale(1.03)"}}
+              
               spacing={4}
               align="center"
             >
