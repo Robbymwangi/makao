@@ -61,6 +61,7 @@ const App = () => {
           <Route path="reports" element={<Reports />} />
           <Route path="Expenses" element={<Expenses />} />
           <Route path="messages" element={<Messages />} />
+          <Route path="messages/:chatId" element={<Messages />} />
         </Route>
 
         {/* Fallback Route */}
