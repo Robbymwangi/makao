@@ -26,8 +26,10 @@ import {
   List,
   ChevronDown,
   MenuIcon,
+  X as CloseIcon,
 } from "lucide-react";
 import { toaster } from "@/components/ui/toaster";
+import { LuChevronRight } from "react-icons/lu";
 
 const initialFolders = [
   { id: 1, name: "Tech Innovations" },
@@ -86,6 +88,8 @@ const menuItems = [
 const FileTransferUI = () => {
   const [fileView, setFileView] = useState("grid");
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const [folderMenuOpenId, setFolderMenuOpenId] = useState(null);
+  const [fileMenuOpenId, setFileMenuOpenId] = useState(null);
 
   const handleItemClick = (item) => {
     toaster.create({ description: `Clicked: ${item.name}`, type: "info" });
@@ -96,6 +100,117 @@ const FileTransferUI = () => {
 
   // For files: allow toggling, but force list view on mobile unless toggled
   const filesListView = isMobile ? fileView === "list" || true : fileView === "list";
+
+  // Menu for folders and files
+  const renderEllipsisMenu = (type, id) => (
+    <Menu.Root
+      open={type === "folder" ? folderMenuOpenId === id : fileMenuOpenId === id}
+      onOpenChange={(open) => {
+        if (type === "folder") setFolderMenuOpenId(open ? id : null);
+        else setFileMenuOpenId(open ? id : null);
+      }}
+    >
+      <Menu.Trigger asChild>
+        <Box
+          as="button"
+          aria-label="More options"
+          bg="transparent"
+          border="none"
+          p={1}
+          onClick={e => {
+            e.stopPropagation();
+            if (type === "folder") setFolderMenuOpenId(id);
+            else setFileMenuOpenId(id);
+          }}
+          _hover={{ cursor: "pointer", bg: "gray.100" }} // <-- Add pointer and subtle bg on hover
+        >
+          <EllipsisVertical size={20} color="#A0AEC0" />
+        </Box>
+      </Menu.Trigger>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="180px" position="relative">
+            {/* Close Icon */}
+            <Box
+              position="absolute"
+              top="3"
+              right="2"
+              aria-label="Close menu"
+              bg="transparent"
+              zIndex={2}
+              onClick={() => {
+                if (type === "folder") setFolderMenuOpenId(null);
+                else setFileMenuOpenId(null);
+              }}
+              _hover={{ cursor: "pointer", bg: "red.200" }}
+            >
+              <CloseIcon size={18} />
+            </Box>
+            {/* Padding below the X icon */}
+            <Box h="25px" /> {/* Adjust height as needed for desired spacing */}
+            <Menu.Item
+              onClick={() => toaster.create({ description: "Open clicked", type: "info" })}
+              cursor="pointer"
+              _hover={{ bg: "gray.100" }}
+            >
+              Open
+            </Menu.Item>
+            <Menu.Item
+              onClick={() => toaster.create({ description: "Rename clicked", type: "info" })}
+              cursor="pointer"
+              _hover={{ bg: "gray.100" }}
+            >
+              Rename
+            </Menu.Item>
+            <Menu.Root positioning={{ placement: "right-start", gutter: 2 }}>
+              <Menu.TriggerItem
+                cursor="pointer"
+                _hover={{ bg: "gray.100" }}
+              >
+                More Actions <LuChevronRight />
+              </Menu.TriggerItem>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      onClick={() => toaster.create({ description: "Share clicked", type: "info" })}
+                      cursor="pointer"
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      Share
+                    </Menu.Item>
+                    <Menu.Item
+                      onClick={() => toaster.create({ description: "Move clicked", type: "info" })}
+                      cursor="pointer"
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      Move
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+            <Menu.Item
+              onClick={() => toaster.create({ description: "Export clicked", type: "info" })}
+              cursor="pointer"
+              _hover={{ bg: "gray.100" }}
+            >
+              Export
+            </Menu.Item>
+            <Menu.Item
+              value="delete"
+              color="fg.error"
+              _hover={{ bg: "bg.error", color: "fg.error" }}
+              cursor="pointer"
+              onClick={() => toaster.create({ description: "Delete clicked", type: "error" })}
+            >
+              Delete...
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
 
   return (
     <Box p={2}>
@@ -246,7 +361,7 @@ const FileTransferUI = () => {
                 </VStack>
               </Box>
               <Box ml="auto">
-                <EllipsisVertical size={20} color="#A0AEC0" />
+                {renderEllipsisMenu("folder", folder.id)}
               </Box>
             </HStack>
           ))}
@@ -322,7 +437,7 @@ const FileTransferUI = () => {
                   </VStack>
                 </Box>
                 <Box ml="auto">
-                  <EllipsisVertical size={20} color="#A0AEC0" />
+                  {renderEllipsisMenu("folder", folder.id)}
                 </Box>
               </HStack>
             </Box>
@@ -405,7 +520,7 @@ const FileTransferUI = () => {
                 </VStack>
               </Box>
               <Box ml="auto">
-                <EllipsisVertical size={20} color="#A0AEC0" />
+                {renderEllipsisMenu("file", file.id)}
               </Box>
             </HStack>
           ))}
@@ -475,7 +590,7 @@ const FileTransferUI = () => {
                   </VStack>
                 </Box>
                 <Box ml="auto">
-                  <EllipsisVertical size={20} color="#A0AEC0" />
+                  {renderEllipsisMenu("file", file.id)}
                 </Box>
               </HStack>
             </Box>

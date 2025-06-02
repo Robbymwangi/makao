@@ -318,7 +318,7 @@ const MyProjects = () => {
             </Box>
             {/* Event Display on the right */}
             <Box
-              w={{ base: "100%", md: "60%" }}
+              w={{ base: "100%", md: "90%" }}
               p={4}
               borderWidth="1px"
               borderRadius="lg"

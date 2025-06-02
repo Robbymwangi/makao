@@ -23,7 +23,8 @@ import ProjectSelection from "./usercomponents/Dashboard/UserDash/UserDashCompon
 import MyProjects from "./usercomponents/Dashboard/UserDash/UserDashView/MyProjects.jsx";
 import Expenses from "./usercomponents/Dashboard/UserDash/UserDashView/Expenses.jsx";
 import Reports from "./usercomponents/Dashboard/UserDash/UserDashView/Reports.jsx";
-import Messages from "./usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Messages.jsx";
+import Messages from "./usercomponents/Dashboard/UserDash/UserDashView/Messages.jsx";
+import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.jsx"; // <-- Add this import
 
 const App = () => {
   const location = useLocation();
@@ -62,6 +63,7 @@ const App = () => {
           <Route path="Expenses" element={<Expenses />} />
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:chatId" element={<Messages />} />
+          <Route path="support" element={<Support />} /> {/* <-- Add this line */}
         </Route>
 
         {/* Fallback Route */}
