@@ -206,202 +206,211 @@ function Support() {
           flex="1"
           borderWidth="1px"
           borderRadius="lg"
-          bg="gray.50"
           shadow="sm"
-          p={4}
-          display={isMobileView ? "none" : "flex"} // Hide on mobile for simplicity
+          p={0}
+          display={isMobileView ? "none" : "flex"}
           flexDirection="column"
           overflowY="auto"
         >
-          <Text fontSize="lg" fontWeight="bold" mb={4}>
-            Report an Issue
-          </Text>
-          <VStack spacing={4} align="stretch">
-            <RadioCard.Root
-              value={issueType}
-              onValueChange={(e) => setIssueType(e.value)}
-            >
-              <RadioCard.Label>
-                What is the issue related to?
-              </RadioCard.Label>
-              <VStack align="stretch" mt={2}>
-                {issueTypes.map((item) => (
-                  <RadioCard.Item key={item.value} value={item.value}>
-                    <RadioCard.ItemHiddenInput />
-                    <RadioCard.ItemControl>
-                      <RadioCard.ItemContent>
-                        <RadioCard.ItemText>{item.title}</RadioCard.ItemText>
-                        <RadioCard.ItemDescription>
-                          {item.description}
-                        </RadioCard.ItemDescription>
-                      </RadioCard.ItemContent>
-                      <RadioCard.ItemIndicator />
-                    </RadioCard.ItemControl>
-                  </RadioCard.Item>
-                ))}
-              </VStack>
-            </RadioCard.Root>
-
-            <Box borderBottomWidth="1px" borderColor="gray.200" my={2} />
-
-            {/* Dynamic Fields Based on Issue Type */}
-            {issueType === "agent" && (
-              <Box>
-                <VStack align="stretch" spacing={4}>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Describe the issue with the agent
-                    </Text>
-                    <Textarea
-                      name="agentIssue"
-                      value={formData.agentIssue}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Agent's name (if known)
-                    </Text>
-                    <Input
-                      name="agentName"
-                      value={formData.agentName || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Date of issue
-                    </Text>
-                    <Input
-                      type="date"
-                      name="agentIssueDate"
-                      value={formData.agentIssueDate || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
+          <HStack
+            p={4}
+            borderBottomWidth="1px"
+            borderColor="gray.200"
+            justify="space-between"
+            borderTopRadius="lg"
+          >
+            <Text fontSize="xl" fontWeight="bold">
+              Report an Issue
+            </Text>
+          </HStack>
+          <Box p={4} flex="1" overflowY="auto">
+            <VStack spacing={4} align="stretch">
+              <RadioCard.Root
+                value={issueType}
+                onValueChange={(e) => setIssueType(e.value)}
+              >
+                <RadioCard.Label>
+                  What is the issue related to?
+                </RadioCard.Label>
+                <VStack align="stretch" mt={2}>
+                  {issueTypes.map((item) => (
+                    <RadioCard.Item key={item.value} value={item.value}>
+                      <RadioCard.ItemHiddenInput />
+                      <RadioCard.ItemControl>
+                        <RadioCard.ItemContent>
+                          <RadioCard.ItemText>{item.title}</RadioCard.ItemText>
+                          <RadioCard.ItemDescription>
+                            {item.description}
+                          </RadioCard.ItemDescription>
+                        </RadioCard.ItemContent>
+                        <RadioCard.ItemIndicator />
+                      </RadioCard.ItemControl>
+                    </RadioCard.Item>
+                  ))}
                 </VStack>
-              </Box>
-            )}
+              </RadioCard.Root>
 
-            {issueType === "property" && (
-              <Box>
-                <VStack align="stretch" spacing={4}>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Describe the issue with the property or contractor
-                    </Text>
-                    <Textarea
-                      name="propertyIssue"
-                      value={formData.propertyIssue}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Property address or contractor's name
-                    </Text>
-                    <Input
-                      name="propertyDetails"
-                      value={formData.propertyDetails || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Date of issue
-                    </Text>
-                    <Input
-                      type="date"
-                      name="propertyIssueDate"
-                      value={formData.propertyIssueDate || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                </VStack>
-              </Box>
-            )}
+              <Box borderBottomWidth="1px" borderColor="gray.200" my={2} />
 
-            {issueType === "platform" && (
-              <Box>
-                <VStack align="stretch" spacing={4}>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Describe the issue with the platform
-                    </Text>
-                    <Textarea
-                      name="platformIssue"
-                      value={formData.platformIssue}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Affected feature or section
-                    </Text>
-                    <Input
-                      name="platformFeature"
-                      value={formData.platformFeature || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Date of issue
-                    </Text>
-                    <Input
-                      type="date"
-                      name="platformIssueDate"
-                      value={formData.platformIssueDate || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                </VStack>
-              </Box>
-            )}
+              {/* Dynamic Fields Based on Issue Type */}
+              {issueType === "agent" && (
+                <Box>
+                  <VStack align="stretch" spacing={4}>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Describe the issue with the agent
+                      </Text>
+                      <Textarea
+                        name="agentIssue"
+                        value={formData.agentIssue}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Agent's name (if known)
+                      </Text>
+                      <Input
+                        name="agentName"
+                        value={formData.agentName || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Date of issue
+                      </Text>
+                      <Input
+                        type="date"
+                        name="agentIssueDate"
+                        value={formData.agentIssueDate || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                  </VStack>
+                </Box>
+              )}
 
-            {issueType === "other" && (
-              <Box>
-                <VStack align="stretch" spacing={4}>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Please describe the issue in detail
-                    </Text>
-                    <Textarea
-                      name="otherIssue"
-                      value={formData.otherIssue}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                  <Box>
-                    <Text mb={1} fontWeight="medium">
-                      Date of issue
-                    </Text>
-                    <Input
-                      type="date"
-                      name="otherIssueDate"
-                      value={formData.otherIssueDate || ""}
-                      onChange={handleFormChange}
-                      bg="white"
-                    />
-                  </Box>
-                </VStack>
-              </Box>
-            )}
+              {issueType === "property" && (
+                <Box>
+                  <VStack align="stretch" spacing={4}>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Describe the issue with the property or contractor
+                      </Text>
+                      <Textarea
+                        name="propertyIssue"
+                        value={formData.propertyIssue}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Property address or contractor's name
+                      </Text>
+                      <Input
+                        name="propertyDetails"
+                        value={formData.propertyDetails || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Date of issue
+                      </Text>
+                      <Input
+                        type="date"
+                        name="propertyIssueDate"
+                        value={formData.propertyIssueDate || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                  </VStack>
+                </Box>
+              )}
 
-            <Button colorScheme="blue" onClick={handleSubmit}>
-              Submit Report
-            </Button>
-          </VStack>
+              {issueType === "platform" && (
+                <Box>
+                  <VStack align="stretch" spacing={4}>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Describe the issue with the platform
+                      </Text>
+                      <Textarea
+                        name="platformIssue"
+                        value={formData.platformIssue}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Affected feature or section
+                      </Text>
+                      <Input
+                        name="platformFeature"
+                        value={formData.platformFeature || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Date of issue
+                      </Text>
+                      <Input
+                        type="date"
+                        name="platformIssueDate"
+                        value={formData.platformIssueDate || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                  </VStack>
+                </Box>
+              )}
+
+              {issueType === "other" && (
+                <Box>
+                  <VStack align="stretch" spacing={4}>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Please describe the issue in detail
+                      </Text>
+                      <Textarea
+                        name="otherIssue"
+                        value={formData.otherIssue}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">
+                        Date of issue
+                      </Text>
+                      <Input
+                        type="date"
+                        name="otherIssueDate"
+                        value={formData.otherIssueDate || ""}
+                        onChange={handleFormChange}
+                        bg="white"
+                      />
+                    </Box>
+                  </VStack>
+                </Box>
+              )}
+
+              <Button colorScheme="blue" onClick={handleSubmit}>
+                Submit Report
+              </Button>
+            </VStack>
+          </Box>
         </Box>
 
         {/* Ticket Dialog */}
