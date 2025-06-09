@@ -20,14 +20,14 @@
 }
 @media (min-width: 1024px) {
   :root {
-    --slide-size: 18%; /* Aim for 5+ slides on large screens, allowing for spacing */
+    --slide-size: 16%; /* Aim for 5+ slides on large screens, allowing for spacing */
      --slide-height: 35rem;
   }
 }
 
 
 .embla {
-  max-width: 80rem; /* Increased max-width to accommodate more slides */
+  max-width: 80rem; 
   margin: auto;
   position: relative; 
 }
@@ -79,7 +79,7 @@
 .embla__buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
