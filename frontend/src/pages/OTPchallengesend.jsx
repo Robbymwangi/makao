@@ -8,7 +8,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router";
-import AuthHeader from "@/usercomponents/Auth/AuthHeader";
+import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { Mail, Phone } from "lucide-react";
 import PageTransition from "@/usercomponents/PageTransition/pagetransition";

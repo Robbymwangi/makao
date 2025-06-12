@@ -136,7 +136,6 @@ const AppLayout = React.memo(({ chatList, messageView, isMobileView, currentChat
       minH={0} // Important for flex children in column layout
       p={4}    // Padding for desktop layout
       gap={4}
-      bg="white" // Main background for the chat area sections
     >
       <Box // ChatList container
         flex={{ base: "1", md: "1" }}

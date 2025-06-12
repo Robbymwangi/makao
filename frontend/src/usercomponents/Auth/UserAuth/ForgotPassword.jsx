@@ -2,7 +2,7 @@ import React from "react";
 import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
-import AuthHeader from "@/usercomponents/Auth/AuthHeader";
+import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 
 const ForgotPassword = () => {
   return (

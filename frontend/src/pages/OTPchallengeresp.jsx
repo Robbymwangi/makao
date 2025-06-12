@@ -8,7 +8,7 @@ import {
   PinInput,
   usePinInput,
 } from "@chakra-ui/react";
-import AuthHeader from "@/usercomponents/Auth/AuthHeader";
+import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useNavigate, useLocation } from "react-router";
 import PageTransition from "@/usercomponents/PageTransition/pagetransition";

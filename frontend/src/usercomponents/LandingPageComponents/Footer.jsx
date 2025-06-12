@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Flex, Text, Link, Stack, useBreakpointValue } from "@chakra-ui/react";
+import { Link as RouterLink } from "react-router";
 
 const Footer = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -34,7 +35,7 @@ const Footer = () => {
             <Text fontWeight="bold">Resources</Text>
             <Link href="#">FAQs</Link>
             <Link href="#">Privacy Policy</Link>
-            <Link href="#">Talent Login</Link>
+            <Link href="/staff/login">Talent Login</Link>
           </Stack>
           <Stack spacing={2} textAlign={isMobile ? "center" : "left"}>
             <Text fontWeight="bold">About</Text>
@@ -49,6 +50,7 @@ const Footer = () => {
       <Text mt={15} textAlign="center" fontSize="sm" color="gray.500">
         All rights reserved. All trademarks, logos, and brand names are the property of their respective owners. <br />
         Makao LLC © {currentYear}
+        {" | "}
       </Text>
     </Box>
   );

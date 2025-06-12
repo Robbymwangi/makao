@@ -12,9 +12,11 @@ import NotFound from "./pages/404.jsx"; // fallback
 import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.jsx";
 
 // Auth
-import Login from "./usercomponents/Auth/Login.jsx";
-import SignUp from "./usercomponents/Auth/SignUp.jsx";
-import ForgotPassword from "./usercomponents/Auth/ForgotPassword.jsx";
+import Login from "./usercomponents/Auth/UserAuth/Login.jsx";
+import SignUp from "./usercomponents/Auth/UserAuth/SignUp.jsx";
+import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
+import StaffLogin from "./usercomponents/Auth/StaffAuth/Login.jsx";
+import StaffForgotPassword from "./usercomponents/Auth/StaffAuth/ForgotPassword.jsx";
 
 // Dashboard
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
@@ -65,6 +67,10 @@ const App = () => {
           <Route path="messages/:chatId" element={<Messages />} />
           <Route path="support" element={<Support />} /> {/* <-- Add this line */}
         </Route>
+
+        {/* Staff Routes */}
+        <Route path="/staff/login" element={<StaffLogin />} />
+        <Route path="/staff/forgot-password" element={<StaffForgotPassword />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />
