@@ -1,9 +1,17 @@
 import React from "react";
 import { Box, VStack, Input, Button, Text, Link, Flex } from "@chakra-ui/react";
-import { Link as RouterLink } from "react-router";
+import { Link as RouterLink, useNavigate } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 
 const StaffForgotPassword = () => {
+  const navigate = useNavigate();
+
+  const handleForgot = (e) => {
+    e.preventDefault();
+    // Go to staff OTP send after requesting reset
+    navigate("/staff/otp-challengesend");
+  };
+
   return (
     <Flex minH="100vh" direction="column" bg="gray.50" justify="center" align="center">
       <Box w="100%" maxW="400px" bg="white" p={{ base: 4, md: 8 }} borderRadius="lg" boxShadow="md" mt={12}>
@@ -14,9 +22,9 @@ const StaffForgotPassword = () => {
         <Text mb={4} color="gray.600" textAlign="center">
           Enter your staff email to receive reset instructions.
         </Text>
-        <VStack spacing={4} as="form">
-          <Input placeholder="Staff Email" type="email" />
-          <Button colorScheme="blackAlpha" w="100%">
+        <VStack spacing={4} as="form" onSubmit={handleForgot}>
+          <Input placeholder="Staff Email" type="email" required />
+          <Button colorScheme="blackAlpha" w="100%" type="submit">
             Send Reset Instructions
           </Button>
         </VStack>

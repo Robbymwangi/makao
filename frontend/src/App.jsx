@@ -7,6 +7,8 @@ import Landingpage from "./pages/Landingpage.jsx";
 import OTPChallengeSend from "./pages/OTPchallengesend.jsx";
 import OTPChallengeResp from "./pages/OTPchallengeresp.jsx";
 import NotFound from "./pages/404.jsx"; // fallback
+import StaffOTPChallengeSend from "./pages/StaffOTPChallengeSend";
+import StaffOTPChallengeResp from "./pages/StaffOTPChallengeResp";
 
 // Components
 import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.jsx";
@@ -15,8 +17,8 @@ import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.
 import Login from "./usercomponents/Auth/UserAuth/Login.jsx";
 import SignUp from "./usercomponents/Auth/UserAuth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
-import StaffLogin from "./usercomponents/Auth/StaffAuth/Login.jsx";
-import StaffForgotPassword from "./usercomponents/Auth/StaffAuth/ForgotPassword.jsx";
+import StaffLogin from "@/usercomponents/Auth/StaffAuth/Login";
+import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/ForgotPassword";
 
 // Dashboard
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
@@ -71,6 +73,8 @@ const App = () => {
         {/* Staff Routes */}
         <Route path="/staff/login" element={<StaffLogin />} />
         <Route path="/staff/forgot-password" element={<StaffForgotPassword />} />
+        <Route path="/staff/otp-challengesend" element={<StaffOTPChallengeSend />} />
+        <Route path="/staff/otp-challengeresp" element={<StaffOTPChallengeResp />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />

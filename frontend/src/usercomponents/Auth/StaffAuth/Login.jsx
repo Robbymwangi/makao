@@ -6,9 +6,9 @@ import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 const StaffLogin = () => {
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // Add staff login logic here
-    navigate("/staff/dashboard");
+  const handleLogin = (e) => {
+    e.preventDefault();
+    navigate("/staff/otp-challengesend");
   };
 
   return (
@@ -18,10 +18,10 @@ const StaffLogin = () => {
         <Text fontSize="2xl" fontWeight="bold" mb={4} textAlign="center">
           Staff Login
         </Text>
-        <VStack spacing={4} as="form">
-          <Input placeholder="Staff Email" type="email" />
-          <Input placeholder="Password" type="password" />
-          <Button colorScheme="blackAlpha" w="100%" onClick={handleLogin}>
+        <VStack spacing={4} as="form" onSubmit={handleLogin}>
+          <Input placeholder="Staff Email" type="email" required />
+          <Input placeholder="Password" type="password" required />
+          <Button colorScheme="blackAlpha" w="100%" type="submit">
             Log In
           </Button>
         </VStack>
