@@ -8,6 +8,7 @@ import PhotoProgress from "@/usercomponents/Dashboard/UserDash/UserDashComponent
 import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/QuickLinks";
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
 import { CSSTransition } from "react-transition-group";
+import { getMenuByRole } from "@/utils/menuUtils";
 
 // Mock function to simulate fetching user data
 const fetchUser = () =>
@@ -19,6 +20,7 @@ const UserDashboard = () => {
   const [user, setUser] = useState(null);
   const [showName, setShowName] = useState(false);
   const headingRef = useRef(null); // Create a ref for the heading
+  const menuItems = getMenuByRole("user");
 
   useEffect(() => {
     fetchUser().then((data) => {
@@ -96,6 +98,20 @@ const UserDashboard = () => {
           {/* Agent Report */}
           <AgentReport />
         </VStack>
+
+        <HStack spacing={6}>
+          {menuItems.map((item) => (
+            <Text
+              key={item.label}
+              fontSize="lg"
+              fontWeight="bold"
+              cursor="pointer"
+              _hover={{ textDecoration: "underline" }}
+            >
+              {item.label}
+            </Text>
+          ))}
+        </HStack>
       </VStack>
     </>
   );

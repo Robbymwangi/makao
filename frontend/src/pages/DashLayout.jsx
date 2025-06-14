@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -13,28 +13,28 @@ import {
   Portal,
   Avatar,
   Stack,
+  IconButton,
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
 import { Squash as Hamburger, Squash } from "hamburger-react";
 import { ColorModeButton } from "@/components/ui/color-mode"; // Import the ColorModeButton
+import { getMenuByRole } from "@/utils/menuUtils";
 
-const menuItems = [
-  { label: "Home", icon: Home, route: "/dashboard" },
-  { label: "My Projects", icon: Building, route: "/dashboard/myprojects" },
-  { label: "Reports", icon: ClipboardList, route: "/dashboard/reports" },
-  { label: "Expenses", icon: Building, route: "/dashboard/expenses" },
-  { label: "Messages", icon: MessageCircle, route: "/dashboard/messages" },
-  { label: "Support", icon: Settings, route: "/dashboard/support" },
-];
-
-const DashLayout = () => {
+const DashLayout = ({ role }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuItems, setMenuItems] = useState([]);
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true }); // Show details only on medium screens and above
+
+  useEffect(() => {
+    // Fetch menu items dynamically based on the role
+    const fetchedMenuItems = getMenuByRole(role);
+    setMenuItems(fetchedMenuItems);
+  }, [role]);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -46,6 +46,7 @@ const DashLayout = () => {
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   const handleLogout = () => {
+    // Add logout logic here
     navigate("/login");
   };
 

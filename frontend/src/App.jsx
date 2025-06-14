@@ -20,15 +20,20 @@ import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
 import StaffLogin from "@/usercomponents/Auth/StaffAuth/Login";
 import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/ForgotPassword";
 
-// Dashboard
+
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
+
+// User Dashboard
 import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
 import ProjectSelection from "./usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectSelect.jsx";
 import MyProjects from "./usercomponents/Dashboard/UserDash/UserDashView/MyProjects.jsx";
 import Expenses from "./usercomponents/Dashboard/UserDash/UserDashView/Expenses.jsx";
 import Reports from "./usercomponents/Dashboard/UserDash/UserDashView/Reports.jsx";
 import Messages from "./usercomponents/Dashboard/UserDash/UserDashView/Messages.jsx";
-import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.jsx"; // <-- Add this import
+import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.jsx";
+
+// Admin Dashboard
+import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -75,6 +80,9 @@ const App = () => {
         <Route path="/staff/forgot-password" element={<StaffForgotPassword />} />
         <Route path="/staff/otp-challengesend" element={<StaffOTPChallengeSend />} />
         <Route path="/staff/otp-challengeresp" element={<StaffOTPChallengeResp />} />
+
+        {/* Admin Route */}
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />

@@ -1,15 +1,32 @@
-import React from "react";
+import React, { useState } from "react";
 import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 
+const credentials = {
+  user: ["user@makao.com"],
+  systemAdmin: ["admin@system.com"],
+  consultantAdmin: ["admin@consultant.com"],
+  agentAdmin: ["admin@agent.com"],
+};
+
 const Login = () => {
+  const [email, setEmail] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    // Add login logic here
-    navigate("/otp-challengesend"); // Redirect to OTP challenge send page
+    if (credentials.systemAdmin.includes(email)) {
+      navigate("/admin-dashboard?role=systemAdmin");
+    } else if (credentials.consultantAdmin.includes(email)) {
+      navigate("/admin-dashboard?role=consultantAdmin");
+    } else if (credentials.agentAdmin.includes(email)) {
+      navigate("/admin-dashboard?role=agentAdmin");
+    } else if (credentials.user.includes(email)) {
+      navigate("/dashboard");
+    } else {
+      alert("Invalid credentials. Please try again.");
+    }
   };
 
   return (
@@ -22,9 +39,12 @@ const Login = () => {
           <AuthHeader />
         </Box>
         <Text fontSize="2xl" fontWeight="bold">Log In</Text>
-        <Input placeholder="Enter your email" />
-        <Input placeholder="Enter your password" type="password" />
-        <Button colorScheme="blackAlpha" width="100%" onClick={handleLogin}>
+        <Input
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Button colorScheme="blue" onClick={handleLogin}>
           Log In
         </Button>
         <Text>
