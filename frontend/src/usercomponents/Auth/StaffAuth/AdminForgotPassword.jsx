@@ -23,7 +23,7 @@ const StaffForgotPassword = () => {
           Enter your staff email to receive reset instructions.
         </Text>
         <VStack spacing={4} as="form" onSubmit={handleForgot}>
-          <Input placeholder="Staff Email" type="email" required />
+          <Input placeholder="Staff Email" type="email" required id="staff-email" name="staff-email" />
           <Button colorScheme="blackAlpha" w="100%" type="submit">
             Send Reset Instructions
           </Button>

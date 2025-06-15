@@ -3,29 +3,24 @@ import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
-
-const credentials = {
-  user: ["user@makao.com"],
-  systemAdmin: ["admin@system.com"],
-  consultantAdmin: ["admin@consultant.com"],
-  agentAdmin: ["admin@agent.com"],
-};
+import { useAuthStore } from "@/store/useAuthStore";
 
 const Login = () => {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
 
-  const handleLogin = () => {
-    if (credentials.systemAdmin.includes(email)) {
-      navigate("/admin-dashboard?role=systemAdmin");
-    } else if (credentials.consultantAdmin.includes(email)) {
-      navigate("/admin-dashboard?role=consultantAdmin");
-    } else if (credentials.agentAdmin.includes(email)) {
-      navigate("/admin-dashboard?role=agentAdmin");
-    } else if (credentials.user.includes(email)) {
-      navigate("/dashboard");
-    } else {
-      alert("Invalid credentials. Please try again.");
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const role = login(email);
+    if (role === "user") {
+      setError("");
+      navigate("/otp-challengesend");
+    } 
+    else {
+      setError("Invalid credentials. Please try again.");
     }
   };
 
@@ -39,14 +34,32 @@ const Login = () => {
           <AuthHeader />
         </Box>
         <Text fontSize="2xl" fontWeight="bold">Log In</Text>
-        <Input
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Button colorScheme="blue" onClick={handleLogin}>
-          Log In
-        </Button>
+        <form style={{ width: "100%" }} onSubmit={handleLogin}>
+          <VStack spacing={4} w="100%">
+            <Input
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              id="login-email"
+              name="login-email"
+              type="email"
+              required
+            />
+            <Input
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              id="login-password"
+              name="login-password"
+              type="password"
+              required
+            />
+            <Button colorScheme="blue" type="submit" w="100%">
+              Log In
+            </Button>
+          </VStack>
+        </form>
+        {error && <Text color="red.500">{error}</Text>}
         <Text>
           Don't have an account?{" "}
           <Link variant="underline" asChild>

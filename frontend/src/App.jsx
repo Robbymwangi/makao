@@ -17,8 +17,8 @@ import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.
 import Login from "./usercomponents/Auth/UserAuth/Login.jsx";
 import SignUp from "./usercomponents/Auth/UserAuth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
-import StaffLogin from "@/usercomponents/Auth/StaffAuth/Login";
-import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/ForgotPassword";
+import StaffLogin from "./usercomponents/Auth/StaffAuth/AdminLogin.jsx";
+import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/AdminForgotPassword.jsx";
 
 
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
@@ -82,7 +82,9 @@ const App = () => {
         <Route path="/staff/otp-challengeresp" element={<StaffOTPChallengeResp />} />
 
         {/* Admin Route */}
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-dashboard" element={<DashLayout />}>
+          <Route index element={<AdminDashboard />} />
+        </Route>
 
         {/* Fallback Route */}
         <Route path="*" element={<NotFound />} />

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Flex,
@@ -13,28 +13,23 @@ import {
   Portal,
   Avatar,
   Stack,
-  IconButton,
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
 import { Squash as Hamburger, Squash } from "hamburger-react";
 import { ColorModeButton } from "@/components/ui/color-mode"; // Import the ColorModeButton
+import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
 
-const DashLayout = ({ role }) => {
+const DashLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [menuItems, setMenuItems] = useState([]);
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
-  const showDetails = useBreakpointValue({ base: false, md: true }); // Show details only on medium screens and above
-
-  useEffect(() => {
-    // Fetch menu items dynamically based on the role
-    const fetchedMenuItems = getMenuByRole(role);
-    setMenuItems(fetchedMenuItems);
-  }, [role]);
+  const showDetails = useBreakpointValue({ base: false, md: true });
+  const role = useAuthStore((state) => state.role);
+  const menuItems = getMenuByRole(role);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -46,7 +41,6 @@ const DashLayout = ({ role }) => {
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   const handleLogout = () => {
-    // Add logout logic here
     navigate("/login");
   };
 
@@ -65,33 +59,33 @@ const DashLayout = ({ role }) => {
           </Text>
         )}
         {/* Conditionally render the X or Hamburger button depending on collapsed state, only if the screen size is not small */}
-          {!isMobile && (
-            <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
-              <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
-            </Box>
-          )}
-              </HStack>
+        {!isMobile && (
+          <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
+            <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
+          </Box>
+        )}
+      </HStack>
 
-              <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
-          {menuItems.map(({ label, icon: Icon, route }, idx) => (
-            <HStack
-              key={idx}
-              as="button"
-              spacing={3}
-              px={isMobile ? 3 : collapsed ? 0 : 3}
-              py={2}
-              borderRadius="md"
-              _hover={{ bg: "gray.100" }}
-              justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
-              bg={selectedMenu === label ? "gray.100" : "transparent"}
-              onClick={() => {
+      <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
+        {menuItems.map(({ label, icon: Icon, route }, idx) => (
+          <HStack
+            key={idx}
+            as="button"
+            spacing={3}
+            px={isMobile ? 3 : collapsed ? 0 : 3}
+            py={2}
+            borderRadius="md"
+            _hover={{ bg: "gray.100" }}
+            justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
+            bg={selectedMenu === label ? "gray.100" : "transparent"}
+            onClick={() => {
               navigate(route);
               if (isMobile) onClose();
             }}
             transition="all 0.2s ease-in-out"
             w="full"
           >
-            <Icon size={20} />
+            {Icon && <Icon size={20} />}
             {(isMobile || !collapsed) && (
               <Text transition="opacity 0.2s ease-in-out" whiteSpace="nowrap">
                 {label}

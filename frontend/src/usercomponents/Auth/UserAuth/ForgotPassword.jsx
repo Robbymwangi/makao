@@ -17,7 +17,11 @@ const ForgotPassword = () => {
         </Box>
         <Text fontSize="2xl" fontWeight="bold">Reset Your Password</Text>
         <Text>Enter your email to receive reset instructions.</Text>
-        <Input placeholder="Your email address" />
+        <Input 
+          placeholder="Your email address" 
+          id="forgot-email" 
+          name="forgot-email" 
+        />
         <Button colorScheme="blackAlpha" width="100%">Send Reset Instructions</Button>
         <Text>
           <Link variant="underline" asChild>

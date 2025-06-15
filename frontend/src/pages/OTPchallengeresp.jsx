@@ -12,12 +12,14 @@ import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useNavigate, useLocation } from "react-router";
 import PageTransition from "@/usercomponents/PageTransition/pagetransition";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const OTPChallengeResp = () => {
   const store = usePinInput(); // Use Chakra's PinInput store
   const navigate = useNavigate();
   const location = useLocation();
   const otpMethod = location.state?.otpMethod || "email"; // Default to email if not provided
+  const role = useAuthStore((state) => state.role);
 
   const [resendTimer, setResendTimer] = useState(30); // Countdown timer for resend
   const [canResend, setCanResend] = useState(false); // Resend button state
@@ -43,7 +45,11 @@ const OTPChallengeResp = () => {
         duration: 5000,
       });
       setTimeout(() => {
-        navigate("/dashboard"); // Navigate to the dashboard
+        if (role === "systemAdmin" || role === "consultantAdmin" || role === "agentAdmin") {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
       }, 1000);
     } else {
       // If OTP is incorrect

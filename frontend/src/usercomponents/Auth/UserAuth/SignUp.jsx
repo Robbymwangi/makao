@@ -23,11 +23,11 @@ const SignUp = () => {
           <AuthHeader />
         </Box>
         <Text fontSize="2xl" fontWeight="bold">Sign Up for Makao</Text>
-        <Input placeholder="Full Name" />
-        <Input placeholder="Email" />
-        <Input placeholder="Password" type="password" />
-        <Input placeholder="Confirm Password" type="password" />
-        <Checkbox>I agree to the Terms of Service</Checkbox>
+        <Input placeholder="Full Name" id="full-name" name="full-name" />
+        <Input placeholder="Email" id="signup-email" name="signup-email" />
+        <Input placeholder="Password" type="password" id="signup-password" name="signup-password" />
+        <Input placeholder="Confirm Password" type="password" id="signup-confirm-password" name="signup-confirm-password" />
+        <Checkbox id="tos" name="tos">I agree to the Terms of Service</Checkbox>
         <Button colorScheme="blackAlpha" width="100%" onClick={handleSignUp}>
           Sign Up
         </Button>
