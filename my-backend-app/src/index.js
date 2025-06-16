@@ -13,10 +13,9 @@ const supabase = createClient(
 
 app.use(express.json());
 
-// Example route
-app.get('/', (req, res) => {
-  res.send('Express + Supabase backend is running!');
-});
+// Register your auth routes here
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
