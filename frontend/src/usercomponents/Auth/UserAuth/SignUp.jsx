@@ -1,13 +1,15 @@
-import React from "react";
-import { Input, Button, VStack, Text, Link, Box, useToast } from "@chakra-ui/react";
+import React, { useState } from "react";
+import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toaster } from "@/components/ui/toaster";
+import { supabase } from "@/utils/supabaseClient"; // Import your Supabase client
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const toast = useToast();
+  
 
 
 // State variables for form inputs
@@ -23,41 +25,39 @@ const SignUp = () => {
   const handleSignUp = async () => {
     // Check if Terms of Service is accepted
     if (!tos) {
-      toast({ title: "You must agree to the Terms of Service.", status: "warning" });
+      toaster({ title: "You must agree to the Terms of Service.", status: "warning" });
       return;
     }
     // Check if all fields are filled
     if (!email || !password || !confirmPassword) {
-      toast({ title: "Please fill in all fields.", status: "warning" });
+      toaster({ title: "Please fill in all fields.", status: "warning" });
       return;
     }
     // Check if passwords match
     if (password !== confirmPassword) {
-      toast({ title: "Passwords do not match.", status: "error" });
+      toaster({ title: "Passwords do not match.", status: "error" });
       return;
     }
 
-    try {
-      // Send signup request to backend
-      const response = await fetch("/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-      // If signup fails, show error
-      if (!response.ok) {
-        toast({ title: data.error || "Sign up failed.", status: "error" });
-      } else {
-        // On success, show message and navigate to OTP page
-        toast({ title: "Sign up successful! Please check your email.", status: "success" });
-        navigate("/otp-challengesend");
-      }
-    } catch (err) {
-      // Handle network errors
-      toast({ title: "Network error.", status: "error" });
+     try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName },
+      },
+    });
+
+    if (error) {
+      toaster({ title: error.message || "Sign up failed.", status: "error" });
+    } else {
+      toaster({ title: "Sign up successful! Please check your email.", status: "success" });
+      navigate("/otp-challengesend");
     }
-  };
+  } catch (err) {
+    toaster({ title: "Unexpected error occurred.", status: "error" });
+  }
+};
 
   return (
     <AuthLayout 
@@ -107,7 +107,7 @@ const SignUp = () => {
         <Checkbox
           id="tos"
           name="tos"
-          isChecked={tos}
+          checked={tos}
           onChange={e => setTos(e.target.checked)}
         >
           I agree to the Terms of Service
