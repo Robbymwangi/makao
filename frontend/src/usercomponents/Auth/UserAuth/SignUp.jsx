@@ -5,7 +5,8 @@ import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toaster } from "@/components/ui/toaster";
-import { supabase } from "@/utils/supabaseClient"; // Import your Supabase client
+import { supabase } from "@/utils/supabaseClient";
+
 
 const SignUp = () => {
   const navigate = useNavigate();
