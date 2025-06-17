@@ -15,6 +15,7 @@ router.post('/signup', async (req, res) => {
       email,
       password,
       options: {
+        emailRedirectTo: 'http://localhost:5173/dashboard', // Redirect after email confirmation
         data: {
           full_name,
         },
