@@ -10,25 +10,38 @@ import ProjectTimeline from "@/usercomponents/Dashboard/UserDash/UserDashCompone
 import PhotoProgress from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/PhotoProgress";
 import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/QuickLinks";
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
-
-const fetchUser = () =>
-  new Promise((resolve) =>
-    setTimeout(() => resolve({ name: "Joel Miller" }), 1500)
-  );
+import { supabase } from "@/utils/supabaseClient";
 
 const UserDashboard = () => {
-  const [user, setUser] = useState(null);
-  const [showName, setShowName] = useState(false);
   const headingRef = useRef(null);
-  const role = useAuthStore((state) => state.role);
+  const [showName, setShowName] = useState(false);
+
+  const { user, role, login } = useAuthStore((state) => ({
+    user: state.user,
+    role: state.role,
+    login: state.login,
+  }));
+
+  // On first load, fetch session from Supabase if not already in Zustand
+  useEffect(() => {
+    const fetchSessionUser = async () => {
+      const { data, error } = await supabase.auth.getSession();
+       if (sessionUser) {
+        login(sessionUser); // Save user and role to Zustand
+        setShowName(true);
+      }
+    };
+
+   
+    if (!user) {
+      fetchSessionUser();
+    } else {
+      setShowName(true);
+    }
+  }, [user, login]);
+  
   const menuItems = getMenuByRole(role);
 
-  useEffect(() => {
-    fetchUser().then((data) => {
-      setUser(data);
-      setShowName(true);
-    });
-  }, []);
 
   return (
     <>
