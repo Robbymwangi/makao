@@ -4,44 +4,54 @@ import { VStack, HStack, Heading, useBreakpointValue } from "@chakra-ui/react";
 import { CSSTransition } from "react-transition-group";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
+import { supabase } from "@/utils/supabaseClient";
+
+// Dashboard Components
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
 import ProjectTimeline from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Timeline";
 import PhotoProgress from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/PhotoProgress";
 import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/QuickLinks";
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
-import { supabase } from "@/utils/supabaseClient";
 
 const UserDashboard = () => {
   const headingRef = useRef(null);
+  // State to control the visibility of the welcome message
   const [showName, setShowName] = useState(false);
 
-  const { user, role, login } = useAuthStore((state) => ({
+  // Zustand store to manage user authentication state
+  // This will automatically fetch the user and role from the store
+ const { user, role, login } = useAuthStore((state) => ({
     user: state.user,
     role: state.role,
     login: state.login,
   }));
 
-  // On first load, fetch session from Supabase if not already in Zustand
   useEffect(() => {
     const fetchSessionUser = async () => {
       const { data, error } = await supabase.auth.getSession();
-       if (sessionUser) {
-        login(sessionUser); // Save user and role to Zustand
-        setShowName(true);
+      const sessionUser = data?.session?.user;
+
+      if (sessionUser) {
+       const fullName = sessionUser.user_metadata?.full_name || "User";
+       const userRole = sessionUser.user_metadata?.role || "user";
+        // Log the user in with the fetched session data
+       login({ ...sessionUser, name: fullName, role: userRole });
+         setShowName(true);
       }
     };
-
-   
+    // If user is not available, fetch the session user
+    // This ensures that the user data is available when the component mounts
     if (!user) {
       fetchSessionUser();
     } else {
       setShowName(true);
     }
   }, [user, login]);
-  
-  const menuItems = getMenuByRole(role);
 
+  const menuItems = getMenuByRole(role);
+  const welcomeName= user?.name || "User";
+  // Show the welcome message after the user is fetched
 
   return (
     <>
@@ -61,6 +71,7 @@ const UserDashboard = () => {
           transition: opacity 1500ms ease-out;
         }
       `}</style>
+
       <VStack spacing={6} align="stretch">
         <CSSTransition
           in={showName}
@@ -73,15 +84,14 @@ const UserDashboard = () => {
             ref={headingRef}
             fontSize="4xl"
             fontWeight="bold"
-            paddingBottom={"8"}
-            fontFamily={"Playfair display"}
+            paddingBottom="8"
+            fontFamily="Playfair Display"
             textAlign={useBreakpointValue({ base: "center", md: "left" })}
           >
-            {user ? `Welcome back, ${user.name}` : "Welcome back"}
+            {user ? `Welcome back, ${welcomeName}` : "Welcome to your Dashboard!"}
           </Heading>
         </CSSTransition>
 
-        {/* Other Dashboard Components */}
         <StatsCards />
         <HStack spacing={8} align="start" mt={8}>
           <FinancialOverview />
@@ -96,3 +106,4 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
+
