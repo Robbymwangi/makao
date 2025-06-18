@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../utils/supabaseClient');
 
-// Sign up endpoint
+// Sign up endpoint(for normal users only)
 router.post('/signup', async (req, res) => {
   try {
     const { email, password, full_name } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ error: "Email, password, and full names are required." });
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -18,6 +18,7 @@ router.post('/signup', async (req, res) => {
         emailRedirectTo: 'http://localhost:5173/dashboard', // Redirect after email confirmation
         data: {
           full_name,
+          role: 'user', // Default role for normal users
         },
       },
     });
@@ -30,7 +31,7 @@ router.post('/signup', async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-// Login endpoint
+// Login endpoint (for all roles: user, admin and consultant) 
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -39,10 +40,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: "Email and password are required." });
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email, password
+     });
     if (error) return res.status(400).json({ error: error.message });
 
-    res.json({ message: "Login successful", session: data.session, user: data.user });
+    res.json({ 
+      message: "Login successful", 
+      session: data.session,
+       user: data.user 
+      });
 
   } catch (err) {
     console.error("Login error:", err);
