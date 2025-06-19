@@ -21,22 +21,27 @@ const SignUp = () => {
   const [tos, setTos] = useState(false); // Terms of Service checkbox state
 
 
-
+const [message, setMessage] = useState("");
 // Handle sign-up process
   const handleSignUp = async () => {
+    setMessage(""); // Reset message state
+
     // Check if Terms of Service is accepted
     if (!tos) {
-      toaster({ title: "You must agree to the Terms of Service.", status: "warning" });
+      //toaster({ title: "You must agree to the Terms of Service.", status: "warning" });
+      setMessage("You must agree to the Terms of Service.");
       return;
     }
     // Check if all fields are filled
     if (!email || !password || !confirmPassword) {
-      toaster({ title: "Please fill in all fields.", status: "warning" });
+      //toaster({ title: "Please fill in all fields.", status: "warning" });
+      setMessage("Please fill in all fields.");
       return;
     }
     // Check if passwords match
     if (password !== confirmPassword) {
-      toaster({ title: "Passwords do not match.", status: "error" });
+      //toaster({ title: "Passwords do not match.", status: "error" });
+      setMessage("Passwords do not match.");
       return;
     }
 
@@ -45,18 +50,24 @@ const SignUp = () => {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        emailRedirectTo: "http://localhost:5173/dashboard", // Redirect after email confirmation
+        data: { full_name: fullName, role: "user" }, // Default role for normal users
       },
     });
 
     if (error) {
-      toaster({ title: error.message || "Sign up failed.", status: "error" });
+      //toaster({ title: error.message || "Sign up failed.", status: "error" });
+    setMessage(error.message || "Sign up failed.");
     } else {
-      toaster({ title: "Sign up successful! Please check your email.", status: "success" });
-      navigate("/otp-challengesend");
+      //toaster({ title: "Sign up successful! Please check your email.", status: "success" });
+      setMessage("Sign up successful! Please check your email.");
+      // Redirect to OTP challenge page
+     // navigate("/otp-challengesend");
     }
   } catch (err) {
-    toaster({ title: "Unexpected error occurred.", status: "error" });
+    //toaster({ title: "Unexpected error occurred.", status: "error" });
+  setMessage("Unexpected error occurred.");
+    console.error("Sign up error:", err); 
   }
 };
 
@@ -117,6 +128,11 @@ const SignUp = () => {
         <Button colorScheme="blackAlpha" width="100%" onClick={handleSignUp}>
           Sign Up
         </Button>
+        {message && (
+  <Text fontSize="sm" color="gold.500" textAlign="center">
+    {message}
+  </Text>
+)}
         {/* Link to login page */}
         <Text>
           Already have an account?{" "}
