@@ -21,33 +21,15 @@ const UserDashboard = () => {
 
   // Zustand store to manage user authentication state
   // This will automatically fetch the user and role from the store
- const { user, role, login } = useAuthStore((state) => ({
-    user: state.user,
-    role: state.role,
-    login: state.login,
-  }));
+  const user = useAuthStore((state) => state.user);
+  const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
-    const fetchSessionUser = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      const sessionUser = data?.session?.user;
-
-      if (sessionUser) {
-       const fullName = sessionUser.user_metadata?.full_name || "User";
-       const userRole = sessionUser.user_metadata?.role || "user";
-        // Log the user in with the fetched session data
-       login({ ...sessionUser, name: fullName, role: userRole });
-         setShowName(true);
-      }
-    };
-    // If user is not available, fetch the session user
     // This ensures that the user data is available when the component mounts
-    if (!user) {
-      fetchSessionUser();
-    } else {
+    if (user) {
       setShowName(true);
     }
-  }, [user, login]);
+  }, [user]);       
 
   const menuItems = getMenuByRole(role);
   const welcomeName= user?.name || "User";
