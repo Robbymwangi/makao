@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Box } from "@chakra-ui/react";
+import React, { useEffect, useState } from "react";
+import { Box, Spinner, Center } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
 
 // Pages
@@ -34,24 +34,72 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
+import { useAuthStore } from "./store/useAuthStore.js";
+
+import { supabase } from "@/utils/supabaseClient";
 
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  //  Access the login method from Zustand store
+  const login =useAuthStore((state) => state.login);
+  const [loading, setLoading] = useState(true);
 
-  // Save the current route to localStorage whenever it changes
+  // Restore Supabase session and login to Zustand
+ // Restore Supabase session and login to Zustand
+  useEffect(() => {
+    const restoreSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const sessionUser = data?.session?.user;
+
+      if (sessionUser) {
+        const fullName = sessionUser.user_metadata?.full_name || "User";
+        const userRole = sessionUser.user_metadata?.role || "user";
+        // Sync Supabase user into Zustand store
+        login({ 
+          id: sessionUser.id,
+          email: sessionUser.email,
+          name: fullName,
+          role: userRole,
+
+        });
+      }
+
+      setLoading(false); // Finish loading state
+    };
+
+    restoreSession();
+  }, [login]);
+
+  // Restore last route from localStorage
+  useEffect(() => {
+    const savedRoute = localStorage.getItem("currentRoute");
+
+    const redirectToLastRoute = async () => {
+      const { data } = await supabase.auth.getSession();
+      const isAuthenticated = !!data?.session?.user;
+
+      if (isAuthenticated && savedRoute && savedRoute !== location.pathname) {
+        navigate(savedRoute);
+      }
+    };
+
+    redirectToLastRoute();
+  }, [navigate, location.pathname]);
+
+  // Save current route to localStorage on every change
   useEffect(() => {
     localStorage.setItem("currentRoute", location.pathname);
   }, [location]);
 
-  // Restore the route on app load
-  useEffect(() => {
-    const savedRoute = localStorage.getItem("currentRoute");
-    if (savedRoute && savedRoute !== location.pathname) {
-      navigate(savedRoute);
-    }
-  }, [navigate, location.pathname]);
-
+  // Show loading spinner while session is being restored
+  if (loading) {
+    return (
+      <Center height="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
   return (
     <Box>
       <Routes>
