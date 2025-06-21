@@ -1,6 +1,8 @@
-const express = require('express');
+// routes/auth.js
+import express from 'express';
+import supabase from '../utils/supabaseClient.js'; // Make sure the .js extension is included
+
 const router = express.Router();
-const supabase = require('../utils/supabaseClient');
 
 // Sign up endpoint
 router.post('/signup', async (req, res) => {
@@ -18,4 +20,4 @@ router.post('/login', async (req, res) => {
   res.json(data);
 });
 
-module.exports = router;
+export default router;

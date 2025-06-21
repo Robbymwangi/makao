@@ -1,6 +1,10 @@
-  const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+// index.js
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import authRoutes from './src/routes/auth.js'; 
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,7 +18,6 @@ const supabase = createClient(
 app.use(express.json());
 
 // Register your auth routes here
-const authRoutes = require('./routes/auth');
 app.use('/auth', authRoutes);
 
 app.listen(port, () => {
