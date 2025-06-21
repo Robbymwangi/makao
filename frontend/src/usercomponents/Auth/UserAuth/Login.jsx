@@ -4,29 +4,48 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { supabase } from "@/utils/supabaseClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(""); // Optional for UI
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-
-  const handleLogin = (e) => {
+ 
+const handleLogin = async (e) => {
     e.preventDefault();
-    const role = login(email);
-    if (role === "user") {
-      setError("");
+    setError(""); // Reset error state
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+   try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
+        },
+      });
+
+
+     if (otpError) {
+        setError("Failed to send OTP. Please check your email.");
+        return;
+      }
+
+      login({ email: normalizedEmail }); // save email for later
       navigate("/otp-challengesend");
-    } 
-    else {
-      setError("Invalid credentials. Please try again.");
+    } catch (err) {
+      console.error("Unexpected error during login:", err);
+      setError("Unexpected error. Please try again.");
     }
   };
 
+
+
   return (
-    <AuthLayout 
-      image="https://images.unsplash.com/flagged/photo-1572491259205-506c425b45c3" 
+    <AuthLayout
+      image="https://images.unsplash.com/flagged/photo-1572491259205-506c425b45c3"
       leftContent="Your dream home is one login away"
     >
       <VStack spacing={6} width="100%" maxW="500px">
