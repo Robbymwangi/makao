@@ -82,7 +82,7 @@ const SignUp = () => {
       const result = await signup(formData.email, formData.password, 'user');
       
       if (result.user && result.session) {
-        // User was created and confirmed
+        // User was created and auto-confirmed (development mode)
         toaster.create({
           title: "Account Created",
           description: "Your account has been created successfully!",
@@ -90,15 +90,25 @@ const SignUp = () => {
           duration: 3000,
         });
         navigate("/otp-challengesend");
-      } else {
+      } else if (result.requiresConfirmation) {
         // User created but needs email confirmation
+        localStorage.setItem('pendingConfirmationEmail', formData.email);
         toaster.create({
           title: "Check Your Email",
           description: "Please check your email to confirm your account before logging in.",
           type: "info",
           duration: 5000,
         });
-        navigate("/login");
+        navigate("/auth/confirm");
+      } else {
+        // Fallback case
+        toaster.create({
+          title: "Account Created",
+          description: "Please check your email to confirm your account.",
+          type: "info",
+          duration: 5000,
+        });
+        navigate("/auth/confirm");
       }
     } catch (error) {
       toaster.create({

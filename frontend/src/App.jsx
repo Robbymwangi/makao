@@ -10,6 +10,7 @@ import OTPChallengeResp from "./pages/OTPchallengeresp.jsx";
 import NotFound from "./pages/404.jsx"; // fallback
 import StaffOTPChallengeSend from "./pages/StaffOTPChallengeSend";
 import StaffOTPChallengeResp from "./pages/StaffOTPChallengeResp";
+import EmailConfirmation from "./pages/EmailConfirmation.jsx";
 
 // Components
 import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.jsx";
@@ -61,6 +62,7 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/confirm" element={<EmailConfirmation />} />
         <Route path="/otp-challengesend" element={<OTPChallengeSend />} />
         <Route path="/otp-challengeresp" element={<OTPChallengeResp />} />
 

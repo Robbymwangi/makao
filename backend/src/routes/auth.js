@@ -49,12 +49,12 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - DISABLE email confirmation for now
+    // Sign up user with Supabase Auth - ENABLE email confirmation
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: undefined, // Disable email confirmation redirect
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm`,
         data: {
           role: role // Store role in user metadata
         }
@@ -76,58 +76,62 @@ router.post('/signup', async (req, res) => {
     if (authData.user) {
       console.log('User created successfully:', authData.user.id);
       
-      // Wait a moment for the database trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Check if profile was created by the trigger
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single();
-
-      console.log('Profile check:', { profile, profileError });
-
-      let userRole = role;
-      
-      if (profileError) {
-        console.log('Profile not found, creating manually...');
-        // If profile doesn't exist, create it manually
-        const { data: newProfile, error: createError } = await supabase
+      // If user has a session, they're auto-confirmed (development mode)
+      if (authData.session) {
+        // Wait a moment for the database trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check if profile was created by the trigger
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email,
-            role: role
-          })
-          .select()
+          .select('role')
+          .eq('id', authData.user.id)
           .single();
 
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          // Don't fail the signup, just use default role
-          userRole = 'user';
+        console.log('Profile check:', { profile, profileError });
+
+        let userRole = role;
+        
+        if (profileError) {
+          console.log('Profile not found, creating manually...');
+          // If profile doesn't exist, create it manually
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              email: authData.user.email,
+              role: role
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            userRole = 'user';
+          } else {
+            console.log('Profile created manually:', newProfile);
+            userRole = newProfile.role;
+          }
         } else {
-          console.log('Profile created manually:', newProfile);
-          userRole = newProfile.role;
+          userRole = profile.role;
         }
+
+        res.json({
+          user: authData.user,
+          session: authData.session,
+          role: userRole,
+          message: 'User created and logged in successfully'
+        });
       } else {
-        userRole = profile.role;
+        // User needs to confirm email
+        res.json({
+          user: authData.user,
+          session: null,
+          role: role,
+          message: 'Please check your email to confirm your account before logging in',
+          requiresConfirmation: true
+        });
       }
-
-      // For development, we'll auto-confirm the user if they don't have a session
-      if (!authData.session && authData.user && !authData.user.email_confirmed_at) {
-        console.log('Auto-confirming user for development...');
-        // Note: In production, you should handle email confirmation properly
-        // For now, we'll return the user data even without confirmation
-      }
-
-      res.json({
-        user: authData.user,
-        session: authData.session,
-        role: userRole,
-        message: authData.session ? 'User created and logged in' : 'User created, please check email for confirmation'
-      });
     } else {
       console.error('No user data returned from Supabase');
       res.status(500).json({ error: 'Failed to create user account' });
@@ -135,6 +139,71 @@ router.post('/signup', async (req, res) => {
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Database error saving new user' });
+  }
+});
+
+// Email confirmation endpoint
+router.get('/confirm', async (req, res) => {
+  try {
+    const { token_hash, type } = req.query;
+
+    console.log('Email confirmation attempt:', { token_hash: !!token_hash, type });
+
+    if (!token_hash || type !== 'signup') {
+      console.log('Invalid confirmation parameters');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=invalid_link`);
+    }
+
+    // Verify the email confirmation
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: 'signup'
+    });
+
+    console.log('Email verification result:', { 
+      user: data?.user ? 'User confirmed' : 'No user', 
+      session: data?.session ? 'Session created' : 'No session',
+      error 
+    });
+
+    if (error) {
+      console.error('Email confirmation error:', error);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=expired_link`);
+    }
+
+    if (data.user) {
+      // Create profile if it doesn't exist
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!existingProfile) {
+        console.log('Creating profile for confirmed user...');
+        const userRole = data.user.user_metadata?.role || 'user';
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            role: userRole
+          });
+
+        if (profileError) {
+          console.error('Error creating profile after confirmation:', profileError);
+        }
+      }
+
+      // Redirect to confirmation success page
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?success=true`);
+    }
+
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=confirmation_failed`);
+  } catch (error) {
+    console.error('Confirmation error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=server_error`);
   }
 });
 
@@ -168,6 +237,15 @@ router.post('/login', async (req, res) => {
 
     if (authError) {
       console.error('Login error:', authError);
+      
+      // Check if it's an email not confirmed error
+      if (authError.message.includes('email not confirmed')) {
+        return res.status(400).json({ 
+          error: 'Please confirm your email address before logging in',
+          code: 'email_not_confirmed'
+        });
+      }
+      
       return res.status(400).json({ error: authError.message });
     }
 
@@ -215,34 +293,33 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Email confirmation endpoint
-router.get('/confirm', async (req, res) => {
+// Resend confirmation email endpoint
+router.post('/resend-confirmation', async (req, res) => {
   try {
-    const { token_hash, type } = req.query;
+    const { email } = req.body;
 
-    if (!token_hash || type !== 'signup') {
-      return res.status(400).json({ error: 'Invalid confirmation link' });
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
     }
 
-    // Verify the email confirmation
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: 'signup'
+    console.log('Resending confirmation email for:', email);
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm`
+      }
     });
 
     if (error) {
-      console.error('Email confirmation error:', error);
-      return res.status(400).json({ error: 'Invalid or expired confirmation link' });
+      console.error('Resend confirmation error:', error);
+      return res.status(400).json({ error: error.message });
     }
 
-    if (data.user) {
-      // Redirect to login page with success message
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?confirmed=true`);
-    }
-
-    res.status(400).json({ error: 'Confirmation failed' });
+    res.json({ message: 'Confirmation email sent successfully' });
   } catch (error) {
-    console.error('Confirmation error:', error);
+    console.error('Resend confirmation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

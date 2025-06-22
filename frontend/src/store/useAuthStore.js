@@ -112,6 +112,36 @@ export const useAuthStore = create(
         }
       },
 
+      // Resend confirmation email
+      resendConfirmation: async (email) => {
+        set({ loading: true, error: null });
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/resend-confirmation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to resend confirmation email');
+          }
+
+          set({ loading: false, error: null });
+          return data;
+        } catch (error) {
+          set({
+            loading: false,
+            error: error.message,
+          });
+          throw error;
+        }
+      },
+
       // Logout action
       logout: async () => {
         const { token } = get();

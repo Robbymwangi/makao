@@ -58,6 +58,21 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (error) {
+      // Check if it's an email not confirmed error
+      if (error.message.includes('email not confirmed') || error.message.includes('confirm your email')) {
+        toaster.create({
+          title: "Email Not Confirmed",
+          description: "Please confirm your email address before logging in.",
+          type: "warning",
+          duration: 5000,
+        });
+        
+        // Store email for potential resend
+        localStorage.setItem('pendingConfirmationEmail', email);
+        navigate("/auth/confirm");
+        return;
+      }
+
       toaster.create({
         title: "Login Failed",
         description: error.message || "Invalid credentials. Please try again.",
