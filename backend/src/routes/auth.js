@@ -49,7 +49,7 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - redirect to verification page
+    // Sign up user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -75,9 +75,12 @@ router.post('/signup', async (req, res) => {
     // Check if user was created successfully
     if (authData.user) {
       console.log('User created successfully:', authData.user.id);
+      console.log('Email confirmed at signup:', authData.user.email_confirmed_at ? 'Yes' : 'No');
       
       // If user has a session, they're auto-confirmed (development mode)
       if (authData.session) {
+        console.log('✅ User auto-confirmed, creating profile...');
+        
         // Wait a moment for the database trigger to create the profile
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -123,6 +126,9 @@ router.post('/signup', async (req, res) => {
           message: 'User created and logged in successfully'
         });
       } else {
+        console.log('📧 User needs email confirmation');
+        console.log('📧 Confirmation email should be sent to:', email);
+        
         // User needs to confirm email
         res.json({
           user: authData.user,
@@ -252,6 +258,7 @@ router.post('/resend-confirmation', async (req, res) => {
       return res.status(400).json({ error: error.message });
     }
 
+    console.log('✅ Confirmation email resent successfully');
     res.json({ message: 'Confirmation email sent successfully' });
   } catch (error) {
     console.error('Resend confirmation error:', error);
