@@ -3,23 +3,66 @@ import { Box, VStack, Input, Button, Text, Link, Flex } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { toaster } from "@/components/ui/toaster";
 
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login, loading, error, clearError } = useAuthStore();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const role = login(email);
-    if (role === "systemAdmin" || role === "consultantAdmin" || role === "agentAdmin") {
-      setError("");
-      navigate("/staff/otp-challengesend");
-    } else if (role === "user") {
-      setError("Users must use the regular Login page.");
-    } else {
-      setError("Invalid credentials. Please try again.");
+    clearError();
+
+    if (!email || !password) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const role = await login(email, password);
+      
+      // Check if the user has a staff role
+      if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+        toaster.create({
+          title: "Login Successful",
+          description: "Welcome to the staff portal!",
+          type: "success",
+          duration: 2000,
+        });
+        navigate("/staff/otp-challengesend");
+      } else if (role === "user") {
+        toaster.create({
+          title: "Access Denied",
+          description: "Users must use the regular Login page.",
+          type: "error",
+          duration: 4000,
+        });
+        // Clear the authentication since this is not a valid staff login
+        useAuthStore.getState().logout();
+      } else {
+        toaster.create({
+          title: "Access Denied",
+          description: "You don't have permission to access the staff portal.",
+          type: "error",
+          duration: 4000,
+        });
+        // Clear the authentication
+        useAuthStore.getState().logout();
+      }
+    } catch (error) {
+      toaster.create({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
+        type: "error",
+        duration: 4000,
+      });
     }
   };
 
@@ -30,14 +73,40 @@ const StaffLogin = () => {
         <Text fontSize="2xl" fontWeight="bold" mb={4} textAlign="center">
           Staff Login
         </Text>
-        <VStack spacing={4} as="form" onSubmit={handleLogin}>
-          <Input placeholder="Staff Email" type="email" required value={email} onChange={e => setEmail(e.target.value)} id="staff-email" name="staff-email" />
-          <Input placeholder="Password" type="password" required id="staff-password" name="staff-password" />
-          <Button colorScheme="blackAlpha" w="100%" type="submit">
-            Log In
-          </Button>
-        </VStack>
-        {error && <Text color="red.500" mt={2} textAlign="center">{error}</Text>}
+        <form onSubmit={handleLogin}>
+          <VStack spacing={4}>
+            <Input 
+              placeholder="Staff Email" 
+              type="email" 
+              required 
+              value={email} 
+              onChange={e => setEmail(e.target.value)}
+              disabled={loading}
+            />
+            <Input 
+              placeholder="Password" 
+              type="password" 
+              required 
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={loading}
+            />
+            <Button 
+              colorScheme="blackAlpha" 
+              w="100%" 
+              type="submit"
+              loading={loading}
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log In"}
+            </Button>
+          </VStack>
+        </form>
+        {error && (
+          <Text color="red.500" mt={2} textAlign="center" fontSize="sm">
+            {error}
+          </Text>
+        )}
         <Text mt={4} textAlign="center">
           <Link as={RouterLink} to="/staff/forgot-password" color="blue.500" fontWeight="medium">
             Forgot Password?

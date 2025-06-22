@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Box } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
+import { Toaster } from "@/components/ui/toaster";
 
 // Pages
 import Landingpage from "./pages/Landingpage.jsx";
@@ -19,7 +20,6 @@ import SignUp from "./usercomponents/Auth/UserAuth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
 import StaffLogin from "./usercomponents/Auth/StaffAuth/AdminLogin.jsx";
 import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/AdminForgotPassword.jsx";
-
 
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
 
@@ -54,6 +54,7 @@ const App = () => {
 
   return (
     <Box>
+      <Toaster />
       <Routes>
         {/* Landing Page */}
         <Route path="/" element={<><LandingHeader /><Landingpage /></>} />
@@ -72,7 +73,7 @@ const App = () => {
           <Route path="Expenses" element={<Expenses />} />
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:chatId" element={<Messages />} />
-          <Route path="support" element={<Support />} /> {/* <-- Add this line */}
+          <Route path="support" element={<Support />} />
         </Route>
 
         {/* Staff Routes */}

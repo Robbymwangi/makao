@@ -4,23 +4,53 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
+import { toaster } from "@/components/ui/toaster";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const { login, loading, error, clearError } = useAuthStore();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const role = login(email);
-    if (role === "user") {
-      setError("");
-      navigate("/otp-challengesend");
-    } 
-    else {
-      setError("Invalid credentials. Please try again.");
+    clearError();
+
+    if (!email || !password) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const role = await login(email, password);
+      
+      toaster.create({
+        title: "Login Successful",
+        description: "Welcome back!",
+        type: "success",
+        duration: 2000,
+      });
+
+      // Navigate based on role
+      if (role === "user") {
+        navigate("/otp-challengesend");
+      } else if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+        navigate("/staff/otp-challengesend");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      toaster.create({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
+        type: "error",
+        duration: 4000,
+      });
     }
   };
 
@@ -44,6 +74,7 @@ const Login = () => {
               name="login-email"
               type="email"
               required
+              disabled={loading}
             />
             <Input
               placeholder="Enter your password"
@@ -53,13 +84,24 @@ const Login = () => {
               name="login-password"
               type="password"
               required
+              disabled={loading}
             />
-            <Button colorScheme="blue" type="submit" w="100%">
-              Log In
+            <Button 
+              colorScheme="blue" 
+              type="submit" 
+              w="100%"
+              loading={loading}
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log In"}
             </Button>
           </VStack>
         </form>
-        {error && <Text color="red.500">{error}</Text>}
+        {error && (
+          <Text color="red.500" fontSize="sm" textAlign="center">
+            {error}
+          </Text>
+        )}
         <Text>
           Don't have an account?{" "}
           <Link variant="underline" asChild>
