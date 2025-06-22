@@ -49,12 +49,12 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth
+    // Sign up user with Supabase Auth - DISABLE email confirmation for now
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: undefined, // Disable email confirmation
+        emailRedirectTo: undefined, // Disable email confirmation redirect
         data: {
           role: role // Store role in user metadata
         }
@@ -115,10 +115,18 @@ router.post('/signup', async (req, res) => {
         userRole = profile.role;
       }
 
+      // For development, we'll auto-confirm the user if they don't have a session
+      if (!authData.session && authData.user && !authData.user.email_confirmed_at) {
+        console.log('Auto-confirming user for development...');
+        // Note: In production, you should handle email confirmation properly
+        // For now, we'll return the user data even without confirmation
+      }
+
       res.json({
         user: authData.user,
         session: authData.session,
-        role: userRole
+        role: userRole,
+        message: authData.session ? 'User created and logged in' : 'User created, please check email for confirmation'
       });
     } else {
       console.error('No user data returned from Supabase');
@@ -203,6 +211,38 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Email confirmation endpoint
+router.get('/confirm', async (req, res) => {
+  try {
+    const { token_hash, type } = req.query;
+
+    if (!token_hash || type !== 'signup') {
+      return res.status(400).json({ error: 'Invalid confirmation link' });
+    }
+
+    // Verify the email confirmation
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: 'signup'
+    });
+
+    if (error) {
+      console.error('Email confirmation error:', error);
+      return res.status(400).json({ error: 'Invalid or expired confirmation link' });
+    }
+
+    if (data.user) {
+      // Redirect to login page with success message
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?confirmed=true`);
+    }
+
+    res.status(400).json({ error: 'Confirmation failed' });
+  } catch (error) {
+    console.error('Confirmation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

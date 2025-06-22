@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
-import { Link as RouterLink, useNavigate } from "react-router";
+import { Link as RouterLink, useNavigate, useSearchParams } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -10,7 +10,20 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loading, error, clearError } = useAuthStore();
+
+  // Check for email confirmation success
+  useEffect(() => {
+    if (searchParams.get('confirmed') === 'true') {
+      toaster.create({
+        title: "Email Confirmed",
+        description: "Your email has been confirmed successfully! You can now log in.",
+        type: "success",
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
