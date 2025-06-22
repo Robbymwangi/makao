@@ -6,11 +6,20 @@ import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { toaster } from "@/components/ui/toaster";
 import { createClient } from '@supabase/supabase-js';
 
+// Get environment variables with fallbacks
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: !!supabaseUrl,
+    key: !!supabaseAnonKey
+  });
+}
+
 // Create Supabase client for email verification
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const EmailConfirmation = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +34,14 @@ const EmailConfirmation = () => {
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
+      // Check if Supabase client is available
+      if (!supabase) {
+        console.error('Supabase client not initialized');
+        setStatus('error');
+        setSearchParams({ error: 'configuration_error' });
+        return;
+      }
+
       // If we have success/error params from backend redirect, use those
       if (success === 'true') {
         setStatus('success');
@@ -94,6 +111,8 @@ const EmailConfirmation = () => {
         return 'Email confirmation failed. Please try again.';
       case 'server_error':
         return 'A server error occurred. Please try again later.';
+      case 'configuration_error':
+        return 'Application configuration error. Please contact support.';
       default:
         return 'An unknown error occurred during email confirmation.';
     }
@@ -115,7 +134,8 @@ const EmailConfirmation = () => {
     setResendLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'}/auth/resend-confirmation`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${backendUrl}/auth/resend-confirmation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
