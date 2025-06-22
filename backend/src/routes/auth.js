@@ -49,12 +49,12 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - use base URL without query params
+    // Sign up user with Supabase Auth - redirect to verification page
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:5173/auth/confirm',
+        emailRedirectTo: 'http://localhost:5173/verify-email',
         data: {
           role: role // Store role in user metadata
         }
@@ -228,6 +228,66 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Email verification endpoint
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { token_hash, type } = req.body;
+
+    if (!token_hash || !type) {
+      return res.status(400).json({ error: 'Missing verification parameters' });
+    }
+
+    console.log('Verifying email with token...');
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type
+    });
+
+    if (error) {
+      console.error('Email verification error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    if (data.user) {
+      console.log('Email verified successfully:', data.user.id);
+      
+      // Get user's role from metadata or create profile
+      const userRole = data.user.user_metadata?.role || 'user';
+      
+      // Ensure profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        // Create profile if it doesn't exist
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            role: userRole
+          });
+      }
+
+      res.json({
+        user: data.user,
+        session: data.session,
+        role: userRole,
+        message: 'Email verified successfully'
+      });
+    } else {
+      res.status(400).json({ error: 'Verification failed' });
+    }
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Resend confirmation email endpoint
 router.post('/resend-confirmation', async (req, res) => {
   try {
@@ -243,7 +303,7 @@ router.post('/resend-confirmation', async (req, res) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: 'http://localhost:5173/auth/confirm'
+        emailRedirectTo: 'http://localhost:5173/verify-email'
       }
     });
 
