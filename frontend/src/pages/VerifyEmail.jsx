@@ -19,10 +19,6 @@ const VerifyEmail = () => {
         const type = searchParams.get('type');
         const redirectType = searchParams.get('redirect_type');
 
-        // Log all URL parameters for debugging
-        console.log('=== EMAIL VERIFICATION DEBUG ===');
-        console.log('Full URL:', window.location.href);
-        console.log('Search params string:', searchParams.toString());
         console.log('All URL parameters:', {
           tokenHash,
           type,
@@ -32,16 +28,13 @@ const VerifyEmail = () => {
 
         // Check if we have the required parameters
         if (!tokenHash || !type) {
-          console.log('❌ Missing required parameters');
-          console.log('Required: token_hash and type');
-          console.log('Received:', { tokenHash, type });
+          console.log('Missing required parameters');
           setStatus('error');
           setMessage('Invalid verification link. Missing required parameters.');
           return;
         }
 
-        console.log('✅ Required parameters found');
-        console.log('🔄 Verifying email with:', { tokenHash, type });
+        console.log('Verifying email with token_hash:', tokenHash, 'type:', type);
         
         // Use verifyOtp to confirm the email
         const { data, error } = await supabase.auth.verifyOtp({
@@ -49,23 +42,17 @@ const VerifyEmail = () => {
           type: type
         });
 
-        console.log('📧 Verification response:', { 
-          data: data ? 'Data received' : 'No data', 
-          user: data?.user ? `User ID: ${data.user.id}` : 'No user',
-          session: data?.session ? 'Session created' : 'No session',
-          error: error ? error.message : 'No error'
-        });
+        console.log('Verification response:', { data, error });
 
         if (error) {
-          console.error('❌ Verification error:', error);
+          console.error('Verification error:', error);
           setStatus('error');
           setMessage(`Email verification failed: ${error.message}`);
           return;
         }
 
         if (data.user) {
-          console.log('✅ Email verified successfully for user:', data.user.id);
-          console.log('📧 User email confirmed:', data.user.email_confirmed_at ? 'Yes' : 'No');
+          console.log('Email verified successfully for user:', data.user.id);
           setStatus('success');
           setMessage('Your email has been verified successfully! You can now log in to your account.');
           
@@ -77,13 +64,13 @@ const VerifyEmail = () => {
             duration: 5000,
           });
         } else {
-          console.log('❌ No user data returned');
+          console.log('No user data returned');
           setStatus('error');
           setMessage('Verification failed. No user data returned.');
         }
 
       } catch (error) {
-        console.error('💥 Email verification error:', error);
+        console.error('Email verification error:', error);
         setStatus('error');
         setMessage(`Email verification failed: ${error.message}`);
       }
@@ -91,10 +78,8 @@ const VerifyEmail = () => {
 
     // Only run verification if we have URL parameters
     if (searchParams.toString()) {
-      console.log('🚀 Starting email verification process...');
       verifyEmail();
     } else {
-      console.log('❌ No URL parameters found');
       setStatus('error');
       setMessage('No verification parameters found in URL.');
     }
