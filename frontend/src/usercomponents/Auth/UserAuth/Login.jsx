@@ -8,7 +8,7 @@ import { supabase } from "@/utils/supabaseClient";
 
 const Login = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // Optional for UI
+  const [password, setPassword] = useState(""); 
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
@@ -20,29 +20,51 @@ const handleLogin = async (e) => {
     const normalizedEmail = email.trim().toLowerCase();
 
    try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
-        },
-      });
+    // Step 1: Sign in with password
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
 
-
-     if (otpError) {
-        setError("Failed to send OTP. Please check your email.");
-        return;
-      }
-
-      login({ email: normalizedEmail }); // save email for later
-      navigate("/otp-challengesend");
-    } catch (err) {
-      console.error("Unexpected error during login:", err);
-      setError("Unexpected error. Please try again.");
+    if (signInError || !data?.user) {
+      setError("Invalid email or password.");
+      return;
     }
-  };
 
+    const role = data.user.user_metadata?.role;
+    if (role !== "user") {
+      setError("Access denied. This login is for users only.");
+      await supabase.auth.signOut();
+      return;
+    }
 
+    // Step 2: Sign out immediately
+    await supabase.auth.signOut();
 
+    // Step 3: Send OTP to email
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
+      },
+    });
+
+    if (otpError) {
+      setError("Failed to send OTP. Please check your email.");
+      return;
+    }
+
+    // Save email to Zustand or localStorage
+    login({ email: normalizedEmail });
+
+    // Step 4: Redirect to OTP entry screen
+    navigate("/otp-challengesend");
+
+  } catch (err) {
+    console.error("Login error:", err);
+    setError("Something went wrong. Please try again.");
+  }
+};
   return (
     <AuthLayout
       image="https://images.unsplash.com/flagged/photo-1572491259205-506c425b45c3"
