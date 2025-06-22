@@ -12,67 +12,42 @@ const VerifyEmail = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        // Get all URL parameters
+        // Get token_hash and type from URL parameters
         const tokenHash = searchParams.get('token_hash');
         const type = searchParams.get('type');
-        const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
 
-        console.log('URL parameters:', { tokenHash, type, accessToken, refreshToken });
+        console.log('URL parameters:', { tokenHash, type });
 
-        // If we have access_token and refresh_token, the user is already verified
-        if (accessToken && refreshToken) {
-          console.log('User already verified with tokens');
-          
-          // Set the session
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          });
+        // Check if we have the required parameters for verifyOtp
+        if (!tokenHash || !type) {
+          setStatus('error');
+          setMessage('Invalid verification link. Missing required parameters.');
+          return;
+        }
 
-          if (error) {
-            console.error('Session error:', error);
-            setStatus('error');
-            setMessage('Failed to establish session after verification.');
-            return;
-          }
+        console.log('Verifying email with verifyOtp...');
+        
+        // Use verifyOtp to confirm the email without establishing a session
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type
+        });
 
-          console.log('Session established:', data);
+        if (error) {
+          console.error('Verification error:', error);
+          setStatus('error');
+          setMessage('Email verification failed. The link may be invalid or expired.');
+          return;
+        }
+
+        if (data.user) {
+          console.log('Email verified successfully:', data.user.id);
           setStatus('success');
           setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
-          return;
+        } else {
+          setStatus('error');
+          setMessage('Verification failed. Please try again.');
         }
-
-        // If we have token_hash and type, use verifyOtp
-        if (tokenHash && type) {
-          console.log('Verifying with token_hash and type');
-          
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: type
-          });
-
-          if (error) {
-            console.error('Verification error:', error);
-            setStatus('error');
-            setMessage('Email verification failed. The link may be invalid or expired.');
-            return;
-          }
-
-          if (data.user) {
-            console.log('Email verified successfully:', data.user.id);
-            setStatus('success');
-            setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
-          } else {
-            setStatus('error');
-            setMessage('Verification failed. Please try again.');
-          }
-          return;
-        }
-
-        // If no valid parameters found
-        setStatus('error');
-        setMessage('Invalid verification link. Missing required parameters.');
 
       } catch (error) {
         console.error('Email verification error:', error);
