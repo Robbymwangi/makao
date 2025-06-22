@@ -49,12 +49,12 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - redirect to frontend confirmation page with type=signup
+    // Sign up user with Supabase Auth - use base URL without query params
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:5173/auth/confirm?type=signup',
+        emailRedirectTo: 'http://localhost:5173/auth/confirm',
         data: {
           role: role // Store role in user metadata
         }
@@ -243,7 +243,7 @@ router.post('/resend-confirmation', async (req, res) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: 'http://localhost:5173/auth/confirm?type=signup'
+        emailRedirectTo: 'http://localhost:5173/auth/confirm'
       }
     });
 
