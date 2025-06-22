@@ -49,12 +49,12 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - ENABLE email confirmation
+    // Sign up user with Supabase Auth - redirect to frontend confirmation page
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `http://localhost:3000/auth/confirm`,
+        emailRedirectTo: 'http://localhost:5173/auth/confirm',
         data: {
           role: role // Store role in user metadata
         }
@@ -139,71 +139,6 @@ router.post('/signup', async (req, res) => {
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'Database error saving new user' });
-  }
-});
-
-// Email confirmation endpoint - This handles the redirect from email
-router.get('/confirm', async (req, res) => {
-  try {
-    const { token_hash, type } = req.query;
-
-    console.log('Email confirmation attempt:', { token_hash: !!token_hash, type });
-
-    if (!token_hash || type !== 'signup') {
-      console.log('Invalid confirmation parameters');
-      return res.redirect(`http://localhost:5173/auth/confirm?error=invalid_link`);
-    }
-
-    // Verify the email confirmation
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: 'signup'
-    });
-
-    console.log('Email verification result:', { 
-      user: data?.user ? 'User confirmed' : 'No user', 
-      session: data?.session ? 'Session created' : 'No session',
-      error 
-    });
-
-    if (error) {
-      console.error('Email confirmation error:', error);
-      return res.redirect(`http://localhost:5173/auth/confirm?error=expired_link`);
-    }
-
-    if (data.user) {
-      // Create profile if it doesn't exist
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single();
-
-      if (!existingProfile) {
-        console.log('Creating profile for confirmed user...');
-        const userRole = data.user.user_metadata?.role || 'user';
-        
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email,
-            role: userRole
-          });
-
-        if (profileError) {
-          console.error('Error creating profile after confirmation:', profileError);
-        }
-      }
-
-      // Redirect to confirmation success page
-      return res.redirect(`http://localhost:5173/auth/confirm?success=true`);
-    }
-
-    res.redirect(`http://localhost:5173/auth/confirm?error=confirmation_failed`);
-  } catch (error) {
-    console.error('Confirmation error:', error);
-    res.redirect(`http://localhost:5173/auth/confirm?error=server_error`);
   }
 });
 
@@ -308,7 +243,7 @@ router.post('/resend-confirmation', async (req, res) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: `http://localhost:3000/auth/confirm`
+        emailRedirectTo: 'http://localhost:5173/auth/confirm'
       }
     });
 

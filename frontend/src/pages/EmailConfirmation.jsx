@@ -13,8 +13,6 @@ const EmailConfirmation = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [supabase, setSupabase] = useState(null);
 
-  const success = searchParams.get('success');
-  const error = searchParams.get('error');
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type');
 
@@ -25,9 +23,7 @@ const EmailConfirmation = () => {
 
     console.log('Environment variables check:', {
       url: !!supabaseUrl,
-      key: !!supabaseAnonKey,
-      urlValue: supabaseUrl,
-      keyValue: supabaseAnonKey ? 'Present' : 'Missing'
+      key: !!supabaseAnonKey
     });
 
     if (supabaseUrl && supabaseAnonKey) {
@@ -38,29 +34,21 @@ const EmailConfirmation = () => {
       } catch (error) {
         console.error('Failed to initialize Supabase client:', error);
         setStatus('error');
-        setSearchParams({ error: 'configuration_error' });
       }
     } else {
-      console.error('Missing Supabase environment variables');
+      console.error('Missing Supabase environment variables:', {
+        url: !!supabaseUrl,
+        key: !!supabaseAnonKey
+      });
       setStatus('error');
-      setSearchParams({ error: 'configuration_error' });
     }
-  }, [setSearchParams]);
+  }, []);
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       // Check if Supabase client is available
       if (!supabase) {
-        console.log('Waiting for Supabase client initialization...');
-        return;
-      }
-
-      // If we have success/error params from backend redirect, use those
-      if (success === 'true') {
-        setStatus('success');
-        return;
-      } else if (error) {
-        setStatus('error');
+        console.log('Supabase client not initialized');
         return;
       }
 
@@ -77,14 +65,12 @@ const EmailConfirmation = () => {
           if (verifyError) {
             console.error('Email verification error:', verifyError);
             setStatus('error');
-            setSearchParams({ error: 'verification_failed' });
             return;
           }
 
           if (data.user) {
             console.log('Email verified successfully:', data.user.id);
             setStatus('success');
-            setSearchParams({ success: 'true' });
             
             toaster.create({
               title: "Email Confirmed",
@@ -94,12 +80,10 @@ const EmailConfirmation = () => {
             });
           } else {
             setStatus('error');
-            setSearchParams({ error: 'verification_failed' });
           }
         } catch (error) {
           console.error('Verification error:', error);
           setStatus('error');
-          setSearchParams({ error: 'server_error' });
         }
       } else {
         // No verification params, show pending state
@@ -108,26 +92,7 @@ const EmailConfirmation = () => {
     };
 
     handleEmailConfirmation();
-  }, [supabase, tokenHash, type, success, error, setSearchParams]);
-
-  const getErrorMessage = (errorCode) => {
-    switch (errorCode) {
-      case 'invalid_link':
-        return 'The confirmation link is invalid or malformed.';
-      case 'expired_link':
-        return 'The confirmation link has expired. Please request a new one.';
-      case 'verification_failed':
-        return 'Email verification failed. The link may be invalid or expired.';
-      case 'confirmation_failed':
-        return 'Email confirmation failed. Please try again.';
-      case 'server_error':
-        return 'A server error occurred. Please try again later.';
-      case 'configuration_error':
-        return 'Application configuration error. Please contact support.';
-      default:
-        return 'An unknown error occurred during email confirmation.';
-    }
-  };
+  }, [supabase, tokenHash, type]);
 
   const handleResendConfirmation = async () => {
     const email = localStorage.getItem('pendingConfirmationEmail');
@@ -222,7 +187,7 @@ const EmailConfirmation = () => {
               Confirmation Failed
             </Heading>
             <Text color="gray.600">
-              {getErrorMessage(error)}
+              The confirmation link is invalid or has expired. Please request a new confirmation email.
             </Text>
             <VStack spacing={3} w="100%">
               <Button
