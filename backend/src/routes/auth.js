@@ -54,7 +54,7 @@ router.post('/signup', async (req, res) => {
       email,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm`,
+        emailRedirectTo: `http://localhost:3000/auth/confirm`,
         data: {
           role: role // Store role in user metadata
         }
@@ -142,7 +142,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Email confirmation endpoint
+// Email confirmation endpoint - This handles the redirect from email
 router.get('/confirm', async (req, res) => {
   try {
     const { token_hash, type } = req.query;
@@ -151,7 +151,7 @@ router.get('/confirm', async (req, res) => {
 
     if (!token_hash || type !== 'signup') {
       console.log('Invalid confirmation parameters');
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=invalid_link`);
+      return res.redirect(`http://localhost:5173/auth/confirm?error=invalid_link`);
     }
 
     // Verify the email confirmation
@@ -168,7 +168,7 @@ router.get('/confirm', async (req, res) => {
 
     if (error) {
       console.error('Email confirmation error:', error);
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=expired_link`);
+      return res.redirect(`http://localhost:5173/auth/confirm?error=expired_link`);
     }
 
     if (data.user) {
@@ -197,13 +197,13 @@ router.get('/confirm', async (req, res) => {
       }
 
       // Redirect to confirmation success page
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?success=true`);
+      return res.redirect(`http://localhost:5173/auth/confirm?success=true`);
     }
 
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=confirmation_failed`);
+    res.redirect(`http://localhost:5173/auth/confirm?error=confirmation_failed`);
   } catch (error) {
     console.error('Confirmation error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm?error=server_error`);
+    res.redirect(`http://localhost:5173/auth/confirm?error=server_error`);
   }
 });
 
@@ -308,7 +308,7 @@ router.post('/resend-confirmation', async (req, res) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/confirm`
+        emailRedirectTo: `http://localhost:3000/auth/confirm`
       }
     });
 
