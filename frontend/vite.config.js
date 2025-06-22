@@ -10,4 +10,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true,
+    hmr: {
+      clientPort: 443,
+      protocol: 'wss'
+    }
+  }
 })
