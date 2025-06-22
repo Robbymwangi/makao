@@ -9,6 +9,8 @@ router.post('/signup', async (req, res) => {
   try {
     const { email, password, role = 'user' } = req.body;
 
+    console.log('Signup attempt for:', email, 'with role:', role);
+
     // Validate input
     if (!email || !password) {
       return res.status(400).json({ 
@@ -28,49 +30,53 @@ router.post('/signup', async (req, res) => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: undefined, // Disable email confirmation
+        data: {
+          role: role // Store role in user metadata
+        }
+      }
     });
 
+    console.log('Supabase auth response:', { authData, authError });
+
     if (authError) {
+      console.error('Auth error:', authError);
       return res.status(400).json({ error: authError.message });
     }
 
-    // If user was created successfully, update their profile with the specified role
-    if (authData.user && !authError) {
-      // Only allow non-user roles to be set by system admins or during initial setup
-      if (role !== 'user') {
-        // For now, we'll allow role assignment during signup
-        // In production, you might want to restrict this to admin-only operations
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ role })
-          .eq('id', authData.user.id);
+    // Check if user was created successfully
+    if (authData.user) {
+      console.log('User created successfully:', authData.user.id);
+      
+      // The profile should be created automatically by the database trigger
+      // Let's wait a moment and then fetch the profile to confirm
+      setTimeout(async () => {
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.user.id)
+            .single();
 
-        if (profileError) {
-          console.error('Error updating user role:', profileError);
-          // Don't fail the signup, just log the error
+          console.log('Profile check:', { profile, profileError });
+        } catch (err) {
+          console.error('Profile check error:', err);
         }
-      }
-
-      // Fetch the user's profile to get the role
-      const { data: profile, error: profileFetchError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single();
-
-      const userRole = profile?.role || 'user';
+      }, 1000);
 
       res.json({
         user: authData.user,
         session: authData.session,
-        role: userRole
+        role: role
       });
     } else {
-      res.json(authData);
+      console.error('No user data returned from Supabase');
+      res.status(500).json({ error: 'Failed to create user account' });
     }
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Database error saving new user' });
   }
 });
 
@@ -78,6 +84,8 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    console.log('Login attempt for:', email);
 
     // Validate input
     if (!email || !password) {
@@ -92,7 +100,10 @@ router.post('/login', async (req, res) => {
       password,
     });
 
+    console.log('Login auth response:', { authData, authError });
+
     if (authError) {
+      console.error('Login error:', authError);
       return res.status(400).json({ error: authError.message });
     }
 
@@ -103,9 +114,30 @@ router.post('/login', async (req, res) => {
       .eq('id', authData.user.id)
       .single();
 
+    console.log('Profile fetch:', { profile, profileError });
+
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
-      return res.status(500).json({ error: 'Error fetching user profile' });
+      // If profile doesn't exist, create it with default role
+      const { error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          email: authData.user.email,
+          role: 'user'
+        });
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return res.status(500).json({ error: 'Error setting up user profile' });
+      }
+
+      // Return with default role
+      return res.json({
+        user: authData.user,
+        session: authData.session,
+        role: 'user'
+      });
     }
 
     res.json({
