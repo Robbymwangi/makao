@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, VStack, Text, Heading, Spinner } from "@chakra-ui/react";
 import { useSearchParams } from "react-router";
 import { CheckCircle, XCircle } from "lucide-react";
+import supabase from "@/utils/supabaseClient";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -11,43 +12,72 @@ const VerifyEmail = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
+        // Get all URL parameters
         const tokenHash = searchParams.get('token_hash');
         const type = searchParams.get('type');
+        const accessToken = searchParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token');
 
-        if (!tokenHash || !type) {
-          setStatus('error');
-          setMessage('Invalid verification link. Missing required parameters.');
+        console.log('URL parameters:', { tokenHash, type, accessToken, refreshToken });
+
+        // If we have access_token and refresh_token, the user is already verified
+        if (accessToken && refreshToken) {
+          console.log('User already verified with tokens');
+          
+          // Set the session
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            console.error('Session error:', error);
+            setStatus('error');
+            setMessage('Failed to establish session after verification.');
+            return;
+          }
+
+          console.log('Session established:', data);
+          setStatus('success');
+          setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
           return;
         }
 
-        console.log('Verifying email with backend...');
-
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-        const response = await fetch(`${backendUrl}/auth/verify-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        // If we have token_hash and type, use verifyOtp
+        if (tokenHash && type) {
+          console.log('Verifying with token_hash and type');
+          
+          const { data, error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: type
-          }),
-        });
+          });
 
-        const data = await response.json();
+          if (error) {
+            console.error('Verification error:', error);
+            setStatus('error');
+            setMessage('Email verification failed. The link may be invalid or expired.');
+            return;
+          }
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Verification failed');
+          if (data.user) {
+            console.log('Email verified successfully:', data.user.id);
+            setStatus('success');
+            setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
+          } else {
+            setStatus('error');
+            setMessage('Verification failed. Please try again.');
+          }
+          return;
         }
 
-        console.log('Email verified successfully');
-        setStatus('success');
-        setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
+        // If no valid parameters found
+        setStatus('error');
+        setMessage('Invalid verification link. Missing required parameters.');
 
       } catch (error) {
         console.error('Email verification error:', error);
         setStatus('error');
-        setMessage(error.message || 'Email verification failed. The link may be invalid or expired.');
+        setMessage('Email verification failed. Please try again or contact support.');
       }
     };
 
