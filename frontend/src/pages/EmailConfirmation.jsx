@@ -4,25 +4,83 @@ import { useNavigate, useSearchParams } from "react-router";
 import { CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { toaster } from "@/components/ui/toaster";
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase client for email verification
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const EmailConfirmation = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading');
   const [resendLoading, setResendLoading] = useState(false);
 
   const success = searchParams.get('success');
   const error = searchParams.get('error');
+  const tokenHash = searchParams.get('token_hash');
+  const type = searchParams.get('type');
 
   useEffect(() => {
-    if (success === 'true') {
-      setStatus('success');
-    } else if (error) {
-      setStatus('error');
-    } else {
-      setStatus('pending');
-    }
-  }, [success, error]);
+    const handleEmailConfirmation = async () => {
+      // If we have success/error params from backend redirect, use those
+      if (success === 'true') {
+        setStatus('success');
+        return;
+      } else if (error) {
+        setStatus('error');
+        return;
+      }
+
+      // If we have token_hash and type, verify directly with Supabase
+      if (tokenHash && type === 'signup') {
+        try {
+          console.log('Verifying email with token...');
+          
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'signup'
+          });
+
+          if (verifyError) {
+            console.error('Email verification error:', verifyError);
+            setStatus('error');
+            // Update URL to show error
+            setSearchParams({ error: 'verification_failed' });
+            return;
+          }
+
+          if (data.user) {
+            console.log('Email verified successfully:', data.user.id);
+            setStatus('success');
+            // Update URL to show success and clean up token params
+            setSearchParams({ success: 'true' });
+            
+            toaster.create({
+              title: "Email Confirmed",
+              description: "Your email has been verified successfully!",
+              type: "success",
+              duration: 5000,
+            });
+          } else {
+            setStatus('error');
+            setSearchParams({ error: 'verification_failed' });
+          }
+        } catch (error) {
+          console.error('Verification error:', error);
+          setStatus('error');
+          setSearchParams({ error: 'server_error' });
+        }
+      } else {
+        // No verification params, show pending state
+        setStatus('pending');
+      }
+    };
+
+    handleEmailConfirmation();
+  }, [tokenHash, type, success, error, setSearchParams]);
 
   const getErrorMessage = (errorCode) => {
     switch (errorCode) {
@@ -30,6 +88,8 @@ const EmailConfirmation = () => {
         return 'The confirmation link is invalid or malformed.';
       case 'expired_link':
         return 'The confirmation link has expired. Please request a new one.';
+      case 'verification_failed':
+        return 'Email verification failed. The link may be invalid or expired.';
       case 'confirmation_failed':
         return 'Email confirmation failed. Please try again.';
       case 'server_error':
@@ -115,7 +175,7 @@ const EmailConfirmation = () => {
               size="lg"
               onClick={() => {
                 localStorage.removeItem('pendingConfirmationEmail');
-                navigate('/login');
+                navigate('/login?confirmed=true');
               }}
             >
               Continue to Login
