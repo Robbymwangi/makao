@@ -1,62 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { Box, VStack, Text, Heading, Spinner, Button } from "@chakra-ui/react";
-import { useSearchParams, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { CheckCircle, XCircle } from "lucide-react";
 import { toaster } from "@/components/ui/toaster";
 import supabase from "@/utils/supabaseClient";
 
 const VerifyEmail = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState('verifying');
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState("verifying");
+  const [message, setMessage] = useState("");
+
+  // Helper to parse the hash string (e.g. #type=signup&token_hash=abc123)
+  const parseHashParams = () => {
+    const hash = window.location.hash.substring(1); // remove the #
+    return new URLSearchParams(hash);
+  };
 
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        // Get all URL parameters
-        const tokenHash = searchParams.get('token_hash');
-        const type = searchParams.get('type');
-        const redirectType = searchParams.get('redirect_type');
+        const hashParams = parseHashParams();
+        const tokenHash = hashParams.get("token_hash");
+        const type = hashParams.get("type");
 
-        console.log('All URL parameters:', {
-          tokenHash,
-          type,
-          redirectType,
-          allParams: Object.fromEntries(searchParams.entries())
-        });
+        console.log("Parsed from hash:", { tokenHash, type });
 
-        // Check if we have the required parameters
         if (!tokenHash || !type) {
-          console.log('Missing required parameters');
-          setStatus('error');
-          setMessage('Invalid verification link. Missing required parameters.');
+          setStatus("error");
+          setMessage("Invalid verification link. Missing required parameters.");
           return;
         }
 
-        console.log('Verifying email with token_hash:', tokenHash, 'type:', type);
-        
-        // Use verifyOtp to confirm the email
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: type
+          type: type,
         });
 
-        console.log('Verification response:', { data, error });
-
         if (error) {
-          console.error('Verification error:', error);
-          setStatus('error');
+          console.error("Verification error:", error);
+          setStatus("error");
           setMessage(`Email verification failed: ${error.message}`);
           return;
         }
 
-        if (data.user) {
-          console.log('Email verified successfully for user:', data.user.id);
-          setStatus('success');
-          setMessage('Your email has been verified successfully! You can now log in to your account.');
-          
-          // Show success toast
+        if (data?.user) {
+          console.log("Email verified for user:", data.user.id);
+          setStatus("success");
+          setMessage("Your email has been verified successfully! You can now log in.");
           toaster.create({
             title: "Email Verified",
             description: "Your email has been confirmed successfully!",
@@ -64,30 +54,22 @@ const VerifyEmail = () => {
             duration: 5000,
           });
         } else {
-          console.log('No user data returned');
-          setStatus('error');
-          setMessage('Verification failed. No user data returned.');
+          setStatus("error");
+          setMessage("Verification failed. No user information returned.");
         }
-
-      } catch (error) {
-        console.error('Email verification error:', error);
-        setStatus('error');
-        setMessage(`Email verification failed: ${error.message}`);
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        setStatus("error");
+        setMessage("Something went wrong during email verification.");
       }
     };
 
-    // Only run verification if we have URL parameters
-    if (searchParams.toString()) {
-      verifyEmail();
-    } else {
-      setStatus('error');
-      setMessage('No verification parameters found in URL.');
-    }
-  }, [searchParams]);
+    verifyEmail();
+  }, []);
 
   const renderContent = () => {
     switch (status) {
-      case 'verifying':
+      case "verifying":
         return (
           <VStack spacing={6} textAlign="center">
             <Spinner size="xl" color="blue.500" />
@@ -97,8 +79,7 @@ const VerifyEmail = () => {
             </Text>
           </VStack>
         );
-
-      case 'success':
+      case "success":
         return (
           <VStack spacing={6} textAlign="center">
             <CheckCircle size={64} color="#48BB78" />
@@ -108,18 +89,12 @@ const VerifyEmail = () => {
             <Text color="gray.600" maxW="md">
               {message}
             </Text>
-            <Button
-              colorScheme="green"
-              size="lg"
-              onClick={() => navigate('/login')}
-              mt={4}
-            >
+            <Button colorScheme="green" size="lg" onClick={() => navigate("/login")} mt={4}>
               Continue to Login
             </Button>
           </VStack>
         );
-
-      case 'error':
+      case "error":
         return (
           <VStack spacing={6} textAlign="center">
             <XCircle size={64} color="#F56565" />
@@ -130,24 +105,15 @@ const VerifyEmail = () => {
               {message}
             </Text>
             <VStack spacing={3} mt={4}>
-              <Button
-                colorScheme="blue"
-                size="lg"
-                onClick={() => navigate('/signup')}
-              >
+              <Button colorScheme="blue" size="lg" onClick={() => navigate("/signup")}>
                 Try Signing Up Again
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => navigate('/login')}
-              >
+              <Button variant="outline" size="lg" onClick={() => navigate("/login")}>
                 Back to Login
               </Button>
             </VStack>
           </VStack>
         );
-
       default:
         return null;
     }
