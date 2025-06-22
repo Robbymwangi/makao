@@ -54,7 +54,7 @@ router.post('/signup', async (req, res) => {
       email,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:5173/verify-email',
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`,
         data: {
           role: role // Store role in user metadata
         }
@@ -243,7 +243,7 @@ router.post('/resend-confirmation', async (req, res) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: 'http://localhost:5173/verify-email'
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`
       }
     });
 

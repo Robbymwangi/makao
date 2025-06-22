@@ -1,62 +1,88 @@
 import React, { useEffect, useState } from "react";
-import { Box, VStack, Text, Heading, Spinner } from "@chakra-ui/react";
-import { useSearchParams } from "react-router";
+import { Box, VStack, Text, Heading, Spinner, Button } from "@chakra-ui/react";
+import { useSearchParams, useNavigate } from "react-router";
 import { CheckCircle, XCircle } from "lucide-react";
+import { toaster } from "@/components/ui/toaster";
 import supabase from "@/utils/supabaseClient";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        // Get token_hash and type from URL parameters
+        // Get all URL parameters
         const tokenHash = searchParams.get('token_hash');
         const type = searchParams.get('type');
+        const redirectType = searchParams.get('redirect_type');
 
-        console.log('URL parameters:', { tokenHash, type });
+        console.log('All URL parameters:', {
+          tokenHash,
+          type,
+          redirectType,
+          allParams: Object.fromEntries(searchParams.entries())
+        });
 
-        // Check if we have the required parameters for verifyOtp
+        // Check if we have the required parameters
         if (!tokenHash || !type) {
+          console.log('Missing required parameters');
           setStatus('error');
           setMessage('Invalid verification link. Missing required parameters.');
           return;
         }
 
-        console.log('Verifying email with verifyOtp...');
+        console.log('Verifying email with token_hash:', tokenHash, 'type:', type);
         
-        // Use verifyOtp to confirm the email without establishing a session
+        // Use verifyOtp to confirm the email
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: type
         });
 
+        console.log('Verification response:', { data, error });
+
         if (error) {
           console.error('Verification error:', error);
           setStatus('error');
-          setMessage('Email verification failed. The link may be invalid or expired.');
+          setMessage(`Email verification failed: ${error.message}`);
           return;
         }
 
         if (data.user) {
-          console.log('Email verified successfully:', data.user.id);
+          console.log('Email verified successfully for user:', data.user.id);
           setStatus('success');
-          setMessage('Your email has been verified successfully! You can now close this window and log in to your account.');
+          setMessage('Your email has been verified successfully! You can now log in to your account.');
+          
+          // Show success toast
+          toaster.create({
+            title: "Email Verified",
+            description: "Your email has been confirmed successfully!",
+            type: "success",
+            duration: 5000,
+          });
         } else {
+          console.log('No user data returned');
           setStatus('error');
-          setMessage('Verification failed. Please try again.');
+          setMessage('Verification failed. No user data returned.');
         }
 
       } catch (error) {
         console.error('Email verification error:', error);
         setStatus('error');
-        setMessage('Email verification failed. Please try again or contact support.');
+        setMessage(`Email verification failed: ${error.message}`);
       }
     };
 
-    verifyEmail();
+    // Only run verification if we have URL parameters
+    if (searchParams.toString()) {
+      verifyEmail();
+    } else {
+      setStatus('error');
+      setMessage('No verification parameters found in URL.');
+    }
   }, [searchParams]);
 
   const renderContent = () => {
@@ -82,9 +108,14 @@ const VerifyEmail = () => {
             <Text color="gray.600" maxW="md">
               {message}
             </Text>
-            <Text fontSize="sm" color="gray.500" mt={4}>
-              You may now close this window.
-            </Text>
+            <Button
+              colorScheme="green"
+              size="lg"
+              onClick={() => navigate('/login')}
+              mt={4}
+            >
+              Continue to Login
+            </Button>
           </VStack>
         );
 
@@ -98,9 +129,22 @@ const VerifyEmail = () => {
             <Text color="gray.600" maxW="md">
               {message}
             </Text>
-            <Text fontSize="sm" color="gray.500" mt={4}>
-              Please try signing up again or contact support if the problem persists.
-            </Text>
+            <VStack spacing={3} mt={4}>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                onClick={() => navigate('/signup')}
+              >
+                Try Signing Up Again
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => navigate('/login')}
+              >
+                Back to Login
+              </Button>
+            </VStack>
           </VStack>
         );
 
