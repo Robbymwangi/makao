@@ -4,57 +4,22 @@ import { useNavigate, useSearchParams } from "react-router";
 import { CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { toaster } from "@/components/ui/toaster";
-import { createClient } from '@supabase/supabase-js';
+import supabase from "@/utils/supabaseClient";
 
 const EmailConfirmation = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading');
   const [resendLoading, setResendLoading] = useState(false);
-  const [supabase, setSupabase] = useState(null);
 
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type');
 
-  // Initialize Supabase client
-  useEffect(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    console.log('Environment variables check:', {
-      url: !!supabaseUrl,
-      key: !!supabaseAnonKey
-    });
-
-    if (supabaseUrl && supabaseAnonKey) {
-      try {
-        const client = createClient(supabaseUrl, supabaseAnonKey);
-        setSupabase(client);
-        console.log('Supabase client initialized successfully');
-      } catch (error) {
-        console.error('Failed to initialize Supabase client:', error);
-        setStatus('error');
-      }
-    } else {
-      console.error('Missing Supabase environment variables:', {
-        url: !!supabaseUrl,
-        key: !!supabaseAnonKey
-      });
-      setStatus('error');
-    }
-  }, []);
-
   useEffect(() => {
     const handleEmailConfirmation = async () => {
-      // Check if Supabase client is available
-      if (!supabase) {
-        console.log('Supabase client not initialized');
-        return;
-      }
-
-      // If we have token_hash and type, verify directly with Supabase
-      if (tokenHash && type === 'signup') {
-        try {
+      try {
+        // If we have token_hash and type, verify directly with Supabase
+        if (tokenHash && type === 'signup') {
           console.log('Verifying email with token...');
           
           const { data, error: verifyError } = await supabase.auth.verifyOtp({
@@ -81,18 +46,18 @@ const EmailConfirmation = () => {
           } else {
             setStatus('error');
           }
-        } catch (error) {
-          console.error('Verification error:', error);
-          setStatus('error');
+        } else {
+          // No verification params, show pending state
+          setStatus('pending');
         }
-      } else {
-        // No verification params, show pending state
-        setStatus('pending');
+      } catch (error) {
+        console.error('Verification error:', error);
+        setStatus('error');
       }
     };
 
     handleEmailConfirmation();
-  }, [supabase, tokenHash, type]);
+  }, [tokenHash, type]);
 
   const handleResendConfirmation = async () => {
     const email = localStorage.getItem('pendingConfirmationEmail');
