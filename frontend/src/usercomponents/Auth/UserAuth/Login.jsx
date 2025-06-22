@@ -5,6 +5,7 @@ import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { supabase } from "@/utils/supabaseClient";
+import { toaster, Toaster } from "@/components/ui/toaster";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,51 +21,73 @@ const handleLogin = async (e) => {
     const normalizedEmail = email.trim().toLowerCase();
 
    try {
-    // Step 1: Sign in with password
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+      const loginPromise = supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
 
-    if (signInError || !data?.user) {
-      setError("Invalid email or password.");
-      return;
+      const { data: loginData, error: loginError } = await toaster.promise(loginPromise, {
+        loading: {
+          title: "Logging in",
+          description: "Authenticating credentials...",
+        },
+        success: {
+          title: "Login Successful",
+          description: "Sending OTP to your email...",
+        },
+        error: {
+          title: "Login Failed",
+          description: "Invalid email or password.",
+        },
+      });
+
+      if (loginError || !loginData?.user) return;
+
+      const user = loginData.user;
+      const role = user.user_metadata?.role;
+
+      if (role !== "user") {
+        setError("Access denied. This login is for users only.");
+        return;
+      }
+
+      // Send OTP after successful password login
+      const otpPromise = supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
+        },
+      });
+
+      await toaster.promise(otpPromise, {
+        loading: {
+          title: "Sending OTP",
+          description: "Please wait while we send your verification code",
+        },
+        success: {
+          title: "OTP Sent",
+          description: `Code sent to ${normalizedEmail}`,
+        },
+        error: {
+          title: "OTP Send Failed",
+          description: "Could not send verification code.",
+        },
+      });
+
+      login({
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || "User",
+        role,
+      });
+
+      navigate("/otp-challengesend", { state: { otpMethod: "email" } });
+    } catch (err) {
+      console.error("Unexpected error during login:", err);
+      setError("Something went wrong. Please try again.");
     }
+  };
 
-    const role = data.user.user_metadata?.role;
-    if (role !== "user") {
-      setError("Access denied. This login is for users only.");
-      await supabase.auth.signOut();
-      return;
-    }
-
-    // Step 2: Sign out immediately
-    await supabase.auth.signOut();
-
-    // Step 3: Send OTP to email
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
-      },
-    });
-
-    if (otpError) {
-      setError("Failed to send OTP. Please check your email.");
-      return;
-    }
-
-    // Save email to Zustand or localStorage
-    login({ email: normalizedEmail });
-
-    // Step 4: Redirect to OTP entry screen
-    navigate("/otp-challengesend");
-
-  } catch (err) {
-    console.error("Login error:", err);
-    setError("Something went wrong. Please try again.");
-  }
-};
   return (
     <AuthLayout
       image="https://images.unsplash.com/flagged/photo-1572491259205-506c425b45c3"
