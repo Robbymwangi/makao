@@ -6,39 +6,52 @@ import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { toaster } from "@/components/ui/toaster";
 import { createClient } from '@supabase/supabase-js';
 
-// Get environment variables with fallbacks
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:', {
-    url: !!supabaseUrl,
-    key: !!supabaseAnonKey
-  });
-}
-
-// Create Supabase client for email verification
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
-
 const EmailConfirmation = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading');
   const [resendLoading, setResendLoading] = useState(false);
+  const [supabase, setSupabase] = useState(null);
 
   const success = searchParams.get('success');
   const error = searchParams.get('error');
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type');
 
+  // Initialize Supabase client
+  useEffect(() => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    console.log('Environment variables check:', {
+      url: !!supabaseUrl,
+      key: !!supabaseAnonKey,
+      urlValue: supabaseUrl,
+      keyValue: supabaseAnonKey ? 'Present' : 'Missing'
+    });
+
+    if (supabaseUrl && supabaseAnonKey) {
+      try {
+        const client = createClient(supabaseUrl, supabaseAnonKey);
+        setSupabase(client);
+        console.log('Supabase client initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Supabase client:', error);
+        setStatus('error');
+        setSearchParams({ error: 'configuration_error' });
+      }
+    } else {
+      console.error('Missing Supabase environment variables');
+      setStatus('error');
+      setSearchParams({ error: 'configuration_error' });
+    }
+  }, [setSearchParams]);
+
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       // Check if Supabase client is available
       if (!supabase) {
-        console.error('Supabase client not initialized');
-        setStatus('error');
-        setSearchParams({ error: 'configuration_error' });
+        console.log('Waiting for Supabase client initialization...');
         return;
       }
 
@@ -64,7 +77,6 @@ const EmailConfirmation = () => {
           if (verifyError) {
             console.error('Email verification error:', verifyError);
             setStatus('error');
-            // Update URL to show error
             setSearchParams({ error: 'verification_failed' });
             return;
           }
@@ -72,7 +84,6 @@ const EmailConfirmation = () => {
           if (data.user) {
             console.log('Email verified successfully:', data.user.id);
             setStatus('success');
-            // Update URL to show success and clean up token params
             setSearchParams({ success: 'true' });
             
             toaster.create({
@@ -97,7 +108,7 @@ const EmailConfirmation = () => {
     };
 
     handleEmailConfirmation();
-  }, [tokenHash, type, success, error, setSearchParams]);
+  }, [supabase, tokenHash, type, success, error, setSearchParams]);
 
   const getErrorMessage = (errorCode) => {
     switch (errorCode) {
