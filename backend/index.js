@@ -19,11 +19,20 @@ const port = process.env.PORT || 3000;
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://localhost:5173'],
+  origin: ['http://localhost:5173', 'https://localhost:5173', /\.webcontainer-api\.io$/],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Request body:', { ...req.body, password: req.body.password ? '[HIDDEN]' : undefined });
+  }
+  next();
+});
 
 // Supabase client setup
 const supabase = createClient(
@@ -41,7 +50,16 @@ app.get('/health', (req, res) => {
 // Register your auth routes here
 app.use('/auth', authRoutes);
 
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server listening on port ${port}`);
   console.log(`Health check available at http://localhost:${port}/health`);
+  console.log('Environment check:');
+  console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
+  console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing');
 });

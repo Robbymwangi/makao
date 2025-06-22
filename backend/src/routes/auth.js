@@ -7,24 +7,47 @@ const router = express.Router();
 // Sign up endpoint
 router.post('/signup', async (req, res) => {
   try {
+    console.log('Signup request received:', req.body);
+    
     const { email, password, role = 'user' } = req.body;
 
     console.log('Signup attempt for:', email, 'with role:', role);
 
     // Validate input
     if (!email || !password) {
+      console.log('Missing email or password');
       return res.status(400).json({ 
         error: 'Email and password are required' 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log('Invalid email format');
+      return res.status(400).json({ 
+        error: 'Invalid email format' 
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      console.log('Password too short');
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters long' 
       });
     }
 
     // Validate role
     const validRoles = ['user', 'systemAdmin', 'consultantAdmin', 'agentAdmin'];
     if (!validRoles.includes(role)) {
+      console.log('Invalid role:', role);
       return res.status(400).json({ 
         error: 'Invalid role specified' 
       });
     }
+
+    console.log('Attempting Supabase signup...');
 
     // Sign up user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -38,7 +61,11 @@ router.post('/signup', async (req, res) => {
       }
     });
 
-    console.log('Supabase auth response:', { authData, authError });
+    console.log('Supabase auth response:', { 
+      user: authData?.user ? 'User created' : 'No user', 
+      session: authData?.session ? 'Session created' : 'No session',
+      error: authError 
+    });
 
     if (authError) {
       console.error('Auth error:', authError);
@@ -49,26 +76,49 @@ router.post('/signup', async (req, res) => {
     if (authData.user) {
       console.log('User created successfully:', authData.user.id);
       
-      // The profile should be created automatically by the database trigger
-      // Let's wait a moment and then fetch the profile to confirm
-      setTimeout(async () => {
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.user.id)
-            .single();
+      // Wait a moment for the database trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if profile was created by the trigger
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
 
-          console.log('Profile check:', { profile, profileError });
-        } catch (err) {
-          console.error('Profile check error:', err);
+      console.log('Profile check:', { profile, profileError });
+
+      let userRole = role;
+      
+      if (profileError) {
+        console.log('Profile not found, creating manually...');
+        // If profile doesn't exist, create it manually
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email,
+            role: role
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          // Don't fail the signup, just use default role
+          userRole = 'user';
+        } else {
+          console.log('Profile created manually:', newProfile);
+          userRole = newProfile.role;
         }
-      }, 1000);
+      } else {
+        userRole = profile.role;
+      }
 
       res.json({
         user: authData.user,
         session: authData.session,
-        role: role
+        role: userRole
       });
     } else {
       console.error('No user data returned from Supabase');
@@ -83,6 +133,8 @@ router.post('/signup', async (req, res) => {
 // Login endpoint
 router.post('/login', async (req, res) => {
   try {
+    console.log('Login request received:', { email: req.body.email });
+    
     const { email, password } = req.body;
 
     console.log('Login attempt for:', email);
@@ -100,7 +152,11 @@ router.post('/login', async (req, res) => {
       password,
     });
 
-    console.log('Login auth response:', { authData, authError });
+    console.log('Login auth response:', { 
+      user: authData?.user ? 'User found' : 'No user', 
+      session: authData?.session ? 'Session created' : 'No session',
+      error: authError 
+    });
 
     if (authError) {
       console.error('Login error:', authError);
