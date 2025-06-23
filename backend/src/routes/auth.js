@@ -1,8 +1,11 @@
 // routes/auth.js
 import express from 'express';
-import supabase from '../utils/supabaseClient.js';
+import { createSupabaseClient } from '../utils/supabaseClient.js';
 
 const router = express.Router();
+
+// Initialize Supabase client
+const supabase = createSupabaseClient();
 
 // Helper function to handle Supabase errors with retry logic
 const withRetry = async (operation, maxRetries = 2) => {
