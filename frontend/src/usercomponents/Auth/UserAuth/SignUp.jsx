@@ -81,36 +81,15 @@ const SignUp = () => {
     try {
       const result = await signup(formData.email, formData.password, 'user');
       
-      if (result.user && result.session) {
-        // User was created and auto-confirmed (development mode)
-        toaster.create({
-          title: "Account Created",
-          description: "Your account has been created successfully!",
-          type: "success",
-          duration: 3000,
-        });
-        navigate("/otp-challengesend");
-      } else if (result.requiresConfirmation) {
-        // User created but needs email confirmation
-        localStorage.setItem('pendingConfirmationEmail', formData.email);
-        toaster.create({
-          title: "Check Your Email",
-          description: "Please check your email and click the verification link to activate your account.",
-          type: "info",
-          duration: 5000,
-        });
-        navigate("/auth/confirm");
-      } else {
-        // Fallback case
-        localStorage.setItem('pendingConfirmationEmail', formData.email);
-        toaster.create({
-          title: "Account Created",
-          description: "Please check your email to verify your account.",
-          type: "info",
-          duration: 5000,
-        });
-        navigate("/auth/confirm");
-      }
+      // Always show registration confirmation and navigate to confirmation page
+      localStorage.setItem('pendingConfirmationEmail', formData.email);
+      toaster.create({
+        title: "Registration Successful",
+        description: "Your account has been created. Please check your email to verify your account.",
+        type: "success",
+        duration: 5000,
+      });
+      navigate("/auth/confirm");
     } catch (error) {
       toaster.create({
         title: "Signup Failed",
