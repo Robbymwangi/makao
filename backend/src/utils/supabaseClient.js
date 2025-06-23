@@ -52,7 +52,7 @@ const supabase = createClient(
           signal: controller.signal,
           // Add retry logic for network issues
           headers: {
-            ...options.headers,
+            ...(options.headers || {}),
             'Connection': 'keep-alive',
           }
         }).finally(() => {
