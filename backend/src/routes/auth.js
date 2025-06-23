@@ -142,7 +142,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login endpoint - IMPROVED
+// Login endpoint - FIXED to handle RLS properly
 router.post('/login', async (req, res) => {
   try {
     console.log('Login request received:', { email: req.body.email });
@@ -184,21 +184,28 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
 
-    // Fetch user's profile to get their role
+    // Use the session token to fetch profile with proper auth context
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single();
+      .auth
+      .setSession(authData.session)
+      .then(() => 
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single()
+      );
 
     console.log('Profile fetch:', { profile, profileError });
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
       
-      // IMPROVED: Only create profile if it doesn't exist (not due to RLS issues)
-      if (profileError.code === 'PGRST116') { // No rows returned
+      // Check if it's a "no rows" error (profile doesn't exist)
+      if (profileError.code === 'PGRST116') {
         console.log('Profile does not exist, creating new profile...');
+        
+        // Create profile with the authenticated session
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -221,7 +228,7 @@ router.post('/login', async (req, res) => {
           role: newProfile.role
         });
       } else {
-        // Other errors (like RLS violations)
+        // Other errors (like RLS violations or infinite recursion)
         console.error('Profile access error:', profileError);
         return res.status(500).json({ error: 'Error accessing user profile' });
       }
@@ -295,7 +302,7 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Get current user profile
+// Get current user profile - FIXED
 router.get('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -312,7 +319,13 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Fetch user's profile
+    // Set the session for this request to ensure proper RLS context
+    await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: '', // Not needed for this operation
+    });
+
+    // Fetch user's profile with proper auth context
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -320,6 +333,7 @@ router.get('/profile', async (req, res) => {
       .single();
 
     if (profileError) {
+      console.error('Profile fetch error:', profileError);
       return res.status(500).json({ error: 'Error fetching profile' });
     }
 
