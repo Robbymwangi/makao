@@ -44,17 +44,31 @@ const supabase = createClient(
   }
 );
 
-// Test the connection
-supabase.from('profiles').select('count', { count: 'exact', head: true })
-  .then(({ error }) => {
+// Test the connection with a simple health check
+const testConnection = async () => {
+  try {
+    console.log('🔄 Testing Supabase connection...');
+    
+    // Simple connection test that doesn't require authentication
+    const { error } = await supabase
+      .from('profiles')
+      .select('count', { count: 'exact', head: true });
+    
     if (error) {
       console.error('❌ Supabase connection test failed:', error.message);
+      console.error('Error details:', error);
+      return false;
     } else {
       console.log('✅ Supabase connection test successful');
+      return true;
     }
-  })
-  .catch((error) => {
+  } catch (error) {
     console.error('❌ Supabase connection error:', error.message);
-  });
+    return false;
+  }
+};
+
+// Run connection test
+testConnection();
 
 export default supabase;
