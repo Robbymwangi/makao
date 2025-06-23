@@ -1,90 +1,84 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Button, VStack, Text, Link, Box } from "@chakra-ui/react";
-import { Link as RouterLink, useNavigate } from "react-router";
+import { Link as RouterLink, useNavigate, useSearchParams } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
-import { supabase } from "@/utils/supabaseClient";
-import { toaster, Toaster } from "@/components/ui/toaster";
+import { toaster } from "@/components/ui/toaster";
 
 const Login = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); 
-  const [error, setError] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
- 
-const handleLogin = async (e) => {
+  const [searchParams] = useSearchParams();
+  const { login, loading, error, clearError } = useAuthStore();
+
+  // Check for email confirmation success
+  useEffect(() => {
+    if (searchParams.get('confirmed') === 'true') {
+      toaster.create({
+        title: "Email Confirmed",
+        description: "Your email has been confirmed successfully! You can now log in.",
+        type: "success",
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setError(""); // Reset error state
+    clearError();
 
-    const normalizedEmail = email.trim().toLowerCase();
+    if (!email || !password) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
 
-   try {
-      const loginPromise = supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
+    try {
+      const role = await login(email, password);
+      
+      toaster.create({
+        title: "Login Successful",
+        description: "Welcome back!",
+        type: "success",
+        duration: 2000,
       });
 
-      const { data: loginData, error: loginError } = await toaster.promise(loginPromise, {
-        loading: {
-          title: "Logging in",
-          description: "Authenticating credentials...",
-        },
-        success: {
-          title: "Login Successful",
-          description: "Sending OTP to your email...",
-        },
-        error: {
-          title: "Login Failed",
-          description: "Invalid email or password.",
-        },
-      });
-
-      if (loginError || !loginData?.user) return;
-
-      const user = loginData.user;
-      const role = user.user_metadata?.role;
-
-      if (role !== "user") {
-        setError("Access denied. This login is for users only.");
+      // Navigate based on role
+      if (role === "user") {
+        navigate("/otp-challengesend");
+      } else if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+        navigate("/staff/otp-challengesend");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      // Check if it's an email not confirmed error
+      if (error.message.includes('email not confirmed') || error.message.includes('confirm your email')) {
+        toaster.create({
+          title: "Email Not Confirmed",
+          description: "Please confirm your email address before logging in.",
+          type: "warning",
+          duration: 5000,
+        });
+        
+        // Store email for potential resend
+        localStorage.setItem('pendingConfirmationEmail', email);
+        navigate("/auth/confirm");
         return;
       }
 
-      // Send OTP after successful password login
-      const otpPromise = supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/otp-challengeresp`,
-        },
+      toaster.create({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
+        type: "error",
+        duration: 4000,
       });
-
-      await toaster.promise(otpPromise, {
-        loading: {
-          title: "Sending OTP",
-          description: "Please wait while we send your verification code",
-        },
-        success: {
-          title: "OTP Sent",
-          description: `Code sent to ${normalizedEmail}`,
-        },
-        error: {
-          title: "OTP Send Failed",
-          description: "Could not send verification code.",
-        },
-      });
-
-      login({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.full_name || "User",
-        role,
-      });
-
-      navigate("/otp-challengesend", { state: { otpMethod: "email" } });
-    } catch (err) {
-      console.error("Unexpected error during login:", err);
-      setError("Something went wrong. Please try again.");
     }
   };
 
@@ -108,6 +102,7 @@ const handleLogin = async (e) => {
               name="login-email"
               type="email"
               required
+              disabled={loading}
             />
             <Input
               placeholder="Enter your password"
@@ -117,13 +112,24 @@ const handleLogin = async (e) => {
               name="login-password"
               type="password"
               required
+              disabled={loading}
             />
-            <Button colorScheme="blue" type="submit" w="100%">
-              Log In
+            <Button 
+              colorScheme="blue" 
+              type="submit" 
+              w="100%"
+              loading={loading}
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log In"}
             </Button>
           </VStack>
         </form>
-        {error && <Text color="red.500">{error}</Text>}
+        {error && (
+          <Text color="red.500" fontSize="sm" textAlign="center">
+            {error}
+          </Text>
+        )}
         <Text>
           Don't have an account?{" "}
           <Link variant="underline" asChild>

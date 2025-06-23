@@ -4,72 +4,101 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import AuthLayout from "@/pages/AuthLayout";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
-import { supabase } from "@/utils/supabaseClient";
-
 
 const SignUp = () => {
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreeToTerms: false,
+  });
   const navigate = useNavigate();
-  
+  const { signup, loading, error, clearError } = useAuthStore();
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-// State variables for form inputs
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [tos, setTos] = useState(false); // Terms of Service checkbox state
+  const handleCheckboxChange = (checked) => {
+    setFormData(prev => ({
+      ...prev,
+      agreeToTerms: checked
+    }));
+  };
 
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    clearError();
 
-const [message, setMessage] = useState("");
-// Handle sign-up process
-  const handleSignUp = async () => {
-    setMessage(""); // Reset message state
-
-    // Check if Terms of Service is accepted
-    if (!tos) {
-      //toaster({ title: "You must agree to the Terms of Service.", status: "warning" });
-      setMessage("You must agree to the Terms of Service.");
-      return;
-    }
-    // Check if all fields are filled
-    if (!email || !password || !confirmPassword) {
-      //toaster({ title: "Please fill in all fields.", status: "warning" });
-      setMessage("Please fill in all fields.");
-      return;
-    }
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      //toaster({ title: "Passwords do not match.", status: "error" });
-      setMessage("Passwords do not match.");
+    // Validation
+    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please fill in all fields",
+        type: "error",
+        duration: 3000,
+      });
       return;
     }
 
-     try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: "http://localhost:5173/dashboard", // Redirect after email confirmation
-        data: { full_name: fullName, role: "user" }, // Default role for normal users
-      },
-    });
-
-    if (error) {
-      //toaster({ title: error.message || "Sign up failed.", status: "error" });
-    setMessage(error.message || "Sign up failed.");
-    } else {
-      //toaster({ title: "Sign up successful! Please check your email.", status: "success" });
-      setMessage("Sign up successful! Please check your email.");
-      // Redirect to OTP challenge page
-     // navigate("/otp-challengesend");
+    if (formData.password !== formData.confirmPassword) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Passwords do not match",
+        type: "error",
+        duration: 3000,
+      });
+      return;
     }
-  } catch (err) {
-    //toaster({ title: "Unexpected error occurred.", status: "error" });
-  setMessage("Unexpected error occurred.");
-    console.error("Sign up error:", err); 
-  }
-};
+
+    if (formData.password.length < 6) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!formData.agreeToTerms) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please agree to the Terms of Service",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const result = await signup(formData.email, formData.password, 'user');
+      
+      // Always show registration confirmation and navigate to confirmation page
+      localStorage.setItem('pendingConfirmationEmail', formData.email);
+      toaster.create({
+        title: "Registration Successful",
+        description: "Your account has been created. Please check your email to verify your account.",
+        type: "success",
+        duration: 5000,
+      });
+      navigate("/auth/confirm");
+    } catch (error) {
+      toaster.create({
+        title: "Signup Failed",
+        description: error.message || "Failed to create account. Please try again.",
+        type: "error",
+        duration: 4000,
+      });
+    }
+  };
 
   return (
     <AuthLayout 
@@ -80,60 +109,67 @@ const [message, setMessage] = useState("");
         <Box mb={6} w="100%">
           <AuthHeader />
         </Box>
-         <Text fontSize="2xl" fontWeight="bold">Sign Up for Makao</Text>
-        {/* Full Name input */}
-        <Input
-          placeholder="Full Name"
-          id="full-name"
-          name="full-name"
-          value={fullName}
-          onChange={e => setFullName(e.target.value)}
-        />
-        {/* Email input */}
-        <Input
-          placeholder="Email"
-          id="signup-email"
-          name="signup-email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
-         {/* Password input */}
-        <Input
-          placeholder="Password"
-          type="password"
-          id="signup-password"
-          name="signup-password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        {/* Confirm Password input */}
-        <Input
-          placeholder="Confirm Password"
-          type="password"
-          id="signup-confirm-password"
-          name="signup-confirm-password"
-          value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
-        />
-        {/* Terms of Service checkbox */}
-        <Checkbox
-          id="tos"
-          name="tos"
-          checked={tos}
-          onChange={e => setTos(e.target.checked)}
-        >
-          I agree to the Terms of Service
-        </Checkbox>
-        {/* Sign Up button */}
-        <Button colorScheme="blackAlpha" width="100%" onClick={handleSignUp}>
-          Sign Up
-        </Button>
-        {message && (
-  <Text fontSize="sm" color="gold.500" textAlign="center">
-    {message}
-  </Text>
-)}
-        {/* Link to login page */}
+        <Text fontSize="2xl" fontWeight="bold">Sign Up for Makao</Text>
+        <form style={{ width: "100%" }} onSubmit={handleSignUp}>
+          <VStack spacing={4} w="100%">
+            <Input 
+              placeholder="Full Name" 
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              required
+              disabled={loading}
+            />
+            <Input 
+              placeholder="Email" 
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              disabled={loading}
+            />
+            <Input 
+              placeholder="Password" 
+              type="password" 
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              disabled={loading}
+            />
+            <Input 
+              placeholder="Confirm Password" 
+              type="password" 
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              required
+              disabled={loading}
+            />
+            <Checkbox 
+              checked={formData.agreeToTerms}
+              onCheckedChange={handleCheckboxChange}
+              disabled={loading}
+            >
+              I agree to the Terms of Service
+            </Checkbox>
+            <Button 
+              colorScheme="blackAlpha" 
+              width="100%" 
+              type="submit"
+              loading={loading}
+              disabled={loading || !formData.agreeToTerms}
+            >
+              {loading ? "Creating Account..." : "Sign Up"}
+            </Button>
+          </VStack>
+        </form>
+        {error && (
+          <Text color="red.500" fontSize="sm" textAlign="center">
+            {error}
+          </Text>
+        )}
         <Text>
           Already have an account?{" "}
           <Link variant="underline" asChild>

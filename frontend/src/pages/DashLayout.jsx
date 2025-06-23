@@ -1,35 +1,64 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Flex,
-  Text,
-  VStack,
-  HStack,
-  useDisclosure,
-  useBreakpointValue,
-  Drawer,
-  CloseButton,
-  Portal,
-  Avatar,
-  Stack,
+  Box, Flex, Text, VStack, HStack,
+  useDisclosure, useBreakpointValue,
+  Drawer, CloseButton, Portal, Avatar, Stack, Spinner
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
-import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
-import { Squash as Hamburger, Squash } from "hamburger-react";
-import { ColorModeButton } from "@/components/ui/color-mode"; // Import the ColorModeButton
+import {
+  LogOut, Menu
+} from "lucide-react";
+import { Squash } from "hamburger-react";
+import { ColorModeButton } from "@/components/ui/color-mode";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
+import { toaster } from "@/components/ui/toaster";
 
 const DashLayout = () => {
+  // Debug: log every render
+  console.log("[DashLayout] render");
   const navigate = useNavigate();
   const location = useLocation();
+  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
+  console.log("[DashLayout] state:", { loading, isAuthenticated, role, user });
+
+  // Redirect to login if not authenticated and not loading
+  useEffect(() => {
+    console.log("[DashLayout] useEffect: loading/isAuthenticated", { loading, isAuthenticated });
+    if (!loading && !isAuthenticated) {
+      console.log("[DashLayout] Navigating to /login");
+      navigate("/login", { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  // Early return for loading state
+  if (loading) {
+    console.log("[DashLayout] Early return: loading");
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Loading...</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+  // If not authenticated and not loading, render nothing (redirect will happen in useEffect)
+  if (!isAuthenticated) {
+    console.log("[DashLayout] Early return: not authenticated");
+    return null;
+  }
+
+  // All other hooks and logic after early return
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
-  const role = useAuthStore((state) => state.role);
-  const menuItems = getMenuByRole(role);
+
+  // Always use an array for menuItems
+  const menuItems = role ? getMenuByRole(role) : [];
+  console.log("[DashLayout] menuItems:", menuItems);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -40,25 +69,41 @@ const DashLayout = () => {
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
-  const handleLogout = () => {
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      localStorage.removeItem("currentRoute");
+      toaster.create({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+        type: "success",
+        duration: 2000,
+      });
+      // TEMPORARY DEBUG: force loading to false after 1s if stuck
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.__AUTH_STORE__) {
+          window.__AUTH_STORE__.setState({ loading: false });
+          console.log("[DashLayout] Forced loading to false via window.__AUTH_STORE__");
+        }
+      }, 1000);
+      // Do not navigate here; let useEffect handle it
+    } catch (error) {
+      console.error('Logout error:', error);
+      toaster.create({
+        title: "Logout Error",
+        description: "There was an issue logging out. Please try again.",
+        type: "error",
+        duration: 3000,
+      });
+    }
   };
 
   const SidebarContent = ({ onClose, isMobile = false }) => (
-    <Flex
-      direction="column"
-      h="100%"
-      justify="space-between"
-      py={4}
-      px={isMobile ? 4 : collapsed ? 2 : 4}
-    >
+    <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
       <HStack justify="space-between" mb={8}>
         {!collapsed && !isMobile && (
-          <Text fontSize="xl" fontFamily="Playfair Display">
-            Menu
-          </Text>
+          <Text fontSize="xl" fontFamily="Playfair Display">Menu</Text>
         )}
-        {/* Conditionally render the X or Hamburger button depending on collapsed state, only if the screen size is not small */}
         {!isMobile && (
           <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
             <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
@@ -117,6 +162,7 @@ const DashLayout = () => {
     </Flex>
   );
 
+  // ✅ Main authenticated layout
   return (
     <Flex h="100vh" bg="gray.50">
       {/* Sidebar */}
@@ -134,7 +180,7 @@ const DashLayout = () => {
         </Box>
       )}
 
-      {/* Header Bar */}
+      {/* Header */}
       <Box
         as="header"
         bg="white"
@@ -148,72 +194,64 @@ const DashLayout = () => {
       >
         <Flex align="center" justify="space-between" h="100%" px={6}>
           {isMobile && (
-            <>
-              {/* Mobile Drawer */}
-              <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
-                <Drawer.Trigger asChild>
-                  <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-                    <Menu size={20} />
-                  </Box>
-                </Drawer.Trigger>
-                <Portal>
-                  <Drawer.Backdrop />
-                  <Drawer.Positioner>
-                    <Drawer.Content>
-                      <Drawer.Header>
-                        <Drawer.Title>Menu</Drawer.Title>
-                        <Drawer.CloseTrigger asChild>
-                          <CloseButton size="sm" />
-                        </Drawer.CloseTrigger>
-                      </Drawer.Header>
-                      <Drawer.Body p={0}>
-                        <SidebarContent isMobile={isMobile} onClose={onClose} />
-                      </Drawer.Body>
-                    </Drawer.Content>
-                  </Drawer.Positioner>
-                </Portal>
-              </Drawer.Root>
-            </>
+            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+              <Drawer.Trigger asChild>
+                <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                  <Menu size={20} />
+                </Box>
+              </Drawer.Trigger>
+              <Portal>
+                <Drawer.Backdrop />
+                <Drawer.Positioner>
+                  <Drawer.Content>
+                    <Drawer.Header>
+                      <Drawer.Title>Menu</Drawer.Title>
+                      <Drawer.CloseTrigger asChild>
+                        <CloseButton size="sm" />
+                      </Drawer.CloseTrigger>
+                    </Drawer.Header>
+                    <Drawer.Body p={0}>
+                      <SidebarContent isMobile={isMobile} onClose={onClose} />
+                    </Drawer.Body>
+                  </Drawer.Content>
+                </Drawer.Positioner>
+              </Portal>
+            </Drawer.Root>
           )}
           <Text
-    fontSize="2xl"
-    ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
-    textAlign={useBreakpointValue({ base: "center", md: "left" })}
-    position={useBreakpointValue({ base: "absolute", md: "relative" })}
-    left={useBreakpointValue({ base: "50%", md: "auto" })}
-    transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
-    transition="margin-left 0.3s ease-in-out"
-    fontFamily="Playfair Display , serif"
-    cursor={"pointer"}
-    onClick={() => navigate("/dashboard")}
-  >
-    <Box as="span" fontWeight="bold">Makao </Box>
-    <Box as="span" fontWeight="normal">Manager</Box>
-  </Text>
+            fontSize="2xl"
+            ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
+            textAlign={useBreakpointValue({ base: "center", md: "left" })}
+            position={useBreakpointValue({ base: "absolute", md: "relative" })}
+            left={useBreakpointValue({ base: "50%", md: "auto" })}
+            transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
+            transition="margin-left 0.3s ease-in-out"
+            fontFamily="Playfair Display , serif"
+            cursor="pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            <Box as="span" fontWeight="bold">Makao </Box>
+            <Box as="span" fontWeight="normal">Manager</Box>
+          </Text>
           <HStack spacing={4}>
-            <ColorModeButton /> {/* Add the dark mode toggle button here */}
+            <ColorModeButton />
             <Avatar.Root>
-              <Avatar.Fallback name="Joel Miller" />
+              <Avatar.Fallback name={user?.email || "User"} />
               <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
             </Avatar.Root>
-            {showDetails && ( // Conditionally render name and email
+            {showDetails && (
               <Stack gap={0}>
-                <Text fontSize="sm" fontWeight="bold">
-                  Joel Miller
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  joel.miller@example.com
-                </Text>
+                <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
+                <Text fontSize="xs" color="gray.500">{user?.email}</Text>
               </Stack>
             )}
           </HStack>
         </Flex>
       </Box>
 
-      {/* Main Content */}
+      {/* Main content */}
       <Box flex="1" overflow="auto" mt="50px">
         <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
-          <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
           <Outlet />
         </Box>
       </Box>

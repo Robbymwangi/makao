@@ -1,36 +1,300 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       user: null,
-      role: null,
       email: null,
+      role: null,
+      token: null,
+      loading: false,
+      error: null,
 
-      //Login stores the full user object and role
-      login: ({ id, email, name, role }) =>
-        set({
-          isAuthenticated: true,
-          user: { id, email, name },
-          role,
-          email, // Store email for potential use in OTP or other features
-        }),
+      // Login action
+      login: async (email, password) => {
+        set({ loading: true, error: null });
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
 
-      logout: () =>
-        set({
-          isAuthenticated: false,
-          user: null,
-          role: null,
-          email: null, 
-        }),
-        //For manually setting email (used in OTP resend)
-      setEmail: (email) => set({ email }),
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+          }
+
+          // Store authentication data
+          set({
+            isAuthenticated: true,
+            user: data.user,
+            email: data.user.email,
+            role: data.role,
+            token: data.session?.access_token,
+            loading: false,
+            error: null,
+          });
+
+          return data.role;
+        } catch (error) {
+          set({
+            loading: false,
+            error: error.message,
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+          });
+          throw error;
+        }
+      },
+
+      // Signup action
+      signup: async (email, password, role = 'user') => {
+        set({ loading: true, error: null });
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password, role }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Signup failed');
+          }
+
+          // Store authentication data if user was created and confirmed
+          if (data.user && data.session) {
+            set({
+              isAuthenticated: true,
+              user: data.user,
+              email: data.user.email,
+              role: data.role,
+              token: data.session.access_token,
+              loading: false,
+              error: null,
+            });
+          } else {
+            // User created but needs email confirmation
+            set({
+              loading: false,
+              error: null,
+            });
+          }
+
+          return data;
+        } catch (error) {
+          set({
+            loading: false,
+            error: error.message,
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+          });
+          throw error;
+        }
+      },
+
+      // Resend confirmation email
+      resendConfirmation: async (email) => {
+        set({ loading: true, error: null });
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/resend-confirmation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to resend confirmation email');
+          }
+
+          set({ loading: false, error: null });
+          return data;
+        } catch (error) {
+          set({
+            loading: false,
+            error: error.message,
+          });
+          throw error;
+        }
+      },
+
+      // Logout action - FIXED
+      logout: async () => {
+        // Set loading to true at the start
+        set({ loading: true });
+        try {
+          // Optionally call your backend to invalidate the session/token here
+          // await fetch(`${API_BASE_URL}/auth/logout`, { ... });
+          set({
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+            loading: false, // <--- CRITICAL: always set loading to false!
+            error: null,
+          });
+        } catch (error) {
+          set({ loading: false, error: error.message || 'Logout failed' });
+          throw error;
+        }
+      },
+
+      // Get current user profile
+      getProfile: async () => {
+        const { token } = get();
+        
+        if (!token) {
+          throw new Error('No authentication token');
+        }
+
+        set({ loading: true, error: null });
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to fetch profile');
+          }
+
+          // Update user data
+          set({
+            user: data.user,
+            email: data.user.email,
+            role: data.profile.role,
+            loading: false,
+            error: null,
+          });
+
+          return data;
+        } catch (error) {
+          set({
+            loading: false,
+            error: error.message,
+          });
+          throw error;
+        }
+      },
+
+      // Clear error
+      clearError: () => set({ error: null }),
+
+      // Check if user has specific role
+      hasRole: (requiredRole) => {
+        const { role } = get();
+        return role === requiredRole;
+      },
+
+      // Check if user has any of the specified roles
+      hasAnyRole: (roles) => {
+        const { role } = get();
+        return roles.includes(role);
+      },
+
+      // Initialize session - IMPROVED
+      initializeSession: async () => {
+        const { token, isAuthenticated } = get();
+        
+        // If already authenticated and has token, validate it
+        if (!token || !isAuthenticated) {
+          set({ loading: false });
+          return false;
+        }
+
+        set({ loading: true });
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            // Token is invalid, clear the session
+            set({
+              isAuthenticated: false,
+              user: null,
+              email: null,
+              role: null,
+              token: null,
+              loading: false,
+              error: null,
+            });
+            return false;
+          }
+
+          const data = await response.json();
+          
+          // Update with fresh data
+          set({
+            isAuthenticated: true,
+            user: data.user,
+            email: data.user.email,
+            role: data.profile.role,
+            loading: false,
+            error: null,
+          });
+
+          return true;
+        } catch (error) {
+          console.error('Session initialization failed:', error);
+          // Clear invalid session
+          set({
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+            loading: false,
+            error: null,
+          });
+          return false;
+        }
+      },
     }),
     {
-      name: "makao-auth", // Key in localStorage
+      name: "makao-auth",
+      // Only persist essential data, not loading states or errors
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        user: state.user,
+        email: state.email,
+        role: state.role,
+        token: state.token,
+      }),
     }
   )
 ); 

@@ -1,0 +1,343 @@
+// routes/auth.js
+import express from 'express';
+import createSupabaseClient from '../utils/supabaseClient.js';
+
+const router = express.Router();
+
+// Helper function to handle Supabase errors with retry logic
+const withRetry = async (operation, maxRetries = 2) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error.message);
+      if (attempt === maxRetries || !error.message.includes('fetch failed')) {
+        throw error;
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+};
+
+// Sign up endpoint
+router.post('/signup', async (req, res) => {
+  try {
+    console.log('Signup request received:', req.body);
+    
+    const { email, password, role = 'user' } = req.body;
+
+    console.log('Signup attempt for:', email, 'with role:', role);
+
+    // Validate input
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ 
+        error: 'Email and password are required' 
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log('Invalid email format');
+      return res.status(400).json({ 
+        error: 'Invalid email format' 
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      console.log('Password too short');
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Validate role
+    const validRoles = ['user', 'systemAdmin', 'consultantAdmin', 'agentAdmin'];
+    if (!validRoles.includes(role)) {
+      console.log('Invalid role:', role);
+      return res.status(400).json({ 
+        error: 'Invalid role specified' 
+      });
+    }
+
+    console.log('Attempting Supabase signup...');
+
+    // Initialize Supabase client
+    const supabase = createSupabaseClient();
+
+    // Sign up user with Supabase Auth with retry logic
+    const { data: authData, error: authError } = await withRetry(async () => {
+      return await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`,
+          data: {
+            role: role // Store role in user metadata
+          }
+        }
+      });
+    });
+
+    console.log('Supabase auth response:', { 
+      user: authData?.user ? 'User created' : 'No user', 
+      session: authData?.session ? 'Session created' : 'No session',
+      error: authError 
+    });
+
+    if (authError) {
+      console.error('Auth error:', authError);
+      return res.status(400).json({ error: authError.message });
+    }
+
+    // Check if user was created successfully
+    if (authData.user) {
+      console.log('User created successfully:', authData.user.id);
+      
+      // Always return success for registration confirmation
+      res.json({
+        user: authData.user,
+        session: authData.session,
+        role: role,
+        message: 'Please check your email to confirm your account before logging in',
+        requiresConfirmation: true
+      });
+    } else {
+      console.error('No user data returned from Supabase');
+      res.status(500).json({ error: 'Failed to create user account' });
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Database error saving new user' });
+  }
+});
+
+// Login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    console.log('Login request received:', { email: req.body.email });
+    
+    const { email, password } = req.body;
+
+    console.log('Login attempt for:', email);
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ 
+        error: 'Email and password are required' 
+      });
+    }
+
+    // Initialize Supabase client
+    const supabase = createSupabaseClient();
+
+    // Sign in user with Supabase Auth with retry logic
+    const { data: authData, error: authError } = await withRetry(async () => {
+      return await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+    });
+
+    console.log('Login auth response:', { 
+      user: authData?.user ? 'User found' : 'No user', 
+      session: authData?.session ? 'Session created' : 'No session',
+      error: authError 
+    });
+
+    if (authError) {
+      console.error('Login error:', authError);
+      
+      // Check if it's an email not confirmed error
+      if (authError.message.includes('email not confirmed')) {
+        return res.status(400).json({ 
+          error: 'Please confirm your email address before logging in',
+          code: 'email_not_confirmed'
+        });
+      }
+      
+      return res.status(400).json({ error: authError.message });
+    }
+
+    if (!authData.user || !authData.session) {
+      return res.status(400).json({ error: 'Invalid login credentials' });
+    }
+
+    // Fetch user's profile to get their role with retry
+    const { data: profile, error: profileError } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
+    });
+
+    console.log('Profile fetch:', { profile, profileError });
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      
+      // Check if it's a "no rows" error (profile doesn't exist)
+      if (profileError.code === 'PGRST116') {
+        console.log('Profile does not exist, creating new profile...');
+        
+        // Create profile with retry
+        const { data: newProfile, error: createError } = await withRetry(async () => {
+          return await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              email: authData.user.email,
+              role: 'user'
+            })
+            .select()
+            .single();
+        });
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          return res.status(500).json({ error: 'Error setting up user profile' });
+        }
+
+        console.log('New profile created:', newProfile);
+        return res.json({
+          user: authData.user,
+          session: authData.session,
+          role: newProfile.role
+        });
+      } else {
+        // Other errors (like RLS violations)
+        console.error('Profile access error:', profileError);
+        return res.status(500).json({ error: 'Error accessing user profile' });
+      }
+    }
+
+    // Profile exists and was fetched successfully
+    res.json({
+      user: authData.user,
+      session: authData.session,
+      role: profile.role
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Resend confirmation email endpoint
+router.post('/resend-confirmation', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    console.log('Resending confirmation email for:', email);
+
+    const supabase = createSupabaseClient();
+
+    const { error } = await withRetry(async () => {
+      return await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`
+        }
+      });
+    });
+
+    if (error) {
+      console.error('Resend confirmation error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ message: 'Confirmation email sent successfully' });
+  } catch (error) {
+    console.error('Resend confirmation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Logout endpoint
+router.post('/logout', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      
+      // Sign out the user's session on Supabase with error handling
+      try {
+        const supabase = createSupabaseClient();
+        const { error } = await withRetry(async () => {
+          return await supabase.auth.signOut();
+        });
+        
+        if (error) {
+          console.error('Supabase logout error:', error);
+          // Don't return error, just log it
+        }
+      } catch (logoutError) {
+        console.error('Logout operation failed:', logoutError);
+        // Continue with successful response even if Supabase logout fails
+      }
+    }
+    
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Always return success for logout to prevent client-side issues
+    res.json({ message: 'Logged out successfully' });
+  }
+});
+
+// Get current user profile
+router.get('/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    const supabase = createSupabaseClient();
+    
+    // Get user from token with retry
+    const { data: { user }, error: userError } = await withRetry(async () => {
+      return await supabase.auth.getUser(token);
+    });
+    
+    if (userError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Fetch user's profile with retry
+    const { data: profile, error: profileError } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+    });
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(500).json({ error: 'Error fetching profile' });
+    }
+
+    res.json({
+      user,
+      profile
+    });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;

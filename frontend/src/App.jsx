@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Box, Spinner, Center } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
+import { Toaster } from "@/components/ui/toaster";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Pages
 import Landingpage from "./pages/Landingpage.jsx";
@@ -9,6 +11,8 @@ import OTPChallengeResp from "./pages/OTPchallengeresp.jsx";
 import NotFound from "./pages/404.jsx"; // fallback
 import StaffOTPChallengeSend from "./pages/StaffOTPChallengeSend";
 import StaffOTPChallengeResp from "./pages/StaffOTPChallengeResp";
+import EmailConfirmation from "./pages/EmailConfirmation.jsx";
+import VerifyEmail from "./pages/VerifyEmail.jsx";
 
 // Components
 import LandingHeader from "./usercomponents/LandingPageComponents/landingheader.jsx";
@@ -19,7 +23,6 @@ import SignUp from "./usercomponents/Auth/UserAuth/SignUp.jsx";
 import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
 import StaffLogin from "./usercomponents/Auth/StaffAuth/AdminLogin.jsx";
 import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/AdminForgotPassword.jsx";
-
 
 import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
 
@@ -41,73 +44,51 @@ import { supabase } from "@/utils/supabaseClient";
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  //  Access the login method from Zustand store
-  const login =useAuthStore((state) => state.login);
-  const [loading, setLoading] = useState(true);
+  const { initializeSession, isAuthenticated } = useAuthStore();
 
-  // Restore Supabase session and login to Zustand
- // Restore Supabase session and login to Zustand
+  // Initialize session on app load
   useEffect(() => {
-    const restoreSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      const sessionUser = data?.session?.user;
-
-      if (sessionUser) {
-        const fullName = sessionUser.user_metadata?.full_name || "User";
-        const userRole = sessionUser.user_metadata?.role || "user";
-        // Sync Supabase user into Zustand store
-        login({ 
-          id: sessionUser.id,
-          email: sessionUser.email,
-          name: fullName,
-          role: userRole,
-
-        });
-      }
-
-      setLoading(false); // Finish loading state
-    };
-
-    restoreSession();
-  }, [login]);
-
-  // Restore last route from localStorage
-  useEffect(() => {
-    const savedRoute = localStorage.getItem("currentRoute");
-
-    const redirectToLastRoute = async () => {
-      const { data } = await supabase.auth.getSession();
-      const isAuthenticated = !!data?.session?.user;
-
-      if (isAuthenticated && savedRoute && savedRoute !== location.pathname) {
-        navigate(savedRoute);
+    const initSession = async () => {
+      try {
+        await initializeSession();
+      } catch (error) {
+        console.error('Failed to initialize session:', error);
       }
     };
 
-    redirectToLastRoute();
-  }, [navigate, location.pathname]);
+    initSession();
+  }, [initializeSession]);
 
-  // Save current route to localStorage on every change
+  // Save the current route to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem("currentRoute", location.pathname);
   }, [location]);
 
-  // Show loading spinner while session is being restored
-  if (loading) {
-    return (
-      <Center height="100vh">
-        <Spinner size="xl" />
-      </Center>
-    );
-  }
+  // Restore the route on app load - IMPROVED
+  useEffect(() => {
+    const savedRoute = localStorage.getItem("currentRoute");
+    
+    // Only restore route if user is authenticated and route is not current
+    if (savedRoute && savedRoute !== location.pathname && isAuthenticated) {
+      // Don't restore auth-related routes
+      const authRoutes = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/verify-email'];
+      if (!authRoutes.includes(savedRoute)) {
+        navigate(savedRoute);
+      }
+    }
+  }, [navigate, location.pathname, isAuthenticated]);
+
   return (
     <Box>
+      <Toaster />
       <Routes>
         {/* Landing Page */}
         <Route path="/" element={<><LandingHeader /><Landingpage /></>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/confirm" element={<EmailConfirmation />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/otp-challengesend" element={<OTPChallengeSend />} />
         <Route path="/otp-challengeresp" element={<OTPChallengeResp />} />
 
@@ -120,7 +101,7 @@ const App = () => {
           <Route path="Expenses" element={<Expenses />} />
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:chatId" element={<Messages />} />
-          <Route path="support" element={<Support />} /> {/* <-- Add this line */}
+          <Route path="support" element={<Support />} />
         </Route>
 
         {/* Staff Routes */}
