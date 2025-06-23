@@ -13,6 +13,7 @@ import {
   Portal,
   Avatar,
   Stack,
+  Spinner,
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
@@ -29,15 +30,10 @@ const DashLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
-  const { role, logout, isAuthenticated, user } = useAuthStore();
+  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
+  
+  // IMPORTANT: All hooks must be called before any conditional returns
   const menuItems = getMenuByRole(role);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, navigate]);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -75,9 +71,35 @@ const DashLayout = () => {
     }
   };
 
-  // Don't render if not authenticated
+  // Redirect if not authenticated - MOVED AFTER ALL HOOKS
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Loading...</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+
+  // Don't render if not authenticated - MOVED AFTER ALL HOOKS
   if (!isAuthenticated) {
-    return null;
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Redirecting to login...</Text>
+        </VStack>
+      </Flex>
+    );
   }
 
   const SidebarContent = ({ onClose, isMobile = false }) => (

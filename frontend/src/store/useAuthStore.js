@@ -232,13 +232,17 @@ export const useAuthStore = create(
         return roles.includes(role);
       },
 
-      // Initialize session - NEW METHOD
+      // Initialize session - IMPROVED
       initializeSession: async () => {
-        const { token } = get();
+        const { token, isAuthenticated } = get();
         
-        if (!token) {
+        // If already authenticated and has token, validate it
+        if (!token || !isAuthenticated) {
+          set({ loading: false });
           return false;
         }
+
+        set({ loading: true });
 
         try {
           const response = await fetch(`${API_BASE_URL}/auth/profile`, {
