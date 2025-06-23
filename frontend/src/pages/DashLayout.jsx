@@ -1,23 +1,15 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Flex,
-  Text,
-  VStack,
-  HStack,
-  useDisclosure,
-  useBreakpointValue,
-  Drawer,
-  CloseButton,
-  Portal,
-  Avatar,
-  Stack,
-  Spinner,
+  Box, Flex, Text, VStack, HStack,
+  useDisclosure, useBreakpointValue,
+  Drawer, CloseButton, Portal, Avatar, Stack, Spinner
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
-import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
-import { Squash as Hamburger, Squash } from "hamburger-react";
+import {
+  LogOut, Menu
+} from "lucide-react";
+import { Squash } from "hamburger-react";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
@@ -30,9 +22,8 @@ const DashLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
+
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
-  
-  // IMPORTANT: All hooks must be called before any conditional returns
   const menuItems = getMenuByRole(role);
 
   const selectedMenu =
@@ -47,18 +38,13 @@ const DashLayout = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      
-      // Clear any stored routes
       localStorage.removeItem("currentRoute");
-      
       toaster.create({
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
         type: "success",
         duration: 2000,
       });
-      
-      // Navigate to login
       navigate("/login");
     } catch (error) {
       console.error('Logout error:', error);
@@ -71,50 +57,17 @@ const DashLayout = () => {
     }
   };
 
-  // Redirect if not authenticated - MOVED AFTER ALL HOOKS
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      navigate('/login');
+      navigate("/login");
     }
-  }, [isAuthenticated, loading, navigate]);
-
-  // Show loading spinner while checking authentication
-  if (loading) {
-    return (
-      <Flex h="100vh" align="center" justify="center">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>Loading...</Text>
-        </VStack>
-      </Flex>
-    );
-  }
-
-  // Don't render if not authenticated - MOVED AFTER ALL HOOKS
-  if (!isAuthenticated) {
-    return (
-      <Flex h="100vh" align="center" justify="center">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>Redirecting to login...</Text>
-        </VStack>
-      </Flex>
-    );
-  }
+  }, [loading, isAuthenticated, navigate]);
 
   const SidebarContent = ({ onClose, isMobile = false }) => (
-    <Flex
-      direction="column"
-      h="100%"
-      justify="space-between"
-      py={4}
-      px={isMobile ? 4 : collapsed ? 2 : 4}
-    >
+    <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
       <HStack justify="space-between" mb={8}>
         {!collapsed && !isMobile && (
-          <Text fontSize="xl" fontFamily="Playfair Display">
-            Menu
-          </Text>
+          <Text fontSize="xl" fontFamily="Playfair Display">Menu</Text>
         )}
         {!isMobile && (
           <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
@@ -174,6 +127,18 @@ const DashLayout = () => {
     </Flex>
   );
 
+  // ✅ Handle loading and redirect in conditional rendering
+  if (loading || !isAuthenticated) {
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>{loading ? "Loading..." : "Redirecting to login..."}</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+
   return (
     <Flex h="100vh" bg="gray.50">
       {/* Sidebar */}
@@ -191,7 +156,7 @@ const DashLayout = () => {
         </Box>
       )}
 
-      {/* Header Bar */}
+      {/* Header */}
       <Box
         as="header"
         bg="white"
@@ -205,31 +170,29 @@ const DashLayout = () => {
       >
         <Flex align="center" justify="space-between" h="100%" px={6}>
           {isMobile && (
-            <>
-              <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
-                <Drawer.Trigger asChild>
-                  <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-                    <Menu size={20} />
-                  </Box>
-                </Drawer.Trigger>
-                <Portal>
-                  <Drawer.Backdrop />
-                  <Drawer.Positioner>
-                    <Drawer.Content>
-                      <Drawer.Header>
-                        <Drawer.Title>Menu</Drawer.Title>
-                        <Drawer.CloseTrigger asChild>
-                          <CloseButton size="sm" />
-                        </Drawer.CloseTrigger>
-                      </Drawer.Header>
-                      <Drawer.Body p={0}>
-                        <SidebarContent isMobile={isMobile} onClose={onClose} />
-                      </Drawer.Body>
-                    </Drawer.Content>
-                  </Drawer.Positioner>
-                </Portal>
-              </Drawer.Root>
-            </>
+            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+              <Drawer.Trigger asChild>
+                <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                  <Menu size={20} />
+                </Box>
+              </Drawer.Trigger>
+              <Portal>
+                <Drawer.Backdrop />
+                <Drawer.Positioner>
+                  <Drawer.Content>
+                    <Drawer.Header>
+                      <Drawer.Title>Menu</Drawer.Title>
+                      <Drawer.CloseTrigger asChild>
+                        <CloseButton size="sm" />
+                      </Drawer.CloseTrigger>
+                    </Drawer.Header>
+                    <Drawer.Body p={0}>
+                      <SidebarContent isMobile={isMobile} onClose={onClose} />
+                    </Drawer.Body>
+                  </Drawer.Content>
+                </Drawer.Positioner>
+              </Portal>
+            </Drawer.Root>
           )}
           <Text
             fontSize="2xl"
@@ -240,7 +203,7 @@ const DashLayout = () => {
             transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
             transition="margin-left 0.3s ease-in-out"
             fontFamily="Playfair Display , serif"
-            cursor={"pointer"}
+            cursor="pointer"
             onClick={() => navigate("/dashboard")}
           >
             <Box as="span" fontWeight="bold">Makao </Box>
@@ -254,22 +217,17 @@ const DashLayout = () => {
             </Avatar.Root>
             {showDetails && (
               <Stack gap={0}>
-                <Text fontSize="sm" fontWeight="bold">
-                  {user?.email?.split('@')[0] || "User"}
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  {user?.email || "user@example.com"}
-                </Text>
+                <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
+                <Text fontSize="xs" color="gray.500">{user?.email}</Text>
               </Stack>
             )}
           </HStack>
         </Flex>
       </Box>
 
-      {/* Main Content */}
+      {/* Main content */}
       <Box flex="1" overflow="auto" mt="50px">
         <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
-          <Flex justify="space-between" align="center" mb={6} gap={4} wrap="wrap" />
           <Outlet />
         </Box>
       </Box>
