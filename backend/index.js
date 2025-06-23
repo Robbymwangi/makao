@@ -49,10 +49,34 @@ app.use((req, res, next) => {
   next();
 });
 
-// Supabase client setup
+// Supabase client setup with better error handling
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      fetch: (url, options = {}) => {
+        // Add timeout and better error handling for fetch requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+        }).finally(() => {
+          clearTimeout(timeoutId);
+        }).catch(error => {
+          console.error('Supabase fetch error:', error.message);
+          throw error;
+        });
+      }
+    }
+  }
 );
 
 app.use(express.json());

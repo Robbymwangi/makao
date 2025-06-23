@@ -40,6 +40,23 @@ const supabase = createClient(
       autoRefreshToken: false,
       persistSession: false,
       detectSessionInUrl: false
+    },
+    global: {
+      fetch: (url, options = {}) => {
+        // Add timeout and better error handling for fetch requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+        }).finally(() => {
+          clearTimeout(timeoutId);
+        }).catch(error => {
+          console.error('Supabase fetch error:', error.message);
+          throw error;
+        });
+      }
     }
   }
 );
@@ -64,11 +81,14 @@ const testConnection = async () => {
     }
   } catch (error) {
     console.error('❌ Supabase connection error:', error.message);
+    // Don't throw here, just log the error to prevent server startup failure
     return false;
   }
 };
 
-// Run connection test
-testConnection();
+// Run connection test but don't block server startup
+testConnection().catch(error => {
+  console.error('Connection test failed:', error.message);
+});
 
 export default supabase;

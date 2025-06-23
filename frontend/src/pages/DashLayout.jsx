@@ -23,6 +23,7 @@ const DashLayout = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
 
+  // ✅ All hooks must be called at the top level, before any conditional returns
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
   const menuItems = getMenuByRole(role);
 
@@ -127,7 +128,7 @@ const DashLayout = () => {
     </Flex>
   );
 
-  // ✅ Handle loading and redirect in conditional rendering
+  // ✅ Conditional rendering moved after all hooks are called
   if (loading || !isAuthenticated) {
     return (
       <Flex h="100vh" align="center" justify="center">
