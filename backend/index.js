@@ -17,6 +17,19 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Check environment variables
+console.log('Backend Environment Check:');
+console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
+console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing');
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('❌ Missing required environment variables!');
+  console.error('Please create a .env file in the backend directory with:');
+  console.error('SUPABASE_URL=your-supabase-url');
+  console.error('SUPABASE_ANON_KEY=your-anon-key');
+  process.exit(1);
+}
+
 // Enable CORS for all routes
 app.use(cors({
   origin: ['http://localhost:5173', 'https://localhost:5173', /\.webcontainer-api\.io$/],
@@ -44,7 +57,14 @@ app.use(express.json());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Backend server is running' });
+  res.json({ 
+    status: 'OK', 
+    message: 'Backend server is running',
+    env: {
+      supabaseUrl: process.env.SUPABASE_URL ? 'Set' : 'Missing',
+      supabaseKey: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+    }
+  });
 });
 
 // Register your auth routes here
@@ -57,9 +77,7 @@ app.use((error, req, res, next) => {
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server listening on port ${port}`);
-  console.log(`Health check available at http://localhost:${port}/health`);
-  console.log('Environment check:');
-  console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
-  console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing');
+  console.log(`✅ Server listening on port ${port}`);
+  console.log(`🔗 Health check available at http://localhost:${port}/health`);
+  console.log('✅ Environment variables loaded successfully');
 });
