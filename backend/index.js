@@ -12,8 +12,6 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Now import other modules that depend on environment variables
 import express from 'express';
-import createSupabaseClient from './src/utils/supabaseClient.js';
-import authRoutes from './src/routes/auth.js'; 
 import cors from 'cors';
 
 const app = express();
@@ -33,9 +31,6 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   console.error('FRONTEND_URL=http://localhost:5173');
   process.exit(1);
 }
-
-// Create Supabase client after environment variables are loaded
-const supabase = createSupabaseClient();
 
 // Enable CORS for all routes
 app.use(cors({
@@ -68,6 +63,9 @@ app.get('/health', (req, res) => {
     }
   });
 });
+
+// Import auth routes AFTER environment variables are confirmed to be loaded
+import authRoutes from './src/routes/auth.js'; 
 
 // Register your auth routes here
 app.use('/auth', authRoutes);

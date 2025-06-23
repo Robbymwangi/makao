@@ -1,7 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Global Supabase client instance
+let supabaseInstance = null;
+
 // Create a function to initialize the Supabase client
 const createSupabaseClient = () => {
+  // Return existing instance if already created
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
   console.log('Backend Supabase Environment Check:', {
     url: process.env.SUPABASE_URL ? 'Set' : 'Missing',
     key: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing'
@@ -24,7 +32,7 @@ const createSupabaseClient = () => {
     throw new Error('Invalid Supabase URL format');
   }
 
-  const supabase = createClient(
+  supabaseInstance = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_ANON_KEY,
     {
@@ -75,7 +83,7 @@ const createSupabaseClient = () => {
       console.log('🔄 Testing Supabase connection...');
       
       // Use a simpler test that doesn't require complex queries
-      const { error } = await supabase.auth.getSession();
+      const { error } = await supabaseInstance.auth.getSession();
       
       if (error && error.message !== 'Auth session missing!') {
         console.error('❌ Supabase connection test failed:', error.message);
@@ -95,7 +103,7 @@ const createSupabaseClient = () => {
     console.error('Connection test failed:', error.message);
   });
 
-  return supabase;
+  return supabaseInstance;
 };
 
 // Export the function instead of the client instance
