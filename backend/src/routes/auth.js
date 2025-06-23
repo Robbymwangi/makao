@@ -142,7 +142,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login endpoint
+// Login endpoint - IMPROVED
 router.post('/login', async (req, res) => {
   try {
     console.log('Login request received:', { email: req.body.email });
@@ -195,28 +195,39 @@ router.post('/login', async (req, res) => {
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
-      // If profile doesn't exist, create it with default role
-      const { error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: authData.user.email,
-          role: 'user'
+      
+      // IMPROVED: Only create profile if it doesn't exist (not due to RLS issues)
+      if (profileError.code === 'PGRST116') { // No rows returned
+        console.log('Profile does not exist, creating new profile...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email,
+            role: 'user'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          return res.status(500).json({ error: 'Error setting up user profile' });
+        }
+
+        console.log('New profile created:', newProfile);
+        return res.json({
+          user: authData.user,
+          session: authData.session,
+          role: newProfile.role
         });
-
-      if (createError) {
-        console.error('Error creating profile:', createError);
-        return res.status(500).json({ error: 'Error setting up user profile' });
+      } else {
+        // Other errors (like RLS violations)
+        console.error('Profile access error:', profileError);
+        return res.status(500).json({ error: 'Error accessing user profile' });
       }
-
-      // Return with default role
-      return res.json({
-        user: authData.user,
-        session: authData.session,
-        role: 'user'
-      });
     }
 
+    // Profile exists and was fetched successfully
     res.json({
       user: authData.user,
       session: authData.session,
