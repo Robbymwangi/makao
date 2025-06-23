@@ -92,21 +92,24 @@ const SignUp = () => {
         navigate("/otp-challengesend");
       } else if (result.requiresConfirmation) {
         // User created but needs email confirmation
+        localStorage.setItem('pendingConfirmationEmail', formData.email);
         toaster.create({
           title: "Check Your Email",
           description: "Please check your email and click the verification link to activate your account.",
           type: "info",
           duration: 5000,
         });
-        // Don't navigate anywhere - user needs to check email and click the link
+        navigate("/auth/confirm");
       } else {
         // Fallback case
+        localStorage.setItem('pendingConfirmationEmail', formData.email);
         toaster.create({
           title: "Account Created",
           description: "Please check your email to verify your account.",
           type: "info",
           duration: 5000,
         });
+        navigate("/auth/confirm");
       }
     } catch (error) {
       toaster.create({

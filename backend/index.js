@@ -11,7 +11,7 @@ import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from the current directory
+// Load environment variables from the backend directory
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
@@ -21,12 +21,14 @@ const port = process.env.PORT || 3000;
 console.log('Backend Environment Check:');
 console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
 console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing');
+console.log('- FRONTEND_URL:', process.env.FRONTEND_URL ? 'Set' : 'Missing');
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   console.error('❌ Missing required environment variables!');
   console.error('Please create a .env file in the backend directory with:');
   console.error('SUPABASE_URL=your-supabase-url');
   console.error('SUPABASE_ANON_KEY=your-anon-key');
+  console.error('FRONTEND_URL=http://localhost:5173');
   process.exit(1);
 }
 
@@ -62,7 +64,8 @@ app.get('/health', (req, res) => {
     message: 'Backend server is running',
     env: {
       supabaseUrl: process.env.SUPABASE_URL ? 'Set' : 'Missing',
-      supabaseKey: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+      supabaseKey: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+      frontendUrl: process.env.FRONTEND_URL ? 'Set' : 'Missing'
     }
   });
 });
