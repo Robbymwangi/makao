@@ -20,6 +20,27 @@ const withRetry = async (operation, maxRetries = 2) => {
   }
 };
 
+// Helper function to create authenticated Supabase client
+const createAuthenticatedClient = (accessToken) => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  
+  const { createClient } = require('@supabase/supabase-js');
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  });
+};
+
 // Sign up endpoint
 router.post('/signup', async (req, res) => {
   try {
@@ -166,9 +187,12 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid login credentials' });
     }
 
-    // Fetch user's profile to get their role with retry
+    // Create authenticated Supabase client using the session token
+    const authenticatedSupabase = createAuthenticatedClient(authData.session.access_token);
+
+    // Fetch user's profile to get their role with retry using authenticated client
     const { data: profile, error: profileError } = await withRetry(async () => {
-      return await supabase
+      return await authenticatedSupabase
         .from('profiles')
         .select('role')
         .eq('id', authData.user.id)
@@ -184,9 +208,9 @@ router.post('/login', async (req, res) => {
       if (profileError.code === 'PGRST116') {
         console.log('Profile does not exist, creating new profile...');
         
-        // Create profile with retry
+        // Create profile with retry using authenticated client
         const { data: newProfile, error: createError } = await withRetry(async () => {
-          return await supabase
+          return await authenticatedSupabase
             .from('profiles')
             .insert({
               id: authData.user.id,
@@ -316,9 +340,12 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Fetch user's profile with retry
+    // Create authenticated client for profile fetch
+    const authenticatedSupabase = createAuthenticatedClient(token);
+
+    // Fetch user's profile with retry using authenticated client
     const { data: profile, error: profileError } = await withRetry(async () => {
-      return await supabase
+      return await authenticatedSupabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
