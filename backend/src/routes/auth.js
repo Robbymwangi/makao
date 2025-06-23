@@ -1,6 +1,6 @@
 // routes/auth.js
 import express from 'express';
-import { createSupabaseClient } from '../utils/supabaseClient.js';
+import createSupabaseClient from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
