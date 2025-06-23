@@ -1,18 +1,20 @@
-// index.js
-import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+// Load environment variables FIRST, before any imports that might need them
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import authRoutes from './src/routes/auth.js'; 
-import cors from 'cors';
 
 // Get the directory name for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from the backend directory
+// Load environment variables from the backend directory BEFORE other imports
 dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Now import other modules that depend on environment variables
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import authRoutes from './src/routes/auth.js'; 
+import cors from 'cors';
 
 const app = express();
 const port = process.env.PORT || 3000;
