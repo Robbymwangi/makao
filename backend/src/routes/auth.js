@@ -4,6 +4,22 @@ import supabase from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
+// Helper function to handle Supabase errors with retry logic
+const withRetry = async (operation, maxRetries = 2) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error(`Attempt ${attempt} failed:`, error.message);
+      if (attempt === maxRetries || !error.message.includes('fetch failed')) {
+        throw error;
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+};
+
 // Sign up endpoint
 router.post('/signup', async (req, res) => {
   try {
@@ -49,16 +65,18 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`,
-        data: {
-          role: role // Store role in user metadata
+    // Sign up user with Supabase Auth with retry logic
+    const { data: authData, error: authError } = await withRetry(async () => {
+      return await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`,
+          data: {
+            role: role // Store role in user metadata
+          }
         }
-      }
+      });
     });
 
     console.log('Supabase auth response:', { 
@@ -81,12 +99,14 @@ router.post('/signup', async (req, res) => {
         // Wait a moment for the database trigger to create the profile
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Check if profile was created by the trigger
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user.id)
-          .single();
+        // Check if profile was created by the trigger with retry
+        const { data: profile, error: profileError } = await withRetry(async () => {
+          return await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.user.id)
+            .single();
+        });
 
         console.log('Profile check:', { profile, profileError });
 
@@ -95,15 +115,17 @@ router.post('/signup', async (req, res) => {
         if (profileError && profileError.code === 'PGRST116') {
           console.log('Profile not found, creating manually...');
           // If profile doesn't exist, create it manually
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              email: authData.user.email,
-              role: role
-            })
-            .select()
-            .single();
+          const { data: newProfile, error: createError } = await withRetry(async () => {
+            return await supabase
+              .from('profiles')
+              .insert({
+                id: authData.user.id,
+                email: authData.user.email,
+                role: role
+              })
+              .select()
+              .single();
+          });
 
           if (createError) {
             console.error('Error creating profile:', createError);
@@ -158,10 +180,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Sign in user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // Sign in user with Supabase Auth with retry logic
+    const { data: authData, error: authError } = await withRetry(async () => {
+      return await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
     });
 
     console.log('Login auth response:', { 
@@ -188,15 +212,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid login credentials' });
     }
 
-    // Create a new Supabase client with the user's session for RLS
-    const userSupabase = supabase.auth.setSession(authData.session);
-    
-    // Fetch user's profile to get their role
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single();
+    // Fetch user's profile to get their role with retry
+    const { data: profile, error: profileError } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single();
+    });
 
     console.log('Profile fetch:', { profile, profileError });
 
@@ -207,16 +230,18 @@ router.post('/login', async (req, res) => {
       if (profileError.code === 'PGRST116') {
         console.log('Profile does not exist, creating new profile...');
         
-        // Create profile
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email,
-            role: 'user'
-          })
-          .select()
-          .single();
+        // Create profile with retry
+        const { data: newProfile, error: createError } = await withRetry(async () => {
+          return await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              email: authData.user.email,
+              role: 'user'
+            })
+            .select()
+            .single();
+        });
 
         if (createError) {
           console.error('Error creating profile:', createError);
@@ -259,12 +284,14 @@ router.post('/resend-confirmation', async (req, res) => {
 
     console.log('Resending confirmation email for:', email);
 
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`
-      }
+    const { error } = await withRetry(async () => {
+      return await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email`
+        }
+      });
     });
 
     if (error) {
@@ -287,12 +314,19 @@ router.post('/logout', async (req, res) => {
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
       
-      // Sign out the user's session on Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Supabase logout error:', error);
-        // Don't return error, just log it
+      // Sign out the user's session on Supabase with error handling
+      try {
+        const { error } = await withRetry(async () => {
+          return await supabase.auth.signOut();
+        });
+        
+        if (error) {
+          console.error('Supabase logout error:', error);
+          // Don't return error, just log it
+        }
+      } catch (logoutError) {
+        console.error('Logout operation failed:', logoutError);
+        // Continue with successful response even if Supabase logout fails
       }
     }
     
@@ -314,19 +348,23 @@ router.get('/profile', async (req, res) => {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Get user from token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Get user from token with retry
+    const { data: { user }, error: userError } = await withRetry(async () => {
+      return await supabase.auth.getUser(token);
+    });
     
     if (userError || !user) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Fetch user's profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    // Fetch user's profile with retry
+    const { data: profile, error: profileError } = await withRetry(async () => {
+      return await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+    });
 
     if (profileError) {
       console.error('Profile fetch error:', profileError);

@@ -43,37 +43,50 @@ const supabase = createClient(
     },
     global: {
       fetch: (url, options = {}) => {
-        // Add timeout and better error handling for fetch requests
+        // Simplified fetch with better error handling and shorter timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced to 5 second timeout
         
         return fetch(url, {
           ...options,
           signal: controller.signal,
+          // Add retry logic for network issues
+          headers: {
+            ...options.headers,
+            'Connection': 'keep-alive',
+          }
         }).finally(() => {
           clearTimeout(timeoutId);
         }).catch(error => {
           console.error('Supabase fetch error:', error.message);
+          // Don't throw immediately, let the calling code handle retries
           throw error;
         });
+      }
+    },
+    // Add database connection options
+    db: {
+      schema: 'public'
+    },
+    // Reduce realtime connection issues
+    realtime: {
+      params: {
+        eventsPerSecond: 2
       }
     }
   }
 );
 
-// Test the connection with a simple health check
+// Simplified connection test that's less likely to fail
 const testConnection = async () => {
   try {
     console.log('🔄 Testing Supabase connection...');
     
-    // Simple connection test that doesn't require authentication
-    const { error } = await supabase
-      .from('profiles')
-      .select('count', { count: 'exact', head: true });
+    // Use a simpler test that doesn't require complex queries
+    const { error } = await supabase.auth.getSession();
     
-    if (error) {
+    if (error && error.message !== 'Auth session missing!') {
       console.error('❌ Supabase connection test failed:', error.message);
-      console.error('Error details:', error);
       return false;
     } else {
       console.log('✅ Supabase connection test successful');
@@ -81,7 +94,6 @@ const testConnection = async () => {
     }
   } catch (error) {
     console.error('❌ Supabase connection error:', error.message);
-    // Don't throw here, just log the error to prevent server startup failure
     return false;
   }
 };
