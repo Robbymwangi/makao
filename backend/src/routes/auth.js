@@ -49,7 +49,7 @@ router.post('/signup', async (req, res) => {
 
     console.log('Attempting Supabase signup...');
 
-    // Sign up user with Supabase Auth - redirect to verification page
+    // Sign up user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -79,7 +79,7 @@ router.post('/signup', async (req, res) => {
       // If user has a session, they're auto-confirmed (development mode)
       if (authData.session) {
         // Wait a moment for the database trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Check if profile was created by the trigger
         const { data: profile, error: profileError } = await supabase
@@ -92,7 +92,7 @@ router.post('/signup', async (req, res) => {
 
         let userRole = role;
         
-        if (profileError) {
+        if (profileError && profileError.code === 'PGRST116') {
           console.log('Profile not found, creating manually...');
           // If profile doesn't exist, create it manually
           const { data: newProfile, error: createError } = await supabase
@@ -112,7 +112,7 @@ router.post('/signup', async (req, res) => {
             console.log('Profile created manually:', newProfile);
             userRole = newProfile.role;
           }
-        } else {
+        } else if (profile) {
           userRole = profile.role;
         }
 
@@ -142,7 +142,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login endpoint - FIXED to handle RLS properly
+// Login endpoint
 router.post('/login', async (req, res) => {
   try {
     console.log('Login request received:', { email: req.body.email });
@@ -184,17 +184,19 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: authError.message });
     }
 
-    // Use the session token to fetch profile with proper auth context
+    if (!authData.user || !authData.session) {
+      return res.status(400).json({ error: 'Invalid login credentials' });
+    }
+
+    // Create a new Supabase client with the user's session for RLS
+    const userSupabase = supabase.auth.setSession(authData.session);
+    
+    // Fetch user's profile to get their role
     const { data: profile, error: profileError } = await supabase
-      .auth
-      .setSession(authData.session)
-      .then(() => 
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user.id)
-          .single()
-      );
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
 
     console.log('Profile fetch:', { profile, profileError });
 
@@ -205,7 +207,7 @@ router.post('/login', async (req, res) => {
       if (profileError.code === 'PGRST116') {
         console.log('Profile does not exist, creating new profile...');
         
-        // Create profile with the authenticated session
+        // Create profile
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
@@ -228,7 +230,7 @@ router.post('/login', async (req, res) => {
           role: newProfile.role
         });
       } else {
-        // Other errors (like RLS violations or infinite recursion)
+        // Other errors (like RLS violations)
         console.error('Profile access error:', profileError);
         return res.status(500).json({ error: 'Error accessing user profile' });
       }
@@ -277,7 +279,7 @@ router.post('/resend-confirmation', async (req, res) => {
   }
 });
 
-// Logout endpoint - IMPROVED
+// Logout endpoint
 router.post('/logout', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -286,7 +288,7 @@ router.post('/logout', async (req, res) => {
       const token = authHeader.replace('Bearer ', '');
       
       // Sign out the user's session on Supabase
-      const { error } = await supabase.auth.admin.signOut(token);
+      const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('Supabase logout error:', error);
@@ -302,7 +304,7 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Get current user profile - FIXED
+// Get current user profile
 router.get('/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -319,13 +321,7 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Set the session for this request to ensure proper RLS context
-    await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '', // Not needed for this operation
-    });
-
-    // Fetch user's profile with proper auth context
+    // Fetch user's profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
