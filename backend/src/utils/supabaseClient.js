@@ -1,14 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Get the directory name for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables from the backend directory
-dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 console.log('Backend Supabase Environment Check:', {
   url: process.env.SUPABASE_URL ? 'Set' : 'Missing',
