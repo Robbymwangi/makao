@@ -128,110 +128,111 @@ const DashLayout = () => {
     </Flex>
   );
 
-  // ✅ Conditional rendering moved after all hooks are called
-  if (loading || !isAuthenticated) {
-    return (
-      <Flex h="100vh" align="center" justify="center">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>{loading ? "Loading..." : "Redirecting to login..."}</Text>
-        </VStack>
-      </Flex>
-    );
-  }
-
+  // ✅ Fixed: Moved conditional rendering into JSX instead of early return
+  // This ensures all hooks are called consistently on every render
   return (
     <Flex h="100vh" bg="gray.50">
-      {/* Sidebar */}
-      {!isOpen && !isMobile && (
-        <Box
-          as="aside"
-          bg="white"
-          boxShadow="md"
-          w={collapsed ? "60px" : "250px"}
-          transition="width 0.3s ease-in-out"
-          overflow="hidden"
-          zIndex="10"
-        >
-          <SidebarContent onClose={toggleSidebar} />
-        </Box>
-      )}
-
-      {/* Header */}
-      <Box
-        as="header"
-        bg="white"
-        boxShadow="sm"
-        w="100%"
-        h="60px"
-        position="fixed"
-        top="0"
-        left="0"
-        zIndex="9"
-      >
-        <Flex align="center" justify="space-between" h="100%" px={6}>
-          {isMobile && (
-            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
-              <Drawer.Trigger asChild>
-                <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-                  <Menu size={20} />
-                </Box>
-              </Drawer.Trigger>
-              <Portal>
-                <Drawer.Backdrop />
-                <Drawer.Positioner>
-                  <Drawer.Content>
-                    <Drawer.Header>
-                      <Drawer.Title>Menu</Drawer.Title>
-                      <Drawer.CloseTrigger asChild>
-                        <CloseButton size="sm" />
-                      </Drawer.CloseTrigger>
-                    </Drawer.Header>
-                    <Drawer.Body p={0}>
-                      <SidebarContent isMobile={isMobile} onClose={onClose} />
-                    </Drawer.Body>
-                  </Drawer.Content>
-                </Drawer.Positioner>
-              </Portal>
-            </Drawer.Root>
-          )}
-          <Text
-            fontSize="2xl"
-            ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
-            textAlign={useBreakpointValue({ base: "center", md: "left" })}
-            position={useBreakpointValue({ base: "absolute", md: "relative" })}
-            left={useBreakpointValue({ base: "50%", md: "auto" })}
-            transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
-            transition="margin-left 0.3s ease-in-out"
-            fontFamily="Playfair Display , serif"
-            cursor="pointer"
-            onClick={() => navigate("/dashboard")}
-          >
-            <Box as="span" fontWeight="bold">Makao </Box>
-            <Box as="span" fontWeight="normal">Manager</Box>
-          </Text>
-          <HStack spacing={4}>
-            <ColorModeButton />
-            <Avatar.Root>
-              <Avatar.Fallback name={user?.email || "User"} />
-              <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
-            </Avatar.Root>
-            {showDetails && (
-              <Stack gap={0}>
-                <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
-                <Text fontSize="xs" color="gray.500">{user?.email}</Text>
-              </Stack>
-            )}
-          </HStack>
+      {(loading || !isAuthenticated) ? (
+        <Flex h="100vh" align="center" justify="center" w="100%">
+          <VStack spacing={4}>
+            <Spinner size="xl" />
+            <Text>{loading ? "Loading..." : "Redirecting to login..."}</Text>
+          </VStack>
         </Flex>
-      </Box>
+      ) : (
+        <>
+          {/* Sidebar */}
+          {!isOpen && !isMobile && (
+            <Box
+              as="aside"
+              bg="white"
+              boxShadow="md"
+              w={collapsed ? "60px" : "250px"}
+              transition="width 0.3s ease-in-out"
+              overflow="hidden"
+              zIndex="10"
+            >
+              <SidebarContent onClose={toggleSidebar} />
+            </Box>
+          )}
 
-      {/* Main content */}
-      <Box flex="1" overflow="auto" mt="50px">
-        <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
-          <Outlet />
-        </Box>
-      </Box>
+          {/* Header */}
+          <Box
+            as="header"
+            bg="white"
+            boxShadow="sm"
+            w="100%"
+            h="60px"
+            position="fixed"
+            top="0"
+            left="0"
+            zIndex="9"
+          >
+            <Flex align="center" justify="space-between" h="100%" px={6}>
+              {isMobile && (
+                <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+                  <Drawer.Trigger asChild>
+                    <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                      <Menu size={20} />
+                    </Box>
+                  </Drawer.Trigger>
+                  <Portal>
+                    <Drawer.Backdrop />
+                    <Drawer.Positioner>
+                      <Drawer.Content>
+                        <Drawer.Header>
+                          <Drawer.Title>Menu</Drawer.Title>
+                          <Drawer.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Drawer.CloseTrigger>
+                        </Drawer.Header>
+                        <Drawer.Body p={0}>
+                          <SidebarContent isMobile={isMobile} onClose={onClose} />
+                        </Drawer.Body>
+                      </Drawer.Content>
+                    </Drawer.Positioner>
+                  </Portal>
+                </Drawer.Root>
+              )}
+              <Text
+                fontSize="2xl"
+                ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
+                textAlign={useBreakpointValue({ base: "center", md: "left" })}
+                position={useBreakpointValue({ base: "absolute", md: "relative" })}
+                left={useBreakpointValue({ base: "50%", md: "auto" })}
+                transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
+                transition="margin-left 0.3s ease-in-out"
+                fontFamily="Playfair Display , serif"
+                cursor="pointer"
+                onClick={() => navigate("/dashboard")}
+              >
+                <Box as="span" fontWeight="bold">Makao </Box>
+                <Box as="span" fontWeight="normal">Manager</Box>
+              </Text>
+              <HStack spacing={4}>
+                <ColorModeButton />
+                <Avatar.Root>
+                  <Avatar.Fallback name={user?.email || "User"} />
+                  <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
+                </Avatar.Root>
+                {showDetails && (
+                  <Stack gap={0}>
+                    <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
+                    <Text fontSize="xs" color="gray.500">{user?.email}</Text>
+                  </Stack>
+                )}
+              </HStack>
+            </Flex>
+          </Box>
+
+          {/* Main content */}
+          <Box flex="1" overflow="auto" mt="50px">
+            <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
+              <Outlet />
+            </Box>
+          </Box>
+        </>
+      )}
     </Flex>
   );
 };
