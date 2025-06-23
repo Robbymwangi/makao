@@ -8,6 +8,7 @@ export const useAuthStore = create(
       isAuthenticated: false,
       user: null,
       role: null,
+      email: null,
 
       //Login stores the full user object and role
       login: ({ id, email, name, role }) =>
@@ -15,6 +16,7 @@ export const useAuthStore = create(
           isAuthenticated: true,
           user: { id, email, name },
           role,
+          email, // Store email for potential use in OTP or other features
         }),
 
       logout: () =>
@@ -22,7 +24,10 @@ export const useAuthStore = create(
           isAuthenticated: false,
           user: null,
           role: null,
+          email: null, 
         }),
+        //For manually setting email (used in OTP resend)
+      setEmail: (email) => set({ email }),
     }),
     {
       name: "makao-auth", // Key in localStorage
