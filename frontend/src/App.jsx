@@ -38,7 +38,8 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
 
-import { supabase } from "@/utils/supabaseClient";
+import supabase from "@/utils/supabaseClient";
+
 
 const App = () => {
   const location = useLocation();
