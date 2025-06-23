@@ -37,7 +37,6 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
-import { useAuthStore } from "./store/useAuthStore.js";
 
 import { supabase } from "@/utils/supabaseClient";
 
