@@ -16,16 +16,49 @@ import { getMenuByRole } from "@/utils/menuUtils";
 import { toaster } from "@/components/ui/toaster";
 
 const DashLayout = () => {
+  // Debug: log every render
+  console.log("[DashLayout] render");
   const navigate = useNavigate();
   const location = useLocation();
+  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
+  console.log("[DashLayout] state:", { loading, isAuthenticated, role, user });
+
+  // Redirect to login if not authenticated and not loading
+  useEffect(() => {
+    console.log("[DashLayout] useEffect: loading/isAuthenticated", { loading, isAuthenticated });
+    if (!loading && !isAuthenticated) {
+      console.log("[DashLayout] Navigating to /login");
+      navigate("/login", { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  // Early return for loading state
+  if (loading) {
+    console.log("[DashLayout] Early return: loading");
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Loading...</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+  // If not authenticated and not loading, render nothing (redirect will happen in useEffect)
+  if (!isAuthenticated) {
+    console.log("[DashLayout] Early return: not authenticated");
+    return null;
+  }
+
+  // All other hooks and logic after early return
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
 
-  // ✅ All hooks must be called at the top level, before any conditional logic
-  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
-  const menuItems = getMenuByRole(role);
+  // Always use an array for menuItems
+  const menuItems = role ? getMenuByRole(role) : [];
+  console.log("[DashLayout] menuItems:", menuItems);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -46,7 +79,14 @@ const DashLayout = () => {
         type: "success",
         duration: 2000,
       });
-      navigate("/login");
+      // TEMPORARY DEBUG: force loading to false after 1s if stuck
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.__AUTH_STORE__) {
+          window.__AUTH_STORE__.setState({ loading: false });
+          console.log("[DashLayout] Forced loading to false via window.__AUTH_STORE__");
+        }
+      }, 1000);
+      // Do not navigate here; let useEffect handle it
     } catch (error) {
       console.error('Logout error:', error);
       toaster.create({
@@ -57,12 +97,6 @@ const DashLayout = () => {
       });
     }
   };
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate("/login");
-    }
-  }, [loading, isAuthenticated, navigate]);
 
   const SidebarContent = ({ onClose, isMobile = false }) => (
     <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
@@ -127,19 +161,6 @@ const DashLayout = () => {
       </Box>
     </Flex>
   );
-
-  // ✅ Show loading/redirect screen when not authenticated
-  // This ensures all hooks are called consistently on every render
-  if (loading || !isAuthenticated) {
-    return (
-      <Flex h="100vh" align="center" justify="center" w="100%">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>{loading ? "Loading..." : "Redirecting to login..."}</Text>
-        </VStack>
-      </Flex>
-    );
-  }
 
   // ✅ Main authenticated layout
   return (

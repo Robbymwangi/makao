@@ -144,33 +144,23 @@ export const useAuthStore = create(
 
       // Logout action - FIXED
       logout: async () => {
-        const { token } = get();
-        
-        // Clear state immediately to prevent UI issues
-        set({
-          isAuthenticated: false,
-          user: null,
-          email: null,
-          role: null,
-          token: null,
-          loading: false,
-          error: null,
-        });
-
+        // Set loading to true at the start
+        set({ loading: true });
         try {
-          if (token) {
-            // Call backend logout endpoint
-            await fetch(`${API_BASE_URL}/auth/logout`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-          }
+          // Optionally call your backend to invalidate the session/token here
+          // await fetch(`${API_BASE_URL}/auth/logout`, { ... });
+          set({
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+            loading: false, // <--- CRITICAL: always set loading to false!
+            error: null,
+          });
         } catch (error) {
-          console.error('Logout API call failed:', error);
-          // Don't throw error since we've already cleared the state
+          set({ loading: false, error: error.message || 'Logout failed' });
+          throw error;
         }
       },
 
