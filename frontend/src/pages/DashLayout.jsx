@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -17,9 +17,10 @@ import {
 import { useNavigate, Outlet, useLocation } from "react-router";
 import { LogOut, X, Home, ClipboardList, Building, MessageCircle, Settings, User, Menu } from "lucide-react";
 import { Squash as Hamburger, Squash } from "hamburger-react";
-import { ColorModeButton } from "@/components/ui/color-mode"; // Import the ColorModeButton
+import { ColorModeButton } from "@/components/ui/color-mode";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
+import { toaster } from "@/components/ui/toaster";
 
 const DashLayout = () => {
   const navigate = useNavigate();
@@ -28,8 +29,15 @@ const DashLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
-  const role = useAuthStore((state) => state.role);
+  const { role, logout, isAuthenticated, user } = useAuthStore();
   const menuItems = getMenuByRole(role);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -40,9 +48,37 @@ const DashLayout = () => {
 
   const toggleSidebar = () => setCollapsed(!collapsed);
 
-  const handleLogout = () => {
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      
+      // Clear any stored routes
+      localStorage.removeItem("currentRoute");
+      
+      toaster.create({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+        type: "success",
+        duration: 2000,
+      });
+      
+      // Navigate to login
+      navigate("/login");
+    } catch (error) {
+      console.error('Logout error:', error);
+      toaster.create({
+        title: "Logout Error",
+        description: "There was an issue logging out. Please try again.",
+        type: "error",
+        duration: 3000,
+      });
+    }
   };
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const SidebarContent = ({ onClose, isMobile = false }) => (
     <Flex
@@ -58,7 +94,6 @@ const DashLayout = () => {
             Menu
           </Text>
         )}
-        {/* Conditionally render the X or Hamburger button depending on collapsed state, only if the screen size is not small */}
         {!isMobile && (
           <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
             <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
@@ -149,7 +184,6 @@ const DashLayout = () => {
         <Flex align="center" justify="space-between" h="100%" px={6}>
           {isMobile && (
             <>
-              {/* Mobile Drawer */}
               <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
                 <Drawer.Trigger asChild>
                   <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
@@ -176,33 +210,33 @@ const DashLayout = () => {
             </>
           )}
           <Text
-    fontSize="2xl"
-    ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
-    textAlign={useBreakpointValue({ base: "center", md: "left" })}
-    position={useBreakpointValue({ base: "absolute", md: "relative" })}
-    left={useBreakpointValue({ base: "50%", md: "auto" })}
-    transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
-    transition="margin-left 0.3s ease-in-out"
-    fontFamily="Playfair Display , serif"
-    cursor={"pointer"}
-    onClick={() => navigate("/dashboard")}
-  >
-    <Box as="span" fontWeight="bold">Makao </Box>
-    <Box as="span" fontWeight="normal">Manager</Box>
-  </Text>
+            fontSize="2xl"
+            ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
+            textAlign={useBreakpointValue({ base: "center", md: "left" })}
+            position={useBreakpointValue({ base: "absolute", md: "relative" })}
+            left={useBreakpointValue({ base: "50%", md: "auto" })}
+            transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
+            transition="margin-left 0.3s ease-in-out"
+            fontFamily="Playfair Display , serif"
+            cursor={"pointer"}
+            onClick={() => navigate("/dashboard")}
+          >
+            <Box as="span" fontWeight="bold">Makao </Box>
+            <Box as="span" fontWeight="normal">Manager</Box>
+          </Text>
           <HStack spacing={4}>
-            <ColorModeButton /> {/* Add the dark mode toggle button here */}
+            <ColorModeButton />
             <Avatar.Root>
-              <Avatar.Fallback name="Joel Miller" />
+              <Avatar.Fallback name={user?.email || "User"} />
               <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
             </Avatar.Root>
-            {showDetails && ( // Conditionally render name and email
+            {showDetails && (
               <Stack gap={0}>
                 <Text fontSize="sm" fontWeight="bold">
-                  Joel Miller
+                  {user?.email?.split('@')[0] || "User"}
                 </Text>
                 <Text fontSize="xs" color="gray.500">
-                  joel.miller@example.com
+                  {user?.email || "user@example.com"}
                 </Text>
               </Stack>
             )}

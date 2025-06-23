@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { Box } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/toaster";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Pages
 import Landingpage from "./pages/Landingpage.jsx";
@@ -40,19 +41,39 @@ import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/A
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { initializeSession, isAuthenticated } = useAuthStore();
+
+  // Initialize session on app load
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        await initializeSession();
+      } catch (error) {
+        console.error('Failed to initialize session:', error);
+      }
+    };
+
+    initSession();
+  }, [initializeSession]);
 
   // Save the current route to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem("currentRoute", location.pathname);
   }, [location]);
 
-  // Restore the route on app load
+  // Restore the route on app load - IMPROVED
   useEffect(() => {
     const savedRoute = localStorage.getItem("currentRoute");
-    if (savedRoute && savedRoute !== location.pathname) {
-      navigate(savedRoute);
+    
+    // Only restore route if user is authenticated and route is not current
+    if (savedRoute && savedRoute !== location.pathname && isAuthenticated) {
+      // Don't restore auth-related routes
+      const authRoutes = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/verify-email'];
+      if (!authRoutes.includes(savedRoute)) {
+        navigate(savedRoute);
+      }
     }
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, isAuthenticated]);
 
   return (
     <Box>

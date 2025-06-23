@@ -259,19 +259,28 @@ router.post('/resend-confirmation', async (req, res) => {
   }
 });
 
-// Logout endpoint
+// Logout endpoint - IMPROVED
 router.post('/logout', async (req, res) => {
   try {
-    const { error } = await supabase.auth.signOut();
+    const authHeader = req.headers.authorization;
     
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      
+      // Sign out the user's session on Supabase
+      const { error } = await supabase.auth.admin.signOut(token);
+      
+      if (error) {
+        console.error('Supabase logout error:', error);
+        // Don't return error, just log it
+      }
     }
-
+    
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    // Always return success for logout to prevent client-side issues
+    res.json({ message: 'Logged out successfully' });
   }
 });
 

@@ -142,12 +142,24 @@ export const useAuthStore = create(
         }
       },
 
-      // Logout action
+      // Logout action - FIXED
       logout: async () => {
         const { token } = get();
         
+        // Clear state immediately to prevent UI issues
+        set({
+          isAuthenticated: false,
+          user: null,
+          email: null,
+          role: null,
+          token: null,
+          loading: false,
+          error: null,
+        });
+
         try {
           if (token) {
+            // Call backend logout endpoint
             await fetch(`${API_BASE_URL}/auth/logout`, {
               method: 'POST',
               headers: {
@@ -157,18 +169,8 @@ export const useAuthStore = create(
             });
           }
         } catch (error) {
-          console.error('Logout error:', error);
-        } finally {
-          // Clear state regardless of API call success
-          set({
-            isAuthenticated: false,
-            user: null,
-            email: null,
-            role: null,
-            token: null,
-            loading: false,
-            error: null,
-          });
+          console.error('Logout API call failed:', error);
+          // Don't throw error since we've already cleared the state
         }
       },
 
@@ -228,6 +230,65 @@ export const useAuthStore = create(
       hasAnyRole: (roles) => {
         const { role } = get();
         return roles.includes(role);
+      },
+
+      // Initialize session - NEW METHOD
+      initializeSession: async () => {
+        const { token } = get();
+        
+        if (!token) {
+          return false;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            // Token is invalid, clear the session
+            set({
+              isAuthenticated: false,
+              user: null,
+              email: null,
+              role: null,
+              token: null,
+              loading: false,
+              error: null,
+            });
+            return false;
+          }
+
+          const data = await response.json();
+          
+          // Update with fresh data
+          set({
+            isAuthenticated: true,
+            user: data.user,
+            email: data.user.email,
+            role: data.profile.role,
+            loading: false,
+            error: null,
+          });
+
+          return true;
+        } catch (error) {
+          console.error('Session initialization failed:', error);
+          // Clear invalid session
+          set({
+            isAuthenticated: false,
+            user: null,
+            email: null,
+            role: null,
+            token: null,
+            loading: false,
+            error: null,
+          });
+          return false;
+        }
       },
     }),
     {
