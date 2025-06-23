@@ -4,7 +4,7 @@ import { VStack, HStack, Heading, useBreakpointValue } from "@chakra-ui/react";
 import { CSSTransition } from "react-transition-group";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
-import { supabase } from "@/utils/supabaseClient";
+import supabase from "@/utils/supabaseClient";
 
 // Dashboard Components
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
