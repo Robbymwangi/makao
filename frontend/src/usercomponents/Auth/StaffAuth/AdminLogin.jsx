@@ -1,19 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, VStack, Input, Button, Text, Link, Flex } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
+import { useSearchParams } from "react-router-dom";
+import supabase from "@/utils/supabaseClient";
+
 
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login, loading, error, clearError } = useAuthStore();
+  const { login, loading, error, clearError, setEmailStore } = useAuthStore();
+
+// Show success toast if email was confirmed
+  useEffect(() => {
+    if (searchParams.get("confirmed") === "true") {
+      toaster.create({
+        title: "Email Confirmed",
+        description: "Your email has been confirmed successfully. You can now log in.",
+        type: "success",
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    clearError();
 
     if (!email || !password) {
       toaster.create({
@@ -25,46 +40,66 @@ const StaffLogin = () => {
       return;
     }
 
-    try {
-      const role = await login(email, password);
-      
-      // Check if the user has a staff role
-      if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      if (
+        error.message.includes("email not confirmed") ||
+        error.message.includes("confirm your email")
+      ) {
         toaster.create({
-          title: "Login Successful",
-          description: "Welcome to the staff portal!",
-          type: "success",
-          duration: 2000,
+          title: "Email Not Confirmed",
+          description: "Please confirm your email before logging in.",
+          type: "warning",
+          duration: 5000,
         });
-        navigate("/staff/otp-challengesend");
-      } else if (role === "user") {
-        toaster.create({
-          title: "Access Denied",
-          description: "Users must use the regular Login page.",
-          type: "error",
-          duration: 4000,
-        });
-        // Clear the authentication since this is not a valid staff login
-        useAuthStore.getState().logout();
-      } else {
-        toaster.create({
-          title: "Access Denied",
-          description: "You don't have permission to access the staff portal.",
-          type: "error",
-          duration: 4000,
-        });
-        // Clear the authentication
-        useAuthStore.getState().logout();
+
+        localStorage.setItem("pendingConfirmationEmail", email);
+        return navigate("/auth/confirm");
       }
-    } catch (error) {
-      toaster.create({
+
+      return toaster.create({
         title: "Login Failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        description: error.message || "Invalid credentials.",
+        type: "error",
+        duration: 4000,
+      });
+    }
+
+    const user = data?.user;
+    const role = user?.user_metadata?.role;
+
+    if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+      // Save session info
+      login({
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || "Staff",
+        role,
+      });
+
+      setEmailStore(email); // For OTP resend
+      toaster.create({
+        title: "Login Successful",
+        description: "Welcome back!",
+        type: "success",
+        duration: 2000,
+      });
+
+      navigate("/staff/otp-challengesend");
+    } else {
+      toaster.create({
+        title: "Access Denied",
+        description: "You are not authorized for staff login.",
         type: "error",
         duration: 4000,
       });
     }
   };
+
 
   return (
     <Flex minH="100vh" direction="column" bg="gray.50" justify="center" align="center">
