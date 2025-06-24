@@ -20,6 +20,14 @@ const DashLayout = () => {
   console.log("[DashLayout] render");
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Hooks and logic after early return
+  const [collapsed, setCollapsed] = useState(true);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const isMobile = useBreakpointValue({ base: true, md: false });
+  const showDetails = useBreakpointValue({ base: false, md: true });
+
+
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
   console.log("[DashLayout] state:", { loading, isAuthenticated, role, user });
 
@@ -50,11 +58,6 @@ const DashLayout = () => {
     return null;
   }
 
-  // All other hooks and logic after early return
-  const [collapsed, setCollapsed] = useState(true);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const isMobile = useBreakpointValue({ base: true, md: false });
-  const showDetails = useBreakpointValue({ base: false, md: true });
 
   // Always use an array for menuItems
   const menuItems = role ? getMenuByRole(role) : [];
@@ -251,7 +254,7 @@ const DashLayout = () => {
 
       {/* Main content */}
       <Box flex="1" overflow="auto" mt="50px">
-        <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
+        <Box bg="gray.100" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
           <Outlet />
         </Box>
       </Box>
