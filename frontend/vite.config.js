@@ -15,6 +15,7 @@ export default defineConfig({
     hmr: {
       port: 5173,
       host: 'localhost'
-    }
+    },
+    historyApiFallback: true,
   }
 })

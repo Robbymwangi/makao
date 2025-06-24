@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box, Flex, Text, VStack, HStack,
   useDisclosure, useBreakpointValue,
@@ -84,6 +84,14 @@ const DashLayout = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // FIX: Move all useBreakpointValue hooks here
+  const mlValue = useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" });
+  const textAlignValue = useBreakpointValue({ base: "center", md: "left" });
+  const positionValue = useBreakpointValue({ base: "absolute", md: "relative" });
+  const leftValue = useBreakpointValue({ base: "50%", md: "auto" });
+  const transformValue = useBreakpointValue({ base: "translateX(-50%)", md: "none" });
 
   // Always use an array for menuItems
   const menuItems = role ? getMenuByRole(role) : [];
@@ -97,6 +105,7 @@ const DashLayout = () => {
   const toggleSidebar = () => setCollapsed(!collapsed);
 
   const handleLogout = async () => {
+    setLoggingOut(true); // Show loading screen
     try {
       await logout();
       localStorage.removeItem("currentRoute");
@@ -107,11 +116,11 @@ const DashLayout = () => {
         duration: 2000,
       });
       setTimeout(() => {
-        if (typeof window !== 'undefined' && window.__AUTH_STORE__) {
-          window.__AUTH_STORE__.setState({ loading: false });
-        }
-      }, 1000);
+        setLoggingOut(false);
+        navigate("/login", { replace: true });
+      }, 1000); // Show loading for 1s before redirect
     } catch (error) {
+      setLoggingOut(false);
       console.error('Logout error:', error);
       toaster.create({
         title: "Logout Error",
@@ -121,6 +130,18 @@ const DashLayout = () => {
       });
     }
   };
+
+  // Show loading screen during logout
+  if (loggingOut) {
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Logging out...</Text>
+        </VStack>
+      </Flex>
+    );
+  }
 
   // Early returns after all hooks
   if (loading) {
@@ -204,11 +225,11 @@ const DashLayout = () => {
           )}
           <Text
             fontSize="2xl"
-            ml={useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" })}
-            textAlign={useBreakpointValue({ base: "center", md: "left" })}
-            position={useBreakpointValue({ base: "absolute", md: "relative" })}
-            left={useBreakpointValue({ base: "50%", md: "auto" })}
-            transform={useBreakpointValue({ base: "translateX(-50%)", md: "none" })}
+            ml={mlValue}
+            textAlign={textAlignValue}
+            position={positionValue}
+            left={leftValue}
+            transform={transformValue}
             transition="margin-left 0.3s ease-in-out"
             fontFamily="Playfair Display , serif"
             cursor="pointer"

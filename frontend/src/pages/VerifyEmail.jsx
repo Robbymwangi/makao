@@ -4,12 +4,25 @@ import { useNavigate, useSearchParams } from "react-router";
 import { CheckCircle, XCircle } from "lucide-react";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 
+// Helper to parse error params from hash fragment
+function getHashParams() {
+  if (typeof window === 'undefined') return {};
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const params = new URLSearchParams(hash.replace(/^\//, ''));
+  return {
+    error: params.get('error'),
+    error_code: params.get('error_code'),
+    error_description: params.get('error_description'),
+  };
+}
+
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const errorCode = searchParams.get("error_code");
-  const errorDescription = searchParams.get("error_description");
+  // Try query params first, then hash params
+  const errorCode = searchParams.get("error_code") || getHashParams().error_code;
+  const errorDescription = searchParams.get("error_description") || getHashParams().error_description;
 
   const isError = !!errorCode || !!errorDescription;
 
