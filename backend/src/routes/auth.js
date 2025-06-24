@@ -1,6 +1,7 @@
 // routes/auth.js
 import express from 'express';
 import createSupabaseClient from '../utils/supabaseClient.js';
+import { createClient as createSupabaseESMClient } from '@supabase/supabase-js';
 
 const router = express.Router();
 
@@ -24,10 +25,8 @@ const withRetry = async (operation, maxRetries = 2) => {
 const createAuthenticatedClient = (accessToken) => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-  
-  const { createClient } = require('@supabase/supabase-js');
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
+
+  return createSupabaseESMClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`

@@ -3,6 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 // Global Supabase client instance
 let supabaseInstance = null;
 
+// Retry utility
+const retryAsync = async (fn, retries = 3, delay = 2000) => {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      console.warn(`Retrying Supabase connection (${i + 1}/${retries})...`);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  throw lastError;
+};
+
 // Create a function to initialize the Supabase client
 const createSupabaseClient = () => {
   // Return existing instance if already created
@@ -81,26 +96,21 @@ const createSupabaseClient = () => {
   const testConnection = async () => {
     try {
       console.log('🔄 Testing Supabase connection...');
-      
-      // Use a simpler test that doesn't require complex queries
       const { error } = await supabaseInstance.auth.getSession();
-      
       if (error && error.message !== 'Auth session missing!') {
-        console.error('❌ Supabase connection test failed:', error.message);
-        return false;
-      } else {
-        console.log('✅ Supabase connection test successful');
-        return true;
+        throw new Error(error.message);
       }
+      console.log('✅ Supabase connection test successful');
+      return true;
     } catch (error) {
       console.error('❌ Supabase connection error:', error.message);
-      return false;
+      throw error;
     }
   };
 
-  // Run connection test but don't block server startup
-  testConnection().catch(error => {
-    console.error('Connection test failed:', error.message);
+  // Use retry logic for connection test
+  retryAsync(testConnection, 3, 2000).catch(error => {
+    console.error('Supabase connection could not be established after retries:', error.message);
   });
 
   return supabaseInstance;
