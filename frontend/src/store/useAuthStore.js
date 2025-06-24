@@ -14,6 +14,7 @@ export const useAuthStore = create(
       loading: false,
       error: null,
 
+      setEmailStore: (email) => set({ email }), 
       // Login action
       login: async (email, password) => {
         set({ loading: true, error: null });
