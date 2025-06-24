@@ -4,7 +4,7 @@ import { Link as RouterLink, useNavigate } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import supabase from "@/utils/supabaseClient";
 
 
