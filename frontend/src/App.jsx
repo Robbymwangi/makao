@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Box, Spinner, Center } from "@chakra-ui/react";
+import React, { useEffect } from "react";
+import { Box } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import Landingpage from "./pages/Landingpage.jsx";
 import OTPChallengeSend from "./pages/OTPchallengesend.jsx";
 import OTPChallengeResp from "./pages/OTPchallengeresp.jsx";
-import NotFound from "./pages/404.jsx"; // fallback
+import NotFound from "./pages/404.jsx";
 import StaffOTPChallengeSend from "./pages/StaffOTPChallengeSend";
 import StaffOTPChallengeResp from "./pages/StaffOTPChallengeResp";
 import EmailConfirmation from "./pages/EmailConfirmation.jsx";
@@ -24,7 +24,7 @@ import ForgotPassword from "./usercomponents/Auth/UserAuth/ForgotPassword.jsx";
 import StaffLogin from "./usercomponents/Auth/StaffAuth/AdminLogin.jsx";
 import StaffForgotPassword from "@/usercomponents/Auth/StaffAuth/AdminForgotPassword.jsx";
 
-import DashLayout from "./pages/DashLayout.jsx"; // Dashboard layout
+import DashLayout from "./pages/DashLayout.jsx";
 
 // User Dashboard
 import UserDashboard from "./usercomponents/Dashboard/UserDash/UserDashView/UserDashboard.jsx";
@@ -38,51 +38,48 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
 
-import supabase from "@/utils/supabaseClient";
-
-
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { initializeSession, isAuthenticated } = useAuthStore();
 
-  // Initialize session on app load
+  // Initialize session once on mount
   useEffect(() => {
-    const initSession = async () => {
+    const init = async () => {
       try {
         await initializeSession();
       } catch (error) {
-        console.error('Failed to initialize session:', error);
+        console.error("Session init failed:", error);
       }
     };
-
-    initSession();
+    init();
   }, [initializeSession]);
 
-  // Save the current route to localStorage whenever it changes
+  // Save current route to localStorage on route change
   useEffect(() => {
     localStorage.setItem("currentRoute", location.pathname);
   }, [location]);
 
-  // Restore the route on app load - IMPROVED
+  // Restore last known route after session restoration
   useEffect(() => {
     const savedRoute = localStorage.getItem("currentRoute");
-    
-    // Only restore route if user is authenticated and route is not current
-    if (savedRoute && savedRoute !== location.pathname && isAuthenticated) {
-      // Don't restore auth-related routes
-      const authRoutes = ['/login', '/signup', '/forgot-password', '/auth/confirm', '/verify-email'];
-      if (!authRoutes.includes(savedRoute)) {
-        navigate(savedRoute);
-      }
+    const isAuthRoute = ["/login", "/signup", "/forgot-password", "/auth/confirm", "/verify-email"];
+
+    if (
+      isAuthenticated &&
+      savedRoute &&
+      savedRoute !== location.pathname &&
+      !isAuthRoute.includes(savedRoute)
+    ) {
+      navigate(savedRoute, { replace: true });
     }
-  }, [navigate, location.pathname, isAuthenticated]);
+  }, [isAuthenticated, location.pathname, navigate]);
 
   return (
     <Box>
       <Toaster />
       <Routes>
-        {/* Landing Page */}
+        {/* Public Routes */}
         <Route path="/" element={<><LandingHeader /><Landingpage /></>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
@@ -92,13 +89,13 @@ const App = () => {
         <Route path="/otp-challengesend" element={<OTPChallengeSend />} />
         <Route path="/otp-challengeresp" element={<OTPChallengeResp />} />
 
-        {/* Dashboard with Nested Routes */}
+        {/* User Dashboard */}
         <Route path="/dashboard" element={<DashLayout />}>
           <Route index element={<UserDashboard />} />
           <Route path="myprojects" element={<ProjectSelection />} />
           <Route path="myprojects/:id" element={<MyProjects />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="Expenses" element={<Expenses />} />
+          <Route path="expenses" element={<Expenses />} />
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:chatId" element={<Messages />} />
           <Route path="support" element={<Support />} />
@@ -110,12 +107,12 @@ const App = () => {
         <Route path="/staff/otp-challengesend" element={<StaffOTPChallengeSend />} />
         <Route path="/staff/otp-challengeresp" element={<StaffOTPChallengeResp />} />
 
-        {/* Admin Route */}
+        {/* Admin Dashboard */}
         <Route path="/admin-dashboard" element={<DashLayout />}>
           <Route index element={<AdminDashboard />} />
         </Route>
 
-        {/* Fallback Route */}
+        {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Box>
