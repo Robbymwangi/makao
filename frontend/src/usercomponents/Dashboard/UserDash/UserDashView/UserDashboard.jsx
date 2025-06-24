@@ -14,24 +14,21 @@ import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/H
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
 
 const UserDashboard = () => {
+  // All hooks at the top!
   const headingRef = useRef(null);
-  // State to control the visibility of the welcome message
   const [showName, setShowName] = useState(false);
-
-  // Zustand store to manage user authentication state
-  // This will automatically fetch the user and role from the store
   const user = useAuthStore((state) => state.user);
   const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
-    // This ensures that the user data is available when the component mounts
     if (user) {
       setShowName(true);
     }
-  }, [user]);       
+  }, [user]);
 
   const menuItems = getMenuByRole(role);
-  const welcomeName= user?.name || "User";
+  const welcomeName = user?.name || "User";
+
   // Show the welcome message after the user is fetched
 
   return (

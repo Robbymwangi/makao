@@ -145,24 +145,30 @@ export const useAuthStore = create(
 
       // Logout action - FIXED
       logout: async () => {
-        // Set loading to true at the start
-        set({ loading: true });
+        // Optionally call backend to invalidate session
         try {
-          // Optionally call your backend to invalidate the session/token here
-          // await fetch(`${API_BASE_URL}/auth/logout`, { ... });
-          set({
-            isAuthenticated: false,
-            user: null,
-            email: null,
-            role: null,
-            token: null,
-            loading: false, // <--- CRITICAL: always set loading to false!
-            error: null,
+          await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
           });
-        } catch (error) {
-          set({ loading: false, error: error.message || 'Logout failed' });
-          throw error;
+        } catch (e) {
+          // Ignore errors, proceed to clear session
         }
+        // Clear all authentication/session data
+        set({
+          isAuthenticated: false,
+          user: null,
+          email: null,
+          role: null,
+          token: null,
+          loading: false,
+          error: null,
+        });
+        // Remove from storage
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('currentRoute');
+        localStorage.removeItem('pendingConfirmationEmail');
+        sessionStorage.clear();
       },
 
       // Get current user profile
@@ -300,4 +306,3 @@ export const useAuthStore = create(
   )
 ); 
       // Optionally, whitelist/blacklist state keys or use sessionStorage
- 

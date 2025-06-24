@@ -13,27 +13,80 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
 import { toaster } from "@/components/ui/toaster";
 
+const SidebarContent = ({ onClose, isMobile = false, collapsed, menuItems, selectedMenu, navigate, handleLogout }) => (
+  <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
+    <HStack justify="space-between" mb={8}>
+      {!collapsed && !isMobile && (
+        <Text fontSize="xl" fontFamily="Playfair Display">Menu</Text>
+      )}
+      {!isMobile && (
+        <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
+          <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
+        </Box>
+      )}
+    </HStack>
+    <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
+      {menuItems.map(({ label, icon: Icon, route }, idx) => (
+        <HStack
+          key={idx}
+          as="button"
+          spacing={3}
+          px={isMobile ? 3 : collapsed ? 0 : 3}
+          py={2}
+          borderRadius="md"
+          _hover={{ bg: "gray.100" }}
+          justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
+          bg={selectedMenu === label ? "gray.100" : "transparent"}
+          onClick={() => {
+            navigate(route);
+            if (isMobile) onClose();
+          }}
+          transition="all 0.2s ease-in-out"
+          w="full"
+        >
+          {Icon && <Icon size={20} />}
+          {(isMobile || !collapsed) && (
+            <Text transition="opacity 0.2s ease-in-out" whiteSpace="nowrap">
+              {label}
+            </Text>
+          )}
+        </HStack>
+      ))}
+    </VStack>
+    <Box mt="auto" pt={4}>
+      <HStack
+        as="button"
+        spacing={3}
+        px={isMobile ? 3 : collapsed ? 0 : 3}
+        py={2}
+        borderRadius="md"
+        _hover={{ bg: "gray.100" }}
+        justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
+        onClick={handleLogout}
+        transition="all 0.2s ease-in-out"
+        w="full"
+      >
+        <LogOut size={20} />
+        {(isMobile || !collapsed) && (
+          <Text transition="opacity 0.2s ease-in-out">Logout</Text>
+        )}
+      </HStack>
+    </Box>
+  </Flex>
+);
+
 const DashLayout = () => {
+  // All hooks at the top!
   const navigate = useNavigate();
   const location = useLocation();
+  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
 
-  const { role, logout, isAuthenticated, user, loading } = useAuthStore();
-
-  // debug current state
-  console.log("[DashLayout]", { loading, isAuthenticated, user });
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [loading, isAuthenticated, navigate]);
-
+  // Always use an array for menuItems
   const menuItems = role ? getMenuByRole(role) : [];
-
   const selectedMenu =
     menuItems.find((item) =>
       location.pathname === "/dashboard"
@@ -53,6 +106,11 @@ const DashLayout = () => {
         type: "success",
         duration: 2000,
       });
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.__AUTH_STORE__) {
+          window.__AUTH_STORE__.setState({ loading: false });
+        }
+      }, 1000);
     } catch (error) {
       console.error('Logout error:', error);
       toaster.create({
@@ -64,69 +122,20 @@ const DashLayout = () => {
     }
   };
 
-  const SidebarContent = ({ onClose, isMobile = false }) => (
-    <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
-      <HStack justify="space-between" mb={8}>
-        {!collapsed && !isMobile && (
-          <Text fontSize="xl" fontFamily="Playfair Display">Menu</Text>
-        )}
-        {!isMobile && (
-          <Box as="button" onClick={onClose} _hover={{ bg: "gray.100" }}>
-            <Squash toggled={!collapsed} size={20} duration={0.5} easing="ease-in-out" />
-          </Box>
-        )}
-      </HStack>
-
-      <VStack align="stretch" spacing={4} flex="1" overflowY="auto">
-        {menuItems.map(({ label, icon: Icon, route }, idx) => (
-          <HStack
-            key={idx}
-            as="button"
-            spacing={3}
-            px={isMobile ? 3 : collapsed ? 0 : 3}
-            py={2}
-            borderRadius="md"
-            _hover={{ bg: "gray.100" }}
-            justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
-            bg={selectedMenu === label ? "gray.100" : "transparent"}
-            onClick={() => {
-              navigate(route);
-              if (isMobile) onClose();
-            }}
-            transition="all 0.2s ease-in-out"
-            w="full"
-          >
-            {Icon && <Icon size={20} />}
-            {(isMobile || !collapsed) && (
-              <Text transition="opacity 0.2s ease-in-out" whiteSpace="nowrap">
-                {label}
-              </Text>
-            )}
-          </HStack>
-        ))}
-      </VStack>
-
-      <Box mt="auto" pt={4}>
-        <HStack
-          as="button"
-          spacing={3}
-          px={isMobile ? 3 : collapsed ? 0 : 3}
-          py={2}
-          borderRadius="md"
-          _hover={{ bg: "gray.100" }}
-          justify={isMobile ? "flex-start" : collapsed ? "center" : "flex-start"}
-          onClick={handleLogout}
-          transition="all 0.2s ease-in-out"
-          w="full"
-        >
-          <LogOut size={20} />
-          {(isMobile || !collapsed) && (
-            <Text transition="opacity 0.2s ease-in-out">Logout</Text>
-          )}
-        </HStack>
-      </Box>
-    </Flex>
-  );
+  // Early returns after all hooks
+  if (loading) {
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>Loading...</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // Only return after all hooks
   if (loading || !isAuthenticated) {
@@ -152,7 +161,7 @@ const DashLayout = () => {
           overflow="hidden"
           zIndex="10"
         >
-          <SidebarContent onClose={toggleSidebar} />
+          <SidebarContent onClose={toggleSidebar} isMobile={false} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
         </Box>
       )}
 
@@ -186,7 +195,7 @@ const DashLayout = () => {
                       </Drawer.CloseTrigger>
                     </Drawer.Header>
                     <Drawer.Body p={0}>
-                      <SidebarContent isMobile={isMobile} onClose={onClose} />
+                      <SidebarContent isMobile={isMobile} onClose={onClose} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
                     </Drawer.Body>
                   </Drawer.Content>
                 </Drawer.Positioner>
