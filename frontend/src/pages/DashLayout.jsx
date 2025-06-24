@@ -6,9 +6,7 @@ import {
   Drawer, CloseButton, Portal, Avatar, Stack, Spinner
 } from "@chakra-ui/react";
 import { useNavigate, Outlet, useLocation } from "react-router";
-import {
-  LogOut, Menu
-} from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { Squash } from "hamburger-react";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -16,52 +14,25 @@ import { getMenuByRole } from "@/utils/menuUtils";
 import { toaster } from "@/components/ui/toaster";
 
 const DashLayout = () => {
-  // Debug: log every render
-  console.log("[DashLayout] render");
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Hooks and logic after early return
   const [collapsed, setCollapsed] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
 
-
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
-  console.log("[DashLayout] state:", { loading, isAuthenticated, role, user });
 
-  // Redirect to login if not authenticated and not loading
+  // debug current state
+  console.log("[DashLayout]", { loading, isAuthenticated, user });
+
   useEffect(() => {
-    console.log("[DashLayout] useEffect: loading/isAuthenticated", { loading, isAuthenticated });
     if (!loading && !isAuthenticated) {
-      console.log("[DashLayout] Navigating to /login");
       navigate("/login", { replace: true });
     }
   }, [loading, isAuthenticated, navigate]);
 
-  // Early return for loading state
-  if (loading) {
-    console.log("[DashLayout] Early return: loading");
-    return (
-      <Flex h="100vh" align="center" justify="center">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>Loading...</Text>
-        </VStack>
-      </Flex>
-    );
-  }
-  // If not authenticated and not loading, render nothing (redirect will happen in useEffect)
-  if (!isAuthenticated) {
-    console.log("[DashLayout] Early return: not authenticated");
-    return null;
-  }
-
-
-  // Always use an array for menuItems
   const menuItems = role ? getMenuByRole(role) : [];
-  console.log("[DashLayout] menuItems:", menuItems);
 
   const selectedMenu =
     menuItems.find((item) =>
@@ -82,14 +53,6 @@ const DashLayout = () => {
         type: "success",
         duration: 2000,
       });
-      // TEMPORARY DEBUG: force loading to false after 1s if stuck
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.__AUTH_STORE__) {
-          window.__AUTH_STORE__.setState({ loading: false });
-          console.log("[DashLayout] Forced loading to false via window.__AUTH_STORE__");
-        }
-      }, 1000);
-      // Do not navigate here; let useEffect handle it
     } catch (error) {
       console.error('Logout error:', error);
       toaster.create({
@@ -165,10 +128,20 @@ const DashLayout = () => {
     </Flex>
   );
 
-  // ✅ Main authenticated layout
+  // Only return after all hooks
+  if (loading || !isAuthenticated) {
+    return (
+      <Flex h="100vh" align="center" justify="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" />
+          <Text>{loading ? "Loading..." : "Redirecting to login..."}</Text>
+        </VStack>
+      </Flex>
+    );
+  }
+
   return (
     <Flex h="100vh" bg="gray.50">
-      {/* Sidebar */}
       {!isOpen && !isMobile && (
         <Box
           as="aside"
@@ -183,7 +156,6 @@ const DashLayout = () => {
         </Box>
       )}
 
-      {/* Header */}
       <Box
         as="header"
         bg="white"
@@ -197,7 +169,7 @@ const DashLayout = () => {
       >
         <Flex align="center" justify="space-between" h="100%" px={6}>
           {isMobile && (
-            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size={"xs"}>
+            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size="xs">
               <Drawer.Trigger asChild>
                 <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
                   <Menu size={20} />
@@ -252,9 +224,8 @@ const DashLayout = () => {
         </Flex>
       </Box>
 
-      {/* Main content */}
-      <Box flex="1" overflow="auto" mt="50px">
-        <Box bg="gray.100" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
+      <Box flex="1" overflow="auto" mt="60px">
+        <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
           <Outlet />
         </Box>
       </Box>
