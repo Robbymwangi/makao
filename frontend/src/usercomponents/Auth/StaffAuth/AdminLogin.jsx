@@ -5,8 +5,6 @@ import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
 import { useSearchParams } from "react-router";
-import supabase from "@/utils/supabaseClient";
-
 
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
@@ -15,7 +13,6 @@ const StaffLogin = () => {
   const navigate = useNavigate();
   const { login, loading, error, clearError, setEmailStore } = useAuthStore();
 
-// Show success toast if email was confirmed
   useEffect(() => {
     if (searchParams.get("confirmed") === "true") {
       toaster.create({
@@ -29,6 +26,7 @@ const StaffLogin = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    clearError();
 
     if (!email || !password) {
       toaster.create({
@@ -40,66 +38,80 @@ const StaffLogin = () => {
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/staff-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (error) {
-      if (
-        error.message.includes("email not confirmed") ||
-        error.message.includes("confirm your email")
-      ) {
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.code === "pending_verification") {
+          localStorage.setItem("pendingConfirmationEmail", email);
+          toaster.create({
+            title: "Email Not Confirmed",
+            description: "Please confirm your email before logging in.",
+            type: "warning",
+            duration: 5000,
+          });
+          return navigate("/auth/confirm");
+        }
+
         toaster.create({
-          title: "Email Not Confirmed",
-          description: "Please confirm your email before logging in.",
-          type: "warning",
-          duration: 5000,
+          title: "Login Failed",
+          description: result.error || "Invalid credentials.",
+          type: "error",
+          duration: 4000,
         });
-
-        localStorage.setItem("pendingConfirmationEmail", email);
-        return navigate("/auth/confirm");
+        return;
       }
 
-      return toaster.create({
-        title: "Login Failed",
-        description: error.message || "Invalid credentials.",
-        type: "error",
-        duration: 4000,
-      });
-    }
+      const { user, session, role } = result;
 
-    const user = data?.user;
-    const role = user?.user_metadata?.role;
+      if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+        login({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || "Staff",
+          role,
+        });
 
-    if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
-      // Save session info
-      login({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.full_name || "Staff",
-        role,
-      });
+        localStorage.setItem(
+          "supabase.auth.token",
+          JSON.stringify({
+            user,
+            access_token: session.access_token,
+          })
+        );
 
-      setEmailStore(email); // For OTP resend
+        setEmailStore(email);
+        toaster.create({
+          title: "Login Successful",
+          description: "Welcome back!",
+          type: "success",
+          duration: 2000,
+        });
+
+        navigate("/staff/otp-challengesend");
+      } else {
+        toaster.create({
+          title: "Access Denied",
+          description: "You are not authorized for staff login.",
+          type: "error",
+          duration: 4000,
+        });
+      }
+    } catch (err) {
       toaster.create({
-        title: "Login Successful",
-        description: "Welcome back!",
-        type: "success",
-        duration: 2000,
-      });
-
-      navigate("/staff/otp-challengesend");
-    } else {
-      toaster.create({
-        title: "Access Denied",
-        description: "You are not authorized for staff login.",
+        title: "Login Error",
+        description: err.message || "An unexpected error occurred.",
         type: "error",
         duration: 4000,
       });
     }
   };
-
 
   return (
     <Flex minH="100vh" direction="column" bg="gray.50" justify="center" align="center">
@@ -130,7 +142,7 @@ const StaffLogin = () => {
               colorScheme="blackAlpha" 
               w="100%" 
               type="submit"
-              loading={loading}
+              loading={loading ? 1 : undefined}
               disabled={loading}
             >
               {loading ? "Logging in..." : "Log In"}
