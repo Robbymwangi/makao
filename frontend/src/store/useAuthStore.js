@@ -97,6 +97,29 @@ export const useAuthStore = create(persist((set, get) => ({
 
   clearError: () => set({ error: null }),
 
+  // --- INITIALIZE SESSION ---
+initializeSession: async () => {
+  try {
+    const token = localStorage.getItem('supabase.auth.token');
+    if (!token) return;
+
+    const session = JSON.parse(token);
+    const { user, access_token } = session;
+
+    if (user && access_token) {
+      set({
+        isAuthenticated: true,
+        user,
+        role: user.user_metadata?.role || null,
+        token: access_token,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to initialize session:", err);
+    set({ isAuthenticated: false, user: null, role: null, token: null });
+  }
+},
+
 }), {
   name: "makao-auth",
   partialize: state => ({
