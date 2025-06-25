@@ -135,6 +135,7 @@ router.post('/login', async (req, res) => {
     );
 
     if (profErr && profErr.code === 'PGRST116') {
+      // Profile not found, create a new one
       const { data: np, error: ce } = await withRetry(() =>
         authed.from('profiles').insert({ id: auth.user.id, email: normalizedEmail, role: 'user' }).select().single()
       );
@@ -153,6 +154,72 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ——— STAFF LOGIN ——— //
+router.post('/staff-login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return fail(res, 400, 'validation_error', 'Email & password required');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const service = makeClient(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  // Use RPC to get staff user by email
+  const { data: rows, error: rpcErr } = await withRetry(() =>
+    service.rpc('get_user_by_email', { p_email: normalizedEmail })
+  );
+  if (rpcErr) {
+    console.error('RPC lookup error:', rpcErr);
+    return fail(res, 500, 'lookup_error', rpcErr.message);
+  }
+const staffUser = Array.isArray(rows) && rows.length ? rows[0] : null;
+
+  if (!staffUser) {
+    return fail(res, 401, 'user_not_found', 'No staff account with that email');
+  }
+  if (!staffUser.email_confirmed_at) {
+    return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
+  }
+
+  // Only allow staff roles
+  const staffRoles = ['systemAdmin', 'agentAdmin', 'consultantAdmin'];
+  console.log('[STAFF LOGIN] Found role:', staffUser.role);
+ const role = staffUser.raw_user_meta_data?.role;
+const full_name = staffUser.raw_user_meta_data?.full_name;
+
+if (!staffRoles.includes(role)) {
+  return fail(res, 403, 'not_staff', 'Access denied: not a staff account');
+}
+  try {
+    const client = createSupabaseClient();
+    const { data: auth, error: authErr } = await withRetry(() =>
+      client.auth.signInWithPassword({ email: normalizedEmail, password })
+    );
+    if (authErr) {
+      if (authErr.message && authErr.message.includes('Email not confirmed')) {
+        return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
+      }
+      return fail(res, 401, 'invalid_credentials', 'Invalid email or password');
+       }
+
+ return res.json({
+  user: {
+    ...auth.user,
+    user_metadata: {
+      role,
+      full_name,
+    },
+  },
+  session: auth.session,
+  role,
+});
+
+
+} catch (err) {
+  console.error('Unexpected staff login error:', err);
+  return fail(res, 500, 'unexpected_error', err.message);
+}
+});
 
 // ——— RESEND CONFIRMATION ——— //
 router.post('/resend-confirmation', async (req, res) => {
