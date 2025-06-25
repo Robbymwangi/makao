@@ -31,7 +31,7 @@ const createSupabaseClient = () => {
   });
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.error('❌ Missing Supabase environment variables in backend!');
+    console.error('Missing Supabase environment variables in backend!');
     console.error('Please ensure your backend/.env file contains:');
     console.error('SUPABASE_URL=your-supabase-url');
     console.error('SUPABASE_ANON_KEY=your-anon-key');
@@ -41,7 +41,7 @@ const createSupabaseClient = () => {
   // Validate Supabase URL format
   const supabaseUrl = process.env.SUPABASE_URL;
   if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
-    console.error('❌ Invalid Supabase URL format!');
+    console.error('Invalid Supabase URL format!');
     console.error('Expected format: https://your-project-id.supabase.co');
     console.error('Received:', supabaseUrl);
     throw new Error('Invalid Supabase URL format');
@@ -95,15 +95,15 @@ const createSupabaseClient = () => {
   // Simplified connection test that's less likely to fail
   const testConnection = async () => {
     try {
-      console.log('🔄 Testing Supabase connection...');
+      console.log(' Testing Supabase connection...');
       const { error } = await supabaseInstance.auth.getSession();
       if (error && error.message !== 'Auth session missing!') {
         throw new Error(error.message);
       }
-      console.log('✅ Supabase connection test successful');
+      console.log(' Supabase connection test successful');
       return true;
     } catch (error) {
-      console.error('❌ Supabase connection error:', error.message);
+      console.error(' Supabase connection error:', error.message);
       throw error;
     }
   };
