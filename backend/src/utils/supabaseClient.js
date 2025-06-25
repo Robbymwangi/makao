@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Global Supabase client instance
 let supabaseInstance = null;
 
-// Retry utility
+/**
+ * Retry helper for async tasks (e.g., connection testing)
+ */
 const retryAsync = async (fn, retries = 3, delay = 2000) => {
   let lastError;
   for (let i = 0; i < retries; i++) {
@@ -11,110 +12,83 @@ const retryAsync = async (fn, retries = 3, delay = 2000) => {
       return await fn();
     } catch (err) {
       lastError = err;
-      console.warn(`Retrying Supabase connection (${i + 1}/${retries})...`);
+      console.warn(`Retry attempt ${i + 1}/${retries} failed:`, err.message);
       await new Promise(res => setTimeout(res, delay));
     }
   }
   throw lastError;
 };
 
-// Create a function to initialize the Supabase client
+/**
+ * Initializes and returns a singleton Supabase client
+ */
 const createSupabaseClient = () => {
-  // Return existing instance if already created
-  if (supabaseInstance) {
-    return supabaseInstance;
+  if (supabaseInstance) return supabaseInstance;
+
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Validate environment variables
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error("Missing Supabase environment variables in backend!");
+    console.error("Expected in .env:\nSUPABASE_URL\nSUPABASE_SERVICE_ROLE_KEY");
+    throw new Error("Missing Supabase backend credentials");
   }
 
-  console.log('Backend Supabase Environment Check:', {
-    url: process.env.SUPABASE_URL ? 'Set' : 'Missing',
-    key: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing'
+  if (!/^https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL)) {
+    console.error("Invalid Supabase URL format:", SUPABASE_URL);
+    throw new Error("Invalid Supabase URL format");
+  }
+
+  // Initialize Supabase client with admin key
+  supabaseInstance = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      fetch: (url, options = {}) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+          headers: {
+            ...(options.headers || {}),
+            Connection: 'keep-alive',
+          },
+        })
+          .finally(() => clearTimeout(timeoutId))
+          .catch(err => {
+            console.error("Supabase fetch error:", err.message);
+            throw err;
+          });
+      },
+    },
+    db: {
+      schema: 'public',
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 2,
+      },
+    },
   });
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.error('Missing Supabase environment variables in backend!');
-    console.error('Please ensure your backend/.env file contains:');
-    console.error('SUPABASE_URL=your-supabase-url');
-    console.error('SUPABASE_ANON_KEY=your-anon-key');
-    throw new Error('Missing Supabase environment variables in backend. Please check your backend/.env file.');
-  }
-
-  // Validate Supabase URL format
-  const supabaseUrl = process.env.SUPABASE_URL;
-  if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
-    console.error('Invalid Supabase URL format!');
-    console.error('Expected format: https://your-project-id.supabase.co');
-    console.error('Received:', supabaseUrl);
-    throw new Error('Invalid Supabase URL format');
-  }
-
-  supabaseInstance = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false
-      },
-      global: {
-        fetch: (url, options = {}) => {
-          // Simplified fetch with better error handling and shorter timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced to 5 second timeout
-          
-          return fetch(url, {
-            ...options,
-            signal: controller.signal,
-            // Add retry logic for network issues
-            headers: {
-              ...(options.headers || {}),
-              'Connection': 'keep-alive',
-            }
-          }).finally(() => {
-            clearTimeout(timeoutId);
-          }).catch(error => {
-            console.error('Supabase fetch error:', error.message);
-            // Don't throw immediately, let the calling code handle retries
-            throw error;
-          });
-        }
-      },
-      // Add database connection options
-      db: {
-        schema: 'public'
-      },
-      // Reduce realtime connection issues
-      realtime: {
-        params: {
-          eventsPerSecond: 2
-        }
-      }
+  // Optional: test connection on startup
+  retryAsync(async () => {
+    const { error } = await supabaseInstance.auth.getUserById("00000000-0000-0000-0000-000000000000");
+    if (error && !error.message.includes("User not found")) {
+      throw new Error("Failed to verify Supabase auth");
     }
-  );
-
-  // Simplified connection test that's less likely to fail
-  const testConnection = async () => {
-    try {
-      console.log(' Testing Supabase connection...');
-      const { error } = await supabaseInstance.auth.getSession();
-      if (error && error.message !== 'Auth session missing!') {
-        throw new Error(error.message);
-      }
-      console.log(' Supabase connection test successful');
-      return true;
-    } catch (error) {
-      console.error(' Supabase connection error:', error.message);
-      throw error;
-    }
-  };
-
-  // Use retry logic for connection test
-  retryAsync(testConnection, 3, 2000).catch(error => {
-    console.error('Supabase connection could not be established after retries:', error.message);
+    console.log("Supabase admin client initialized");
+  }).catch(err => {
+    console.error("Supabase connection failed after retries:", err.message);
   });
 
   return supabaseInstance;
 };
 
-// Export the function instead of the client instance
 export default createSupabaseClient;
