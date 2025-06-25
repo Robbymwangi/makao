@@ -3,6 +3,17 @@ import { persist } from "zustand/middleware";
 
 const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
+// Broadcast session started after successful login (call this in your login logic)
+const broadcastSessionStarted = () => {
+  try {
+    const channel = new BroadcastChannel("makao-session");
+    channel.postMessage("session-started");
+    channel.close();
+  } catch (e) {
+    // Fallback: do nothing
+  }
+};
+
 export const useAuthStore = create(persist((set, get) => ({
   isAuthenticated: false,
   user: null,
@@ -33,6 +44,7 @@ export const useAuthStore = create(persist((set, get) => ({
       token: data.session.access_token,
       loading: false
     });
+    broadcastSessionStarted(); // Broadcast session after successful login
     return data.role;
   },
 
