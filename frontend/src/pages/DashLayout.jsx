@@ -150,8 +150,12 @@ const DashLayout = () => {
   const token = localStorage.getItem("supabase.auth.token");
   const channel = new BroadcastChannel("makao-session");
 
-  // Only show popup if NOT in admin area
-  const isAdminPath = location.pathname.startsWith("/admin-dashboard");
+  // Skip session popup on any admin-type dashboard
+  const isAdminPath = [
+    "/admin-dashboard",
+    "/consultant-dashboard",
+    "/agent-dashboard"
+  ].some((prefix) => location.pathname.startsWith(prefix));
 
   if (token && !dialogShown && !isAdminPath) {
     setShowSessionDialog(true);
@@ -169,6 +173,7 @@ const DashLayout = () => {
     channel.close();
   };
 }, [dialogShown, location.pathname]);
+
 
   // Show loading screen during logout
   if (loggingOut) {
