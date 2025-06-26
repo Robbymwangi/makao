@@ -1,30 +1,49 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase Admin client setup
 const SUPABASE_URL = 'https://plkrxatjphebkphmhvze.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsa3J4YXRqcGhlYmtwaG1odnplIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDAwMTg5MSwiZXhwIjoyMDY1NTc3ODkxfQ.ExBn9PAJQ7rti82QrzovJ8xWO3EmH_B-eQ7XeUGKeIM'; // Found in Supabase > Project > Settings > API
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-/**
- * Create a staff user (systemAdmin, consultantAdmin, agentAdmin)
- * who will log in using OTP, no password.
- */
+// Create staff user and insert into `admins` table
 export async function createStaffUser({ email, fullName, role }) {
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const staffRoles = ['systemAdmin', 'consultantAdmin', 'agentAdmin'];
+  if (!staffRoles.includes(role)) {
+    throw new Error('Invalid staff role');
+  }
+
+  // 1. Create the user in auth.users
+  const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true, // Mark email as verified immediately
+    password,
     user_metadata: {
       full_name: fullName,
-      role: role, // systemAdmin | consultantAdmin | agentAdmin
+      role,
     },
   });
 
-  if (error) {
-    console.error("Error creating staff user:", error.message);
-    throw error;
+  if (createError) {
+    console.error("Error creating staff user:", createError.message);
+    throw createError;
   }
 
-  return data.user;
+  const userId = userData.user.id;
+
+  // 2. Insert into the custom `admins` table
+  const { error: insertError } = await supabaseAdmin.from('admins').insert({
+    id: userId,
+    email,
+    full_name: fullName,
+    role,
+  });
+
+  if (insertError) {
+    console.error("Error inserting into admins table:", insertError.message);
+    throw insertError;
+  }
+
+  return userData.user;
+
 }
