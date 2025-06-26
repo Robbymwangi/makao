@@ -13,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const admins = [
   {
     email: 'sysadmin@example.com',
-    password: 'Admin123!', // change to something strong
+    password: 'Admin123!', 
     full_name: 'Admin John',
     role: 'systemAdmin',
   },
