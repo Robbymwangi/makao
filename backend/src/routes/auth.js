@@ -162,64 +162,60 @@ router.post('/staff-login', async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const service = makeClient(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  // Use RPC to get staff user by email
-  const { data: rows, error: rpcErr } = await withRetry(() =>
-    service.rpc('get_user_by_email', { p_email: normalizedEmail })
-  );
-  if (rpcErr) {
-    console.error('RPC lookup error:', rpcErr);
-    return fail(res, 500, 'lookup_error', rpcErr.message);
-  }
-const staffUser = Array.isArray(rows) && rows.length ? rows[0] : null;
-
-  if (!staffUser) {
-    return fail(res, 401, 'user_not_found', 'No staff account with that email');
-  }
-  if (!staffUser.email_confirmed_at) {
-    return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
-  }
-
-  // Only allow staff roles
-  const staffRoles = ['systemAdmin', 'agentAdmin', 'consultantAdmin'];
-  console.log('[STAFF LOGIN] Found role:', staffUser.role);
- const role = staffUser.raw_user_meta_data?.role;
-const full_name = staffUser.raw_user_meta_data?.full_name;
-
-if (!staffRoles.includes(role)) {
-  return fail(res, 403, 'not_staff', 'Access denied: not a staff account');
-}
   try {
     const client = createSupabaseClient();
+
+    // Step 1: Sign in via Supabase Auth
     const { data: auth, error: authErr } = await withRetry(() =>
       client.auth.signInWithPassword({ email: normalizedEmail, password })
     );
+
     if (authErr) {
-      if (authErr.message && authErr.message.includes('Email not confirmed')) {
+      if (authErr.message?.toLowerCase().includes('email not confirmed')) {
         return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
       }
       return fail(res, 401, 'invalid_credentials', 'Invalid email or password');
-       }
+    }
 
- return res.json({
-  user: {
-    ...auth.user,
-    user_metadata: {
+    const token = auth.session.access_token;
+    const authed = makeClient(process.env.SUPABASE_ANON_KEY, token);
+
+    // Step 2: Fetch from `admins` using user id
+    const { data: adminRow, error: adminErr } = await withRetry(() =>
+      authed.from('admins').select('*').eq('id', auth.user.id).single()
+    );
+
+    if (adminErr || !adminRow) {
+      return fail(res, 403, 'not_staff', 'Account is not recognized as a staff member');
+    }
+
+    const { role, full_name } = adminRow;
+    const staffRoles = ['systemAdmin', 'consultantAdmin', 'agentAdmin'];
+
+    if (!staffRoles.includes(role)) {
+      return fail(res, 403, 'not_staff', 'Access denied: not a staff account');
+    }
+
+    // Step 3: Return enriched session
+    return res.json({
+      user: {
+        ...auth.user,
+        user_metadata: {
+          role,
+          full_name,
+        },
+      },
+      session: auth.session,
       role,
-      full_name,
-    },
-  },
-  session: auth.session,
-  role,
+    });
+
+  } catch (err) {
+    console.error('Unexpected staff login error:', err);
+    return fail(res, 500, 'unexpected_error', err.message);
+  }
 });
 
-
-} catch (err) {
-  console.error('Unexpected staff login error:', err);
-  return fail(res, 500, 'unexpected_error', err.message);
-}
-});
 
 // ——— RESEND CONFIRMATION ——— //
 router.post('/resend-confirmation', async (req, res) => {
