@@ -147,27 +147,28 @@ const DashLayout = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("supabase.auth.token");
-    const channel = new BroadcastChannel("makao-session");
+  const token = localStorage.getItem("supabase.auth.token");
+  const channel = new BroadcastChannel("makao-session");
 
-    // Show dialog if there's already a session and we haven’t shown it in this tab
-    if (token && !dialogShown) {
+  // Only show popup if NOT in admin area
+  const isAdminPath = location.pathname.startsWith("/admin-dashboard");
+
+  if (token && !dialogShown && !isAdminPath) {
+    setShowSessionDialog(true);
+    setDialogShown(true);
+  }
+
+  channel.onmessage = (event) => {
+    if (event.data === "session-started" && !dialogShown && !isAdminPath) {
       setShowSessionDialog(true);
       setDialogShown(true);
     }
+  };
 
-    // Listen for session started messages
-    channel.onmessage = (event) => {
-      if (event.data === "session-started" && !dialogShown) {
-        setShowSessionDialog(true);
-        setDialogShown(true);
-      }
-    };
-
-    return () => {
-      channel.close();
-    };
-  }, [dialogShown]);
+  return () => {
+    channel.close();
+  };
+}, [dialogShown, location.pathname]);
 
   // Show loading screen during logout
   if (loggingOut) {
