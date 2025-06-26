@@ -96,7 +96,15 @@ export const useAuthStore = create(persist((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
-
+ // --- SET EMAIL STORE ---
+  setEmailStore: (email) =>
+    set((state) => ({
+      user: {
+        ...state.user,
+        email
+      }
+    })),
+    
   // --- INITIALIZE SESSION ---
 initializeSession: async () => {
   try {
