@@ -3,8 +3,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { VStack, HStack, Heading, useBreakpointValue } from "@chakra-ui/react";
 import { CSSTransition } from "react-transition-group";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getMenuByRole } from "@/utils/menuUtils";
-import supabase from "@/utils/supabaseClient";  
 // Dashboard Components
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
@@ -18,7 +16,6 @@ const UserDashboard = () => {
   const headingRef = useRef(null);
   const [showName, setShowName] = useState(false);
   const user = useAuthStore((state) => state.user);
-  const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
     if (user) {
@@ -26,7 +23,6 @@ const UserDashboard = () => {
     }
   }, [user]);
 
-  const menuItems = getMenuByRole(role);
   const welcomeName = user?.name || "User";
 
   // Show the welcome message after the user is fetched
