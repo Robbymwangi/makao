@@ -35,7 +35,6 @@ const getFrontendUrl = () =>
 const fail = (res, status, code, message) =>
   res.status(status).json({ code, error: message });
 
-
 // ——— SIGNUP ——— //
 router.post('/signup', async (req, res) => {
   const { email, password, role = 'user' } = req.body;
@@ -65,7 +64,7 @@ router.post('/signup', async (req, res) => {
 
   try {
     const client = createSupabaseClient();
-    const { error: signUpErr } = await withRetry(() =>
+    const { data: signUpData, error: signUpErr } = await withRetry(() =>
       client.auth.signUp({
         email: normalizedEmail,
         password,
@@ -78,6 +77,17 @@ router.post('/signup', async (req, res) => {
     if (signUpErr) {
       console.error('signUp error:', signUpErr);
       return fail(res, 400, 'signup_failed', signUpErr.message);
+    }
+
+    // After user signs up successfully, insert into users table
+    if (signUpData && signUpData.user) {
+      await client
+        .from("users")
+        .insert({
+          id: signUpData.user.id,
+          email: signUpData.user.email,
+          full_name: "", // Optional: collect from frontend
+        });
     }
 
     return res.status(201).json({
@@ -99,24 +109,6 @@ router.post('/login', async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const service = makeClient(process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  const { data: rows, error: rpcErr } = await withRetry(() =>
-    service.rpc('get_user_by_email', { p_email: normalizedEmail })
-  );
-  if (rpcErr) {
-    console.error('RPC lookup error:', rpcErr);
-    return fail(res, 500, 'lookup_error', rpcErr.message);
-  }
-
-  const existing = Array.isArray(rows) && rows.length ? rows[0] : null;
-
-  if (!existing) {
-    return fail(res, 401, 'user_not_found', 'No account with that email');
-  }
-  if (!existing.email_confirmed_at) {
-    return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
-  }
 
   try {
     const client = createSupabaseClient();
@@ -124,35 +116,42 @@ router.post('/login', async (req, res) => {
       client.auth.signInWithPassword({ email: normalizedEmail, password })
     );
     if (authErr) {
-      console.error('signIn error:', authErr);
+      if (authErr.message?.toLowerCase().includes('email not confirmed')) {
+        return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
+      }
       return fail(res, 401, 'invalid_credentials', 'Invalid email or password');
     }
 
     const token = auth.session.access_token;
     const authed = makeClient(process.env.SUPABASE_ANON_KEY, token);
-    const { data: profile, error: profErr } = await withRetry(() =>
-      authed.from('profiles').select('role').eq('id', auth.user.id).single()
+
+    // Block admin login on user route
+    const { data: adminRow } = await withRetry(() =>
+      authed.from('admins').select('role').eq('id', auth.user.id).maybeSingle()
     );
 
-    if (profErr && profErr.code === 'PGRST116') {
-      // Profile not found, create a new one
-      const { data: np, error: ce } = await withRetry(() =>
-        authed.from('profiles').insert({ id: auth.user.id, email: normalizedEmail, role: 'user' }).select().single()
-      );
-      if (ce) return fail(res, 500, 'profile_error', ce.message);
-      return res.json({ user: auth.user, session: auth.session, role: np.role });
-    }
-    if (profErr) {
-      console.error('profile fetch error:', profErr);
-      return fail(res, 500, 'profile_error', profErr.message);
+    if (adminRow) {
+      return fail(res, 403, 'admin_misroute', 'Please log in via the staff portal');
     }
 
-    return res.json({ user: auth.user, session: auth.session, role: profile.role });
+    // Fetch user role
+    const { data: userRow } = await withRetry(() =>
+      authed.from('users').select('role').eq('id', auth.user.id).single()
+    );
+
+    let role = userRow?.role || null;
+
+    return res.json({
+      user: { ...auth.user },
+      session: auth.session,
+      role
+    });
   } catch (err) {
     console.error('Unexpected login error:', err);
     return fail(res, 500, 'unexpected_error', err.message);
   }
 });
+
 
 // ——— STAFF LOGIN ——— //
 router.post('/staff-login', async (req, res) => {
@@ -201,10 +200,9 @@ router.post('/staff-login', async (req, res) => {
     return res.json({
       user: {
         ...auth.user,
-        user_metadata: {
           role,
           full_name,
-        },
+        
       },
       session: auth.session,
       role,
