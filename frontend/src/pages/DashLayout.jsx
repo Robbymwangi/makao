@@ -191,7 +191,7 @@ const DashLayout = () => {
 
   return (
     <>
-      {isClient && showSessionDialog && (
+      {/* {isClient && showSessionDialog && (
         <DialogRoot open={showSessionDialog} onOpenChange={setShowSessionDialog}>
           <DialogBackdrop />
           <DialogHeader>
@@ -209,7 +209,7 @@ const DashLayout = () => {
             </Button>
           </DialogFooter>
         </DialogRoot>
-      )}
+      )} */}
 
       <Flex h="100vh" bg="gray.50">
         {!isOpen && !isMobile && (
