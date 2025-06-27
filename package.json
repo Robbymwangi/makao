@@ -1,5 +1,10 @@
 {
   "dependencies": {
+    "@chakra-ui/react": "^3.21.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "framer-motion": "^12.19.2",
+    "react-transition-group": "^4.4.5",
     "zod": "^3.25.67"
   }
 }
