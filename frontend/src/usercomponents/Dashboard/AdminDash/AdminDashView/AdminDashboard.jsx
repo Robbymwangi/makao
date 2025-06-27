@@ -6,27 +6,30 @@ const AdminDashboard = () => {
   const role = useAuthStore((state) => state.role);
   const user = useAuthStore((state) => state.user);
 
+  const displayName = user?.name || user?.email?.split("@")[0] || "Admin";
+
+  const getDashboardTitle = () => {
+    switch (role) {
+      case "systemAdmin":
+        return "System Admin Dashboard";
+      case "consultantAdmin":
+        return "Consultant Admin Dashboard";
+      case "agentAdmin":
+        return "Agent Admin Dashboard";
+      default:
+        return "Admin Dashboard";
+    }
+  };
+
   return (
     <VStack spacing={6} align="stretch" px={4} py={6}>
-      <Heading fontSize="4xl" fontWeight="bold">
-        System Admin Dashboard
+      <Heading fontSize="3xl" fontWeight="bold">
+        {getDashboardTitle()}
       </Heading>
 
       <Text fontSize="lg">
-        Welcome back, <strong>{user?.name || "Admin"}</strong>. You are logged in as: <strong>{role}</strong>
+        Welcome back, <strong>{displayName}</strong>. You are logged in as: <strong>{role}</strong>
       </Text>
-
-      {/* Dashboard Overview Content */}
-      <Heading fontSize="2xl" mt={4}>Dashboard Overview</Heading>
-      <Text>Metrics, charts, and summaries will go here.</Text>
-
-      {/* User Management Section */}
-      <Heading fontSize="2xl" mt={8}>User Management</Heading>
-      <Text>User Management Section</Text>
-
-      {/* Staff Management Section */}
-      <Heading fontSize="2xl" mt={8}>Staff Management</Heading>
-      <Text>Staff Management Section</Text>
     </VStack>
   );
 };
