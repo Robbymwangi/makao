@@ -1,11 +1,11 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import {
-  Box, Flex, Text, VStack, HStack,
-  useDisclosure, useBreakpointValue,
+  Box, Flex, Text, VStack, HStack, useDisclosure, useBreakpointValue,
   Drawer, CloseButton, Portal, Avatar, Stack, Spinner, Button
 } from "@chakra-ui/react";
-import { useNavigate, Outlet, useLocation } from "react-router";
+import { useNavigate, useLocation, Outlet } from "react-router";
 import { LogOut, Menu } from "lucide-react";
 import { Squash } from "hamburger-react";
 import { ColorModeButton } from "@/components/ui/color-mode";
@@ -13,18 +13,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { getMenuByRole } from "@/utils/menuUtils";
 import { toaster } from "@/components/ui/toaster";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
-import { DialogRoot, DialogHeader, DialogBody, DialogFooter, DialogTitle, DialogTrigger, DialogBackdrop } from "@/components/ui/dialog";
-
-// Broadcast session started after successful login (call this in your login logic)
-const broadcastSessionStarted = () => {
-  try {
-    const channel = new BroadcastChannel("makao-session");
-    channel.postMessage("session-started");
-    channel.close();
-  } catch (e) {
-    // Fallback: do nothing
-  }
-};
+import {
+  DialogRoot, DialogHeader, DialogBody, DialogFooter,
+  DialogTitle, DialogBackdrop
+} from "@/components/ui/dialog";
 
 const SidebarContent = ({ onClose, isMobile = false, collapsed, menuItems, selectedMenu, navigate, handleLogout }) => (
   <Flex direction="column" h="100%" justify="space-between" py={4} px={isMobile ? 4 : collapsed ? 2 : 4}>
@@ -89,7 +81,6 @@ const SidebarContent = ({ onClose, isMobile = false, collapsed, menuItems, selec
 );
 
 const DashLayout = () => {
-  // All hooks at the top!
   const navigate = useNavigate();
   const location = useLocation();
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
@@ -99,16 +90,19 @@ const DashLayout = () => {
   const showDetails = useBreakpointValue({ base: false, md: true });
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSessionDialog, setShowSessionDialog] = useState(false);
-  const [dialogShown, setDialogShown] = useState(false); // Prevent multiple dialogs
+  const [dialogShown, setDialogShown] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // FIX: Move all useBreakpointValue hooks here
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const mlValue = useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" });
   const textAlignValue = useBreakpointValue({ base: "center", md: "left" });
   const positionValue = useBreakpointValue({ base: "absolute", md: "relative" });
   const leftValue = useBreakpointValue({ base: "50%", md: "auto" });
   const transformValue = useBreakpointValue({ base: "translateX(-50%)", md: "none" });
 
-  // Always use an array for menuItems
   const menuItems = role ? getMenuByRole(role) : [];
   const selectedMenu =
     menuItems.find((item) =>
@@ -117,10 +111,8 @@ const DashLayout = () => {
         : location.pathname.startsWith(item.route)
     )?.label || "";
 
-  const toggleSidebar = () => setCollapsed(!collapsed);
-
   const handleLogout = async () => {
-    setLoggingOut(true); // Show loading screen
+    setLoggingOut(true);
     try {
       await logout();
       localStorage.removeItem("currentRoute");
@@ -136,7 +128,7 @@ const DashLayout = () => {
       }, 1800);
     } catch (error) {
       setLoggingOut(false);
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       toaster.create({
         title: "Logout Error",
         description: "There was an issue logging out. Please try again.",
@@ -147,59 +139,37 @@ const DashLayout = () => {
   };
 
   useEffect(() => {
-  const token = localStorage.getItem("supabase.auth.token");
-  const channel = new BroadcastChannel("makao-session");
+    const token = localStorage.getItem("supabase.auth.token");
+    const channel = new BroadcastChannel("makao-session");
 
-  // Skip session popup on any admin-type dashboard
-  const isAdminPath = [
-    "/admin-dashboard",
-    "/consultant-dashboard",
-    "/agent-dashboard"
-  ].some((prefix) => location.pathname.startsWith(prefix));
-
-  if (token && !dialogShown && !isAdminPath) {
-    setShowSessionDialog(true);
-    setDialogShown(true);
-  }
-
-  channel.onmessage = (event) => {
-    if (event.data === "session-started" && !dialogShown && !isAdminPath) {
+    if (token && !dialogShown) {
       setShowSessionDialog(true);
       setDialogShown(true);
     }
-  };
 
-  return () => {
-    channel.close();
-  };
-}, [dialogShown, location.pathname]);
+    channel.onmessage = (event) => {
+      if (event.data === "session-started" && !dialogShown) {
+        setShowSessionDialog(true);
+        setDialogShown(true);
+      }
+    };
 
+    return () => {
+      channel.close();
+    };
+  }, [dialogShown]);
 
-  // Show loading screen during logout
-  if (loggingOut) {
+  if (loggingOut || loading) {
     return (
       <Flex h="100vh" align="center" justify="center">
         <VStack spacing={4}>
           <Spinner size="xl" />
-          <Text>Logging out...</Text>
+          <Text>{loggingOut ? "Logging out..." : "Loading..."}</Text>
         </VStack>
       </Flex>
     );
   }
 
-  // Show loading spinner while checking auth
-  if (loading) {
-    return (
-      <Flex h="100vh" align="center" justify="center">
-        <VStack spacing={4}>
-          <Spinner size="xl" />
-          <Text>Loading...</Text>
-        </VStack>
-      </Flex>
-    );
-  }
-
-  // Only show "not logged in" screen if NOT logging out and NOT loading
   if (!isAuthenticated) {
     return (
       <Flex direction="column" minH="100vh" bg="gray.50">
@@ -209,9 +179,7 @@ const DashLayout = () => {
             <Text fontSize="2xl" fontWeight="bold" color="red.500">
               You are not logged in
             </Text>
-            <Text color="gray.600">
-              Please log in to access your dashboard.
-            </Text>
+            <Text color="gray.600">Please log in to access your dashboard.</Text>
             <Button colorScheme="blue" size="lg" onClick={() => navigate("/login")}>
               Go to Login
             </Button>
@@ -221,10 +189,9 @@ const DashLayout = () => {
     );
   }
 
-  // Render dashboard and session dialog if needed
   return (
     <>
-      {showSessionDialog && (
+      {isClient && showSessionDialog && (
         <DialogRoot open={showSessionDialog} onOpenChange={setShowSessionDialog}>
           <DialogBackdrop />
           <DialogHeader>
@@ -243,6 +210,7 @@ const DashLayout = () => {
           </DialogFooter>
         </DialogRoot>
       )}
+
       <Flex h="100vh" bg="gray.50">
         {!isOpen && !isMobile && (
           <Box
@@ -254,7 +222,15 @@ const DashLayout = () => {
             overflow="hidden"
             zIndex="10"
           >
-            <SidebarContent onClose={toggleSidebar} isMobile={false} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
+            <SidebarContent
+              onClose={() => setCollapsed(!collapsed)}
+              isMobile={false}
+              collapsed={collapsed}
+              menuItems={menuItems}
+              selectedMenu={selectedMenu}
+              navigate={navigate}
+              handleLogout={handleLogout}
+            />
           </Box>
         )}
 
@@ -288,7 +264,15 @@ const DashLayout = () => {
                         </Drawer.CloseTrigger>
                       </Drawer.Header>
                       <Drawer.Body p={0}>
-                        <SidebarContent isMobile={isMobile} onClose={onClose} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
+                        <SidebarContent
+                          isMobile={isMobile}
+                          onClose={onClose}
+                          collapsed={collapsed}
+                          menuItems={menuItems}
+                          selectedMenu={selectedMenu}
+                          navigate={navigate}
+                          handleLogout={handleLogout}
+                        />
                       </Drawer.Body>
                     </Drawer.Content>
                   </Drawer.Positioner>
