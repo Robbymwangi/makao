@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
-// Broadcast session started after successful login (call this in your login logic)
+// Broadcast session started after successful login
 const broadcastSessionStarted = () => {
   try {
     const channel = new BroadcastChannel("makao-session");
@@ -27,7 +27,7 @@ export const useAuthStore = create(persist((set, get) => ({
     set({ loading: true, error: null });
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
@@ -45,28 +45,28 @@ export const useAuthStore = create(persist((set, get) => ({
       loading: false
     });
 
-  
     broadcastSessionStarted(); // Broadcast session after successful login
     return data.role;
   },
- //  Staff login helper
-      loginFromStaff: ({ user, role, token }) => {
-        set({
-          isAuthenticated: true,
-          user,
-          role,
-          token,
-          loading: false
-        });
-        broadcastSessionStarted();
-      },
-  
+
+  // Staff login helper
+  loginFromStaff: ({ user, role, token }) => {
+    set({
+      isAuthenticated: true,
+      user,
+      role,
+      token,
+      loading: false
+    });
+    broadcastSessionStarted();
+  },
+
   // --- SIGNUP ---
   signup: async (email, password, role = 'user') => {
     set({ loading: true, error: null });
     const res = await fetch(`${API}/auth/signup`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, role })
     });
     const data = await res.json();
@@ -76,7 +76,6 @@ export const useAuthStore = create(persist((set, get) => ({
       set({ loading: false });
       throw err;
     }
-    // no session until confirmed
     set({ loading: false });
     return data;
   },
@@ -86,7 +85,7 @@ export const useAuthStore = create(persist((set, get) => ({
     set({ loading: true, error: null });
     const res = await fetch(`${API}/auth/resend-confirmation`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
     const data = await res.json();
@@ -102,14 +101,27 @@ export const useAuthStore = create(persist((set, get) => ({
 
   // --- LOGOUT ---
   logout: async () => {
-    try { await fetch(`${API}/auth/logout`, { method:'POST' }); } catch {}
+    try {
+      await fetch(`${API}/auth/logout`, { method: 'POST' });
+    } catch {}
+
+    const currentRole = get().role;
+
     set({ isAuthenticated: false, user: null, role: null, token: null });
     localStorage.removeItem('supabase.auth.token');
     sessionStorage.clear();
+
+    if (currentRole === 'systemAdmin' || currentRole === 'consultantAdmin' || currentRole === 'agentAdmin') {
+      window.location.href = '/staff/login';
+    } else {
+      window.location.href = '/login';
+    }
   },
 
+  // --- CLEAR ERROR ---
   clearError: () => set({ error: null }),
- // --- SET EMAIL STORE ---
+
+  // --- SET EMAIL STORE ---
   setEmailStore: (email) =>
     set((state) => ({
       user: {
@@ -117,29 +129,29 @@ export const useAuthStore = create(persist((set, get) => ({
         email
       }
     })),
-    
+
   // --- INITIALIZE SESSION ---
-initializeSession: async () => {
-  try {
-    const token = localStorage.getItem('supabase.auth.token');
-    if (!token) return;
+  initializeSession: async () => {
+    try {
+      const token = localStorage.getItem('supabase.auth.token');
+      if (!token) return;
 
-    const session = JSON.parse(token);
-    const { user, access_token } = session;
+      const session = JSON.parse(token);
+      const { user, access_token } = session;
 
-    if (user && access_token) {
-      set({
-        isAuthenticated: true,
-        user,
-        role: user.user_metadata?.role || null,
-        token: access_token,
-      });
+      if (user && access_token) {
+        set({
+          isAuthenticated: true,
+          user,
+          role: user.user_metadata?.role || null,
+          token: access_token,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to initialize session:", err);
+      set({ isAuthenticated: false, user: null, role: null, token: null });
     }
-  } catch (err) {
-    console.error("Failed to initialize session:", err);
-    set({ isAuthenticated: false, user: null, role: null, token: null });
   }
-},
 
 }), {
   name: "makao-auth",
