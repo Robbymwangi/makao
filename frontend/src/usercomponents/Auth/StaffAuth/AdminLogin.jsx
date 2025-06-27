@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { Box, VStack, Input, Button, Text, Link, Flex } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
+import { useSearchParams } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
-import { useSearchParams } from "react-router";
 
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login, loading, error, clearError, setEmailStore } = useAuthStore();
+
+  const {
+    loginFromStaff,
+    loading,
+    error,
+    clearError,
+    setEmailStore,
+  } = useAuthStore();
 
   useEffect(() => {
     if (searchParams.get("confirmed") === "true") {
@@ -71,12 +78,15 @@ const StaffLogin = () => {
       const { user, session, role } = result;
 
       if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
-        login({
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || "Staff",
-          role,
-        });
+        loginFromStaff({
+  user: {
+    id: user.id,
+    email: user.email,
+    name: user.full_name || "Staff",
+  },
+  role,
+  token: session.access_token,
+});
 
         localStorage.setItem(
           "supabase.auth.token",
@@ -87,6 +97,7 @@ const StaffLogin = () => {
         );
 
         setEmailStore(email);
+
         toaster.create({
           title: "Login Successful",
           description: "Welcome back!",
@@ -94,7 +105,9 @@ const StaffLogin = () => {
           duration: 2000,
         });
 
-        navigate("/staff/otp-challengesend");
+        // Redirect to admin dashboard
+        navigate("/admin-dashboard", { replace: true });
+
       } else {
         toaster.create({
           title: "Access Denied",
@@ -122,30 +135,30 @@ const StaffLogin = () => {
         </Text>
         <form onSubmit={handleLogin}>
           <VStack spacing={4}>
-            <Input 
-              placeholder="Staff Email" 
-              type="email" 
-              required 
-              value={email} 
-              onChange={e => setEmail(e.target.value)}
+            <Input
+              placeholder="Staff Email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
-            <Input 
-              placeholder="Password" 
-              type="password" 
-              required 
+            <Input
+              placeholder="Password"
+              type="password"
+              required
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
-            <Button 
-              colorScheme="blackAlpha" 
-              w="100%" 
+            <Button
+              colorScheme="blackAlpha"
+              w="100%"
               type="submit"
-              loading={loading ? 1 : undefined}
-              disabled={loading}
+              isLoading={loading}
+              loadingText="Logging in..."
             >
-              {loading ? "Logging in..." : "Log In"}
+              Log In
             </Button>
           </VStack>
         </form>
