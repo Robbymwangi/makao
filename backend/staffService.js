@@ -31,7 +31,7 @@ export async function createStaffUser({ email, fullName, role }) {
 
   const userId = userData.user.id;
 
-  // 2. Insert into the custom `admins` table
+  // 2. Insert into the `admins` table
   const { error: insertError } = await supabaseAdmin.from('admins').insert({
     id: userId,
     email,
