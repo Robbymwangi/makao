@@ -78,17 +78,18 @@ const createSupabaseClient = () => {
   });
 
   // Optional: test connection on startup
-  retryAsync(async () => {
-    const { error } = await supabaseInstance.auth.getUserById("00000000-0000-0000-0000-000000000000");
-    if (error && !error.message.includes("User not found")) {
-      throw new Error("Failed to verify Supabase auth");
-    }
-    console.log("Supabase admin client initialized");
-  }).catch(err => {
-    console.error("Supabase connection failed after retries:", err.message);
-  });
+retryAsync(async () => {
+  const { error } = await supabaseInstance.auth.admin.listUsers({ page: 1, perPage: 1 });
+  if (error) {
+    throw new Error("Failed to verify Supabase admin client: " + error.message);
+  }
+  console.log("Supabase admin client initialized");
+}).catch(err => {
+  console.error("Supabase connection failed after retries:", err.message);
+});
 
   return supabaseInstance;
 };
 
 export default createSupabaseClient;
+
