@@ -22,7 +22,7 @@ export const useAuthStore = create(persist((set, get) => ({
   loading: false,
   error: null,
 
-  // --- LOGIN ---
+  // --- LOGIN (User) ---
   login: async (email, password) => {
     set({ loading: true, error: null });
     const res = await fetch(`${API}/auth/login`, {
@@ -44,10 +44,23 @@ export const useAuthStore = create(persist((set, get) => ({
       token: data.session.access_token,
       loading: false
     });
+
+  
     broadcastSessionStarted(); // Broadcast session after successful login
     return data.role;
   },
-
+ //  Staff login helper
+      loginFromStaff: ({ user, role, token }) => {
+        set({
+          isAuthenticated: true,
+          user,
+          role,
+          token,
+          loading: false
+        });
+        broadcastSessionStarted();
+      },
+  
   // --- SIGNUP ---
   signup: async (email, password, role = 'user') => {
     set({ loading: true, error: null });
