@@ -8,7 +8,7 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:3000/users/list-non-admins");
+      const response = await fetch("http://localhost:3000/users");
       const data = await response.json();
 
       if (!response.ok) throw new Error(data.error || "Failed to fetch users");
@@ -45,7 +45,7 @@ const UserManagement = () => {
       {users.length === 0 ? (
         <tr>
           <td colSpan="3" style={{ textAlign: 'center', padding: '1rem' }}>
-            No non-admin users found.
+            No clients found.
           </td>
         </tr>
       ) : (
