@@ -67,8 +67,15 @@ app.get('/health', (req, res) => {
 // Import auth routes AFTER environment variables are confirmed to be loaded
 import authRoutes from './src/routes/auth.js'; 
 
-// Register your auth routes here
+// Register auth routes
 app.use('/auth', authRoutes);
+
+// Import user routes
+import userRoutes from './src/routes/users.js';
+
+// Register user routes
+app.use('/users', userRoutes);
+
 
 // Error handling middleware
 app.use((error, req, res, next) => {
