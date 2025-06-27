@@ -37,6 +37,7 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
+import UserManagement from "./usercomponents/Dashboard/AdminDash/AdminDashComponents/UserManagement.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -110,6 +111,7 @@ const App = () => {
         {/* Admin Dashboard */}
         <Route path="/admin-dashboard" element={<DashLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
         </Route>
 
         {/* Catch-all */}
