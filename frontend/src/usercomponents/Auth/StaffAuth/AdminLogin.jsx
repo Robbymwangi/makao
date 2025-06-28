@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, VStack, Input, Button, Text, Link, Flex } from "@chakra-ui/react";
+import { Box, VStack, Input, Button, Text, Link, Flex, Spinner } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import { useSearchParams } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
@@ -9,16 +9,10 @@ import { toaster } from "@/components/ui/toaster";
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  const {
-    loginFromStaff,
-    loading,
-    error,
-    clearError,
-    setEmailStore,
-  } = useAuthStore();
+  const { login, error, clearError, setEmailStore } = useAuthStore();
 
   useEffect(() => {
     if (searchParams.get("confirmed") === "true") {
@@ -34,6 +28,7 @@ const StaffLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     clearError();
+    setLoading(true);
 
     if (!email || !password) {
       toaster.create({
@@ -42,6 +37,7 @@ const StaffLogin = () => {
         type: "error",
         duration: 3000,
       });
+      setLoading(false);
       return;
     }
 
@@ -63,6 +59,7 @@ const StaffLogin = () => {
             type: "warning",
             duration: 5000,
           });
+          setLoading(false);
           return navigate("/auth/confirm");
         }
 
@@ -72,21 +69,22 @@ const StaffLogin = () => {
           type: "error",
           duration: 4000,
         });
+        setLoading(false);
         return;
       }
 
       const { user, session, role } = result;
 
       if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
-        loginFromStaff({
-  user: {
-    id: user.id,
-    email: user.email,
-    name: user.full_name || "Staff",
-  },
-  role,
-  token: session.access_token,
-});
+        // Set auth state directly for staff login
+        useAuthStore.setState({
+          isAuthenticated: true,
+          user: user,
+          role: role,
+          token: session.access_token,
+          loading: false,
+          error: null
+        });
 
         localStorage.setItem(
           "supabase.auth.token",
@@ -123,6 +121,8 @@ const StaffLogin = () => {
         type: "error",
         duration: 4000,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,9 +156,9 @@ const StaffLogin = () => {
               w="100%"
               type="submit"
               isLoading={loading}
-              loadingText="Logging in..."
+              disabled={loading}
             >
-              Log In
+              {loading ? <Spinner size="sm" /> : "Log In"}
             </Button>
           </VStack>
         </form>

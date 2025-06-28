@@ -81,25 +81,33 @@ router.post('/signup', async (req, res) => {
 
     // After user signs up successfully, insert into users table
     if (signUpData && signUpData.user) {
-      await client
-        .from("users")
-        .insert({
-          id: signUpData.user.id,
-          email: signUpData.user.email,
-          full_name: "", // Optional: collect from frontend
-        });
-    }
+      try {
+        await service
+          .from("users")
+          .insert({
+            id: signUpData.user.id,
+            email: signUpData.user.email,
+            full_name: "",
+            role, // optional but helps
+          });
 
-    return res.status(201).json({
-      code: 'verification_sent',
-      message: 'Verification email sent',
-    });
+        return res.status(201).json({
+          code: 'verification_sent',
+          message: 'Verification email sent',
+        });
+      } catch (err) {
+        console.error('Failed to insert into users table:', err.message);
+        return fail(res, 500, 'insert_error', err.message);
+      }
+    } else {
+      // If for some reason signUpData.user is missing
+      return fail(res, 500, 'signup_failed', 'User not created');
+    }
   } catch (err) {
     console.error('Unexpected signup error:', err);
     return fail(res, 500, 'unexpected_error', err.message);
   }
 });
-
 
 // ——— LOGIN ——— //
 router.post('/login', async (req, res) => {
@@ -112,9 +120,11 @@ router.post('/login', async (req, res) => {
 
   try {
     const client = createSupabaseClient();
+
     const { data: auth, error: authErr } = await withRetry(() =>
       client.auth.signInWithPassword({ email: normalizedEmail, password })
     );
+
     if (authErr) {
       if (authErr.message?.toLowerCase().includes('email not confirmed')) {
         return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
@@ -134,24 +144,28 @@ router.post('/login', async (req, res) => {
       return fail(res, 403, 'admin_misroute', 'Please log in via the staff portal');
     }
 
-    // Fetch user role
+    // Fetch user role + full name
     const { data: userRow } = await withRetry(() =>
-      authed.from('users').select('role').eq('id', auth.user.id).single()
+      authed.from('users').select('role, full_name').eq('id', auth.user.id).single()
     );
 
-    let role = userRow?.role || null;
+    const role = userRow?.role || null;
+    const full_name = userRow?.full_name || '';
 
     return res.json({
-      user: { ...auth.user },
+      user: {
+        ...auth.user,
+        full_name,
+      },
       session: auth.session,
       role
     });
+
   } catch (err) {
     console.error('Unexpected login error:', err);
     return fail(res, 500, 'unexpected_error', err.message);
   }
 });
-
 
 // ——— STAFF LOGIN ——— //
 router.post('/staff-login', async (req, res) => {

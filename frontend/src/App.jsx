@@ -38,8 +38,19 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
-import UserManagement from "./usercomponents/Dashboard/AdminDash/AdminDashComponents/UserManagement.jsx";
-
+// Agent Admin Views
+import AgentAssignedClients from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/AssignedClients";
+import AgentTimelineView from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/TimelineView";
+import AgentMyProjects from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/MyProjects";
+import AgentMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/Messages";
+// Consultant Admin Views
+import ConsultantProjectTimelines from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/ProjectTimelines";
+import ConsultantSubmitDeliverables from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/SubmitDeliverables";
+import ConsultantMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/Messages";
+// SysAdmin Views
+import UserManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/UserManagement";
+import StaffManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/StaffManagement";
+import SupportTools from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/SupportTools";
 
 const App = () => {
   const location = useLocation();
@@ -113,7 +124,19 @@ const App = () => {
         {/* Admin Dashboard */}
         <Route path="/admin-dashboard" element={<DashLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
+          {/* Agent Admin Routes */}
+          <Route path="clients" element={<AgentAssignedClients />} />
+          <Route path="timeline" element={<AgentTimelineView />} />
+          <Route path="projects" element={<AgentMyProjects />} />
+          <Route path="messages" element={<AgentMessages />} />
+          {/* Consultant Admin Routes */}
+          <Route path="consultant-projects" element={<ConsultantProjectTimelines />} />
+          <Route path="deliverables" element={<ConsultantSubmitDeliverables />} />
+          <Route path="consultant-messages" element={<ConsultantMessages />} />
+          {/* SysAdmin Routes */}
+          <Route path="user-management" element={<UserManagement />} />
+          <Route path="staff" element={<StaffManagement />} />
+          <Route path="support" element={<SupportTools />} />
         </Route>
 
         {/* Catch-all */}

@@ -1,25 +1,21 @@
 import React from "react";
-import { VStack, Heading, Text } from "@chakra-ui/react";
-import { useAuthStore } from "@/store/useAuthStore";
+import { VStack, Text, Heading } from "@chakra-ui/react";
+import { useAuthStore } from "@/store/useAuthStore"; // Import the store
+import SystemAdminHome from "./SysAdminItems/SystemAdminHome";
+import ConsultantAdminHome from "./ConsultantItems/ConsultantAdminHome";
+import AgentAdminHome from "./AgentItems/AgentAdminHome";
 
 const AdminDashboard = () => {
+  // Get the role directly from the Zustand store
   const role = useAuthStore((state) => state.role);
-  const user = useAuthStore((state) => state.user);
 
-  const displayName = user?.name || user?.email?.split("@")[0] || "Admin";
-
-  const getDashboardTitle = () => {
-    switch (role) {
-      case "systemAdmin":
-        return "System Admin Dashboard";
-      case "consultantAdmin":
-        return "Consultant Admin Dashboard";
-      case "agentAdmin":
-        return "Agent Admin Dashboard";
-      default:
-        return "Admin Dashboard";
-    }
-  };
+  if (role === "systemAdmin") {
+    return <SystemAdminHome />;
+  } else if (role === "consultantAdmin") {
+    return <ConsultantAdminHome />;
+  } else if (role === "agentAdmin") {
+    return <AgentAdminHome />;
+  }
 
   return (
     <VStack spacing={6} align="stretch" px={4} py={6}>

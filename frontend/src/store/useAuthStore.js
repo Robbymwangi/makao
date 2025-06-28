@@ -14,6 +14,25 @@ const broadcastSessionStarted = () => {
   }
 };
 
+// Shared helper
+const handleAuthRequest = async (url, payload) => {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const err = new Error(data.error);
+    err.code = data.code;
+    throw err;
+  }
+
+  return data;
+};
+
 export const useAuthStore = create(persist((set, get) => ({
   isAuthenticated: false,
   user: null,
@@ -62,22 +81,18 @@ export const useAuthStore = create(persist((set, get) => ({
   },
 
   // --- SIGNUP ---
-  signup: async (email, password, role = 'user') => {
+  signup: async (email, password) => {
     set({ loading: true, error: null });
-    const res = await fetch(`${API}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const err = new Error(data.error);
-      err.code = data.code;
-      set({ loading: false });
+
+    try {
+      const data = await handleAuthRequest(`${API}/auth/signup`, { email, password });
+      return data;
+    } catch (err) {
+      set({ error: err });
       throw err;
+    } finally {
+      set({ loading: false });
     }
-    set({ loading: false });
-    return data;
   },
 
   // --- RESEND CONFIRMATION ---

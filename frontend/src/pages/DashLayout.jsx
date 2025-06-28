@@ -89,14 +89,8 @@ const DashLayout = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
   const [loggingOut, setLoggingOut] = useState(false);
-  const [showSessionDialog, setShowSessionDialog] = useState(false);
-  const [dialogShown, setDialogShown] = useState(false);
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
+  // FIX: Move all useBreakpointValue hooks here
   const mlValue = useBreakpointValue({ base: 0, md: collapsed ? "60px" : "250px" });
   const textAlignValue = useBreakpointValue({ base: "center", md: "left" });
   const positionValue = useBreakpointValue({ base: "absolute", md: "relative" });
@@ -124,7 +118,12 @@ const DashLayout = () => {
       });
       setTimeout(() => {
         setLoggingOut(false);
-        navigate("/login", { replace: true });
+        // Route to correct login page based on last role
+        if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
+          navigate("/staff/login", { replace: true });
+        } else {
+          navigate("/login", { replace: true });
+        }
       }, 1800);
     } catch (error) {
       setLoggingOut(false);
@@ -138,28 +137,8 @@ const DashLayout = () => {
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("supabase.auth.token");
-    const channel = new BroadcastChannel("makao-session");
-
-    if (token && !dialogShown) {
-      setShowSessionDialog(true);
-      setDialogShown(true);
-    }
-
-    channel.onmessage = (event) => {
-      if (event.data === "session-started" && !dialogShown) {
-        setShowSessionDialog(true);
-        setDialogShown(true);
-      }
-    };
-
-    return () => {
-      channel.close();
-    };
-  }, [dialogShown]);
-
-  if (loggingOut || loading) {
+  // Show loading screen during logout
+  if (loggingOut) {
     return (
       <Flex h="100vh" align="center" justify="center">
         <VStack spacing={4}>
@@ -189,134 +168,97 @@ const DashLayout = () => {
     );
   }
 
+  // Render dashboard
   return (
-    <>
-      {/* {isClient && showSessionDialog && (
-        <DialogRoot open={showSessionDialog} onOpenChange={setShowSessionDialog}>
-          <DialogBackdrop />
-          <DialogHeader>
-            <DialogTitle>Ongoing Session Detected</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <Text>You have an ongoing session. Please log out or continue browsing.</Text>
-          </DialogBody>
-          <DialogFooter>
-            <Button colorScheme="blue" onClick={() => setShowSessionDialog(false)}>
-              Continue Browsing
-            </Button>
-            <Button colorScheme="red" ml={3} onClick={handleLogout}>
-              Log Out
-            </Button>
-          </DialogFooter>
-        </DialogRoot>
-      )} */}
-
-      <Flex h="100vh" bg="gray.50">
-        {!isOpen && !isMobile && (
-          <Box
-            as="aside"
-            bg="white"
-            boxShadow="md"
-            w={collapsed ? "60px" : "250px"}
-            transition="width 0.3s ease-in-out"
-            overflow="hidden"
-            zIndex="10"
-          >
-            <SidebarContent
-              onClose={() => setCollapsed(!collapsed)}
-              isMobile={false}
-              collapsed={collapsed}
-              menuItems={menuItems}
-              selectedMenu={selectedMenu}
-              navigate={navigate}
-              handleLogout={handleLogout}
-            />
-          </Box>
-        )}
-
+    <Flex h="100vh" bg="gray.50">
+      {!isOpen && !isMobile && (
         <Box
-          as="header"
+          as="aside"
           bg="white"
-          boxShadow="sm"
-          w="100%"
-          h="60px"
-          position="fixed"
-          top="0"
-          left="0"
-          zIndex="9"
+          boxShadow="md"
+          w={collapsed ? "60px" : "250px"}
+          transition="width 0.3s ease-in-out"
+          overflow="hidden"
+          zIndex="10"
         >
-          <Flex align="center" justify="space-between" h="100%" px={6}>
-            {isMobile && (
-              <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size="xs">
-                <Drawer.Trigger asChild>
-                  <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-                    <Menu size={20} />
-                  </Box>
-                </Drawer.Trigger>
-                <Portal>
-                  <Drawer.Backdrop />
-                  <Drawer.Positioner>
-                    <Drawer.Content>
-                      <Drawer.Header>
-                        <Drawer.Title>Menu</Drawer.Title>
-                        <Drawer.CloseTrigger asChild>
-                          <CloseButton size="sm" />
-                        </Drawer.CloseTrigger>
-                      </Drawer.Header>
-                      <Drawer.Body p={0}>
-                        <SidebarContent
-                          isMobile={isMobile}
-                          onClose={onClose}
-                          collapsed={collapsed}
-                          menuItems={menuItems}
-                          selectedMenu={selectedMenu}
-                          navigate={navigate}
-                          handleLogout={handleLogout}
-                        />
-                      </Drawer.Body>
-                    </Drawer.Content>
-                  </Drawer.Positioner>
-                </Portal>
-              </Drawer.Root>
-            )}
-            <Text
-              fontSize="2xl"
-              ml={mlValue}
-              textAlign={textAlignValue}
-              position={positionValue}
-              left={leftValue}
-              transform={transformValue}
-              transition="margin-left 0.3s ease-in-out"
-              fontFamily="Playfair Display , serif"
-              cursor="pointer"
-              onClick={() => navigate("/dashboard")}
-            >
-              <Box as="span" fontWeight="bold">Makao </Box>
-              <Box as="span" fontWeight="normal">Manager</Box>
-            </Text>
-            <HStack spacing={4}>
-              <ColorModeButton />
-              <Avatar.Root>
-                <Avatar.Fallback name={user?.email || "User"} />
-                <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
-              </Avatar.Root>
-              {showDetails && (
-                <Stack gap={0}>
-                  <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
-                  <Text fontSize="xs" color="gray.500">{user?.email}</Text>
-                </Stack>
-              )}
-            </HStack>
-          </Flex>
+          <SidebarContent onClose={toggleSidebar} isMobile={false} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
         </Box>
+      )}
 
-        <Box flex="1" overflow="auto" mt="60px">
-          <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
-            <Outlet />
-          </Box>
+      <Box
+        as="header"
+        bg="white"
+        boxShadow="sm"
+        w="100%"
+        h="60px"
+        position="fixed"
+        top="0"
+        left="0"
+        zIndex="9"
+      >
+        <Flex align="center" justify="space-between" h="100%" px={6}>
+          {isMobile && (
+            <Drawer.Root open={isOpen} onOpenChange={(open) => (open ? onOpen() : onClose())} placement="left" size="xs">
+              <Drawer.Trigger asChild>
+                <Box as="button" p={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
+                  <Menu size={20} />
+                </Box>
+              </Drawer.Trigger>
+              <Portal>
+                <Drawer.Backdrop />
+                <Drawer.Positioner>
+                  <Drawer.Content>
+                    <Drawer.Header>
+                      <Drawer.Title>Menu</Drawer.Title>
+                      <Drawer.CloseTrigger asChild>
+                        <CloseButton size="sm" />
+                      </Drawer.CloseTrigger>
+                    </Drawer.Header>
+                    <Drawer.Body p={0}>
+                      <SidebarContent isMobile={isMobile} onClose={onClose} collapsed={collapsed} menuItems={menuItems} selectedMenu={selectedMenu} navigate={navigate} handleLogout={handleLogout} />
+                    </Drawer.Body>
+                  </Drawer.Content>
+                </Drawer.Positioner>
+              </Portal>
+            </Drawer.Root>
+          )}
+          <Text
+            fontSize="2xl"
+            ml={mlValue}
+            textAlign={textAlignValue}
+            position={positionValue}
+            left={leftValue}
+            transform={transformValue}
+            transition="margin-left 0.3s ease-in-out"
+            fontFamily="Playfair Display , serif"
+            cursor="pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            <Box as="span" fontWeight="bold">Makao </Box>
+            <Box as="span" fontWeight="normal">Manager</Box>
+          </Text>
+          <HStack spacing={4}>
+            <ColorModeButton />
+            <Avatar.Root>
+              <Avatar.Fallback name={user?.email || "User"} />
+              <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
+            </Avatar.Root>
+            {showDetails && (
+              <Stack gap={0}>
+                <Text fontSize="sm" fontWeight="bold">{user?.email?.split('@')[0]}</Text>
+                <Text fontSize="xs" color="gray.500">{user?.email}</Text>
+              </Stack>
+            )}
+          </HStack>
+        </Flex>
+      </Box>
+
+      <Box flex="1" overflow="auto" mt="60px">
+        <Box bg="gray.70" boxShadow="md" borderRadius="lg" p={8} minH="calc(100vh - 60px)">
+          <Outlet />
         </Box>
-      </Flex>
-    </>
+      </Box>
+    </Flex>
   );
 };
 
