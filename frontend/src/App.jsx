@@ -135,7 +135,8 @@ const App = () => {
           <Route path="consultant-messages" element={<ConsultantMessages />} />
           {/* SysAdmin Routes */}
           <Route path="user-management" element={<UserManagement />} />
-          <Route path="staff" element={<StaffManagement />} />
+          <Route path="users" element={<UserManagement />} />
+         <Route path="staff" element={<StaffManagement />} />
           <Route path="support" element={<SupportTools />} />
         </Route>
 
