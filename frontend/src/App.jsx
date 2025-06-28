@@ -38,18 +38,18 @@ import Support from "./usercomponents/Dashboard/UserDash/UserDashView/Support.js
 // Admin Dashboard
 import AdminDashboard from "./usercomponents/Dashboard/AdminDash/AdminDashView/AdminDashboard.jsx";
 // Agent Admin Views
-import AgentAssignedClients from "@/usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/AssignedClients";
-import AgentTimelineView from "@/usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/TimelineView";
-import AgentMyProjects from "@/usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/MyProjects";
-import AgentMessages from "@/usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/Messages";
+import AgentAssignedClients from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/AssignedClients";
+import AgentTimelineView from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/TimelineView";
+import AgentMyProjects from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/MyProjects";
+import AgentMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/Messages";
 // Consultant Admin Views
-import ConsultantProjectTimelines from "@/usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/ProjectTimelines";
-import ConsultantSubmitDeliverables from "@/usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/SubmitDeliverables";
-import ConsultantMessages from "@/usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/Messages";
+import ConsultantProjectTimelines from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/ProjectTimelines";
+import ConsultantSubmitDeliverables from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/SubmitDeliverables";
+import ConsultantMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/ConsultantItems/Messages";
 // SysAdmin Views
-import UserManagement from "@/usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/UserManagement";
-import StaffManagement from "@/usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/StaffManagement";
-import SupportTools from "@/usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/SupportTools";
+import UserManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/UserManagement";
+import StaffManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/StaffManagement";
+import SupportTools from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/SupportTools";
 
 const App = () => {
   const location = useLocation();
