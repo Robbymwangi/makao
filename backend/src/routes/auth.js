@@ -82,14 +82,20 @@ router.post('/signup', async (req, res) => {
     // After user signs up successfully, insert into users table
     if (signUpData && signUpData.user) {
       try {
-        await service
-          .from("users")
-          .insert({
-            id: signUpData.user.id,
-            email: signUpData.user.email,
-            full_name: "",
-            role, // optional but helps
-          });
+       const { error: insertError } = await service
+  .from("users")
+  .insert({
+    id: signUpData.user.id,
+    email: signUpData.user.email,
+    full_name: "",
+    role,
+  })
+  .select(); // needed to trigger return/error check
+
+if (insertError) {
+  console.error('Failed to insert into users table:', insertError.message);
+  return fail(res, 500, 'insert_error', insertError.message);
+}
 
         return res.status(201).json({
           code: 'verification_sent',
