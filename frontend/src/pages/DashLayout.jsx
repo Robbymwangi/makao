@@ -85,6 +85,7 @@ const DashLayout = () => {
   const location = useLocation();
   const { role, logout, isAuthenticated, user, loading } = useAuthStore();
   const [collapsed, setCollapsed] = useState(true);
+  const toggleSidebar = () => setCollapsed(prev => !prev);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const showDetails = useBreakpointValue({ base: false, md: true });
