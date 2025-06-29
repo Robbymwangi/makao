@@ -1,4 +1,3 @@
-// src/usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/UserManagement.jsx
 import React, { useEffect, useState } from "react";
 import { Center, Spinner } from "@chakra-ui/react";
 
