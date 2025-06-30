@@ -27,7 +27,11 @@ const createSupabaseClient = () => {
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+console.log('SupabaseClient.js check:', {
+  url: SUPABASE_URL ? 'Set' : 'Missing',
+  key: SERVICE_ROLE_KEY ? 'Set' : 'Missing',
+  shortKey: SERVICE_ROLE_KEY?.slice(0, 5) + '...'  // just to verify what’s loading
+});
   // Validate environment variables
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error("Missing Supabase environment variables in backend!");
