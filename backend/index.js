@@ -32,6 +32,12 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   process.exit(1);
 }
 
+// Optional: Log all 3 for clarity
+console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
+console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Missing');
+console.log('- FRONTEND_URL:', process.env.FRONTEND_URL ? 'Set' : 'Missing');
+
+
 // Enable CORS for all routes
 app.use(cors({
   origin: ['http://localhost:5173', 'https://localhost:5173', /\.webcontainer-api\.io$/],
