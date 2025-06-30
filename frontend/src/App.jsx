@@ -128,6 +128,7 @@ const App = () => {
           <Route path="clients" element={<AgentAssignedClients />} />
           <Route path="timeline" element={<AgentTimelineView />} />
           <Route path="projects" element={<AgentMyProjects />} />
+          <Route path="projects/:id" element={<AgentMyProjects />} />
           <Route path="messages" element={<AgentMessages />} />
           {/* Consultant Admin Routes */}
           <Route path="consultant-projects" element={<ConsultantProjectTimelines />} />
