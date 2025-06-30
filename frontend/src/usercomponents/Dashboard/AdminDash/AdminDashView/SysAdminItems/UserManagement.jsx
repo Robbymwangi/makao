@@ -51,7 +51,7 @@ const UserManagement = () => {
       ) : (
         users.map((user) => (
           <tr key={user.id}>
-            <td>{user.full_name}</td>
+            <td>{user.name}</td>
             <td>{user.email}</td>
             <td>{user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Never'}</td>
           </tr>
