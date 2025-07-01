@@ -18,6 +18,7 @@ import {
   Portal,
   Select,
   Menu,
+  createListCollection,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
@@ -47,6 +48,13 @@ const initialUsers = [
 ];
 
 const mockAgents = ["Agent Smith", "Agent Jones", "Agent Carter"];
+
+const agentOptions = createListCollection({
+  items: mockAgents.map((agent) => ({
+    label: agent,
+    value: agent,
+  })),
+});
 
 const UserManagement = () => {
   const [users, setUsers] = useState(initialUsers);
@@ -221,10 +229,7 @@ const UserManagement = () => {
                           value="assign-agent"
                           onClick={e => {
                             e.stopPropagation();
-                            setDialogUser(user);
-                            setAssignAgent(user.agent || "");
-                            setDialogType("assign");
-                            setDialogOpen(true);
+                            openAssignAgent(user);
                           }}
                         >
                           Assign Agent
@@ -233,9 +238,7 @@ const UserManagement = () => {
                           value="reset-password"
                           onClick={e => {
                             e.stopPropagation();
-                            setDialogUser(user);
-                            setDialogType("reset");
-                            setDialogOpen(true);
+                            openResetPassword(user);
                           }}
                         >
                           Reset Password
@@ -289,18 +292,30 @@ const UserManagement = () => {
                       <Text>
                         Assign an agent to <b>{dialogUser.full_name}</b>
                       </Text>
-                      <Select
-                        value={assignAgent}
-                        onChange={(e) => setAssignAgent(e.target.value)}
-                        placeholder="Select agent"
-                        bg="white"
+                      <Select.Root
+                        width="100%"
+                        collection={agentOptions}
+                        value={assignAgent ? [assignAgent] : []}
+                        onValueChange={({ value }) => setAssignAgent(value[0] || "")}
+                        // single select, so no 'multiple' prop
                       >
-                        {mockAgents.map((agent) => (
-                          <option key={agent} value={agent}>
-                            {agent}
-                          </option>
-                        ))}
-                      </Select>
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select Agent" />
+                          </Select.Trigger>
+                        </Select.Control>
+                        <Portal>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {agentOptions.items.map((agent) => (
+                                <Select.Item key={agent.value} item={agent}>
+                                  {agent.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
                       <Button
                         colorScheme="blue"
                         onClick={handleAssignAgent}

@@ -29,3 +29,4 @@ const { data: users, error: userErr } = await supabase
 
 
 // Export the router to be used in the main app
+export default router;
