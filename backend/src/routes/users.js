@@ -18,14 +18,16 @@ const { data: users, error: userErr } = await supabase
 }
 
   // Format and Return users
-  const formatted = users.map((u) => ({
-    id: u.id,
-    email: u.email,
-    name: u.full_name || 'N/A',
-    last_sign_in_at: u.last_sign_in_at || 'N/A',
-  }));
+ const formatted = data.map((u) => ({
+  id: u.id,
+  full_name: u.full_name || 'N/A',
+  email: u.email,
+  last_sign_in_at: u.last_sign_in_at,
+  agent: u.agent || '', // optional, or just skip this
+}));
   res.json(formatted);
 });
 
 
 // Export the router to be used in the main app
+export default router;
