@@ -17,12 +17,22 @@ import {
   DataList,
   Dialog,
   Portal,
+  Select,
+  Menu,
+  createListCollection,
   Badge,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
 // Static mock agents (optional: make dynamic later)
 const mockAgents = ["Agent Smith", "Agent Jones", "Agent Carter"];
+
+const agentOptions = createListCollection({
+  items: mockAgents.map((agent) => ({
+    label: agent,
+    value: agent,
+  })),
+});
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -168,47 +178,65 @@ const UserManagement = () => {
               <Text color="gray.400" p={8} textAlign="center">
                 No users found.
               </Text>
-            ) : (
-              users.map((user) => (
-                <Box
-                  key={user.id}
-                  p={4}
-                  cursor="pointer"
-                  _hover={{ bg: "gray.100" }}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Text fontWeight="bold">{user.full_name}</Text>
-                    <Text fontSize="sm" color="gray.500">{user.email}</Text>
-                    <Text fontSize="xs" color="gray.400">
-                      Last Sign In: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : "Never"}
-                    </Text>
-                    <Text fontSize="xs" color="gray.400">
-                      Agent: {user.agent || <span style={{ color: "#888" }}>Unassigned</span>}
-                    </Text>
-                  </Box>
-                  <Menu.Root>
-                    <Menu.Trigger asChild>
-                      <Button variant="outline" size="xs">Actions</Button>
-                    </Menu.Trigger>
-                    <Portal>
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item onClick={(e) => { e.stopPropagation(); openAssignAgent(user); }}>
-                            Assign Agent
-                          </Menu.Item>
-                          <Menu.Item onClick={(e) => { e.stopPropagation(); openResetPassword(user); }}>
-                            Reset Password
-                          </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Portal>
-                  </Menu.Root>
-                </Box>
-              ))
             )}
+            {users.map((user) => (
+              <Box
+                key={user.id}
+                p={4}
+                cursor="pointer"
+                _hover={{ bg: "gray.100" }}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                <Box>
+                  <Text fontWeight="bold">{user.full_name}</Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {user.email}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Last Sign In:{" "}
+                    {user.last_sign_in_at
+                      ? new Date(user.last_sign_in_at).toLocaleString()
+                      : "Never"}
+                  </Text>
+                  <Text fontSize="xs" color="gray.400">
+                    Agent: {user.agent || <span style={{ color: "#888" }}>Unassigned</span>}
+                  </Text>
+                </Box>
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button variant="outline" size="xs">
+                      Actions
+                    </Button>
+                  </Menu.Trigger>
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item
+                          value="assign-agent"
+                          onClick={e => {
+                            e.stopPropagation();
+                            openAssignAgent(user);
+                          }}
+                        >
+                          Assign Agent
+                        </Menu.Item>
+                        <Menu.Item
+                          value="reset-password"
+                          onClick={e => {
+                            e.stopPropagation();
+                            openResetPassword(user);
+                          }}
+                        >
+                          Reset Password
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </Box>
+            ))}
           </VStack>
         </Box>
 
@@ -244,18 +272,38 @@ const UserManagement = () => {
                 <Menu.Body pb="8">
                   {dialogType === "assign" && dialogUser && (
                     <VStack spacing={4} align="stretch">
-                      <Text>Assign an agent to <b>{dialogUser.full_name}</b></Text>
-                      <Select
-                        value={assignAgent}
-                        onChange={(e) => setAssignAgent(e.target.value)}
-                        placeholder="Select agent"
-                        bg="white"
+                      <Text>
+                        Assign an agent to <b>{dialogUser.full_name}</b>
+                      </Text>
+                      <Select.Root
+                        width="100%"
+                        collection={agentOptions}
+                        value={assignAgent ? [assignAgent] : []}
+                        onValueChange={({ value }) => setAssignAgent(value[0] || "")}
+                        // single select, so no 'multiple' prop
                       >
-                        {mockAgents.map((agent) => (
-                          <option key={agent} value={agent}>{agent}</option>
-                        ))}
-                      </Select>
-                      <Button colorScheme="blue" onClick={handleAssignAgent} isDisabled={!assignAgent}>
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select Agent" />
+                          </Select.Trigger>
+                        </Select.Control>
+                        <Portal>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {agentOptions.items.map((agent) => (
+                                <Select.Item key={agent.value} item={agent}>
+                                  {agent.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
+                      <Button
+                        colorScheme="blue"
+                        onClick={handleAssignAgent}
+                        isDisabled={!assignAgent}
+                      >
                         Assign Agent
                       </Button>
                     </VStack>

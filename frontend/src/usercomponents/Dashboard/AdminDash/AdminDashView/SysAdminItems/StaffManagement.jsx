@@ -17,59 +17,79 @@ import {
   Portal,
   Select,
   Menu,
+  createListCollection,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
-// Mock staff data
+// --- FIX 1: Update data model for multi-project ---
 const initialStaff = [
   {
     id: 1,
     full_name: "Jane Doe",
     email: "jane@example.com",
     last_sign_in_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    role: "Agent",
+    project: ["Project Alpha"],
   },
   {
     id: 2,
     full_name: "Mike Wilson",
     email: "mike@example.com",
     last_sign_in_at: null,
-    role: "Consultant",
+    project: ["Project Gamma", "Project Beta"],
   },
   {
     id: 3,
     full_name: "Alice Brown",
     email: "alice@example.com",
     last_sign_in_at: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    role: "Agent",
+    project: ["Project Beta"],
   },
 ];
 
-const roleOptions = ["Agent", "Consultant"];
+const projectOptions = createListCollection({
+  items: [
+    "Project Alpha",
+    "Project Beta",
+    "Project Gamma",
+    "Project Delta",
+  ].map((project) => ({
+    label: project,
+    value: project,
+  })),
+});
 
 const StaffManagement = () => {
   const [staff, setStaff] = useState(initialStaff);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogStaff, setDialogStaff] = useState(null);
   const [dialogType, setDialogType] = useState(null); // 'assign', 'add', 'remove'
-  const [assignRole, setAssignRole] = useState("");
-  const [newStaff, setNewStaff] = useState({ full_name: "", email: "", role: "Agent" });
+  // --- FIX 1: Update state to handle an array ---
+  const [assignProject, setAssignProject] = useState([]);
+  const [newStaff, setNewStaff] = useState({
+    full_name: "",
+    email: "",
+    // --- FIX 1: Update state to handle an array ---
+    project: ["Project Alpha"],
+  });
 
   const isMobileView = useBreakpointValue({ base: true, md: false });
 
   // Open dialog helpers
-  const openAssignRole = (staffMember) => {
+  const openAssignProject = (staffMember) => {
     setDialogStaff(staffMember);
-    setAssignRole(staffMember.role || "");
+    // --- FIX 1: Ensure project is always an array ---
+    setAssignProject(staffMember.project || []);
     setDialogType("assign");
     setDialogOpen(true);
   };
+
   const openAddStaff = () => {
-    setNewStaff({ full_name: "", email: "", role: "Agent" });
+    setNewStaff({ full_name: "", email: "", project: [] });
     setDialogType("add");
     setDialogStaff(null);
     setDialogOpen(true);
   };
+
   const openRemoveStaff = (staffMember) => {
     setDialogStaff(staffMember);
     setDialogType("remove");
@@ -85,16 +105,18 @@ const StaffManagement = () => {
     }, 300);
   };
 
-  // Assign Role submit
-  const handleAssignRole = () => {
+  // Assign Project submit
+  const handleAssignProject = () => {
     toaster.create({
-      title: "Role Assigned",
-      description: `Assigned ${assignRole} role to ${dialogStaff.full_name}`,
+      title: "Projects Assigned",
+      description: `Assigned ${assignProject.join(", ")} to ${
+        dialogStaff.full_name
+      }`,
       type: "success",
     });
     setStaff((prev) =>
       prev.map((s) =>
-        s.id === dialogStaff.id ? { ...s, role: assignRole } : s
+        s.id === dialogStaff.id ? { ...s, project: assignProject } : s
       )
     );
     handleCloseDialog();
@@ -108,7 +130,7 @@ const StaffManagement = () => {
         full_name: newStaff.full_name,
         email: newStaff.email,
         last_sign_in_at: null,
-        role: newStaff.role,
+        project: newStaff.project,
       },
       ...prev,
     ]);
@@ -204,12 +226,15 @@ const StaffManagement = () => {
                       ? new Date(member.last_sign_in_at).toLocaleString()
                       : "Never"}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">
-                    Role:{" "}
-                    <Badge colorScheme={member.role === "Agent" ? "blue" : "purple"}>
-                      {member.role}
-                    </Badge>
-                  </Text>
+                  <HStack fontSize="xs" color="gray.400" mt={1}>
+                    <Text>Projects:</Text>
+                    {/* --- FIX 1: Map over projects array --- */}
+                    {member.project.map((p) => (
+                      <Badge key={p} colorScheme="green">
+                        {p}
+                      </Badge>
+                    ))}
+                  </HStack>
                 </Box>
                 <Menu.Root>
                   <Menu.Trigger asChild>
@@ -221,24 +246,19 @@ const StaffManagement = () => {
                     <Menu.Positioner>
                       <Menu.Content>
                         <Menu.Item
-                          value="assign-role"
-                          onClick={e => {
+                          value="assign-project"
+                          onClick={(e) => {
                             e.stopPropagation();
-                            setDialogStaff(member);
-                            setAssignRole(member.role || "");
-                            setDialogType("assign");
-                            setDialogOpen(true);
+                            openAssignProject(member);
                           }}
                         >
-                          Assign Role
+                          Assign Project
                         </Menu.Item>
                         <Menu.Item
                           value="remove-staff"
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            setDialogStaff(member);
-                            setDialogType("remove");
-                            setDialogOpen(true);
+                            openRemoveStaff(member);
                           }}
                         >
                           Remove Admin
@@ -272,7 +292,7 @@ const StaffManagement = () => {
               <Dialog.Content maxW="lg">
                 <Dialog.Header>
                   <Dialog.Title>
-                    {dialogType === "assign" && `Assign Role`}
+                    {dialogType === "assign" && `Assign Project`}
                     {dialogType === "add" && `Add Admin`}
                     {dialogType === "remove" && `Remove Admin`}
                   </Dialog.Title>
@@ -290,26 +310,46 @@ const StaffManagement = () => {
                   {dialogType === "assign" && dialogStaff && (
                     <VStack spacing={4} align="stretch">
                       <Text>
-                        Assign a role to <b>{dialogStaff.full_name}</b>
+                        Assign a project to <b>{dialogStaff.full_name}</b>
                       </Text>
-                      <Select
-                        value={assignRole}
-                        onChange={(e) => setAssignRole(e.target.value)}
-                        placeholder="Select role"
-                        bg="white"
+                      <Select.Root
+                        width="100%"
+                        collection={projectOptions}
+                        multiple
+                        value={assignProject}
+                        onValueChange={({ value }) => setAssignProject(value)}
                       >
-                        {roleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </Select>
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select up to 3 Projects" />
+                          </Select.Trigger>
+                        </Select.Control>
+                        {/* Use a Portal with a high zIndex to ensure dropdown appears above dialog */}
+                        <Portal>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {projectOptions.items.map((project) => (
+                                <Select.Item
+                                  key={project.value}
+                                  item={project}
+                                  disabled={
+                                    assignProject.length >= 3 &&
+                                    !assignProject.includes(project.value)
+                                  }
+                                >
+                                  {project.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
                       <Button
                         colorScheme="blue"
-                        onClick={handleAssignRole}
-                        isDisabled={!assignRole}
+                        onClick={handleAssignProject}
+                        isDisabled={assignProject.length === 0}
                       >
-                        Assign Role
+                        Assign Projects
                       </Button>
                     </VStack>
                   )}
@@ -337,29 +377,47 @@ const StaffManagement = () => {
                         }
                         bg="white"
                       />
-                      <Select
-                        value={newStaff.role}
-                        onChange={(e) =>
-                          setNewStaff((u) => ({
-                            ...u,
-                            role: e.target.value,
-                          }))
+                      <Select.Root
+                        width="100%"
+                        collection={projectOptions}
+                        multiple
+                        value={newStaff.project}
+                        onValueChange={({ value }) =>
+                          setNewStaff((u) => ({ ...u, project: value }))
                         }
-                        bg="white"
                       >
-                        {roleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </Select>
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select up to 3 Projects" />
+                          </Select.Trigger>
+                        </Select.Control>
+                        {/* Use a Portal with a high zIndex to ensure dropdown appears above dialog */}
+                        <Portal>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {projectOptions.items.map((project) => (
+                                <Select.Item
+                                  key={project.value}
+                                  item={project}
+                                  disabled={
+                                    newStaff.project.length >= 3 &&
+                                    !newStaff.project.includes(project.value)
+                                  }
+                                >
+                                  {project.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
                       <Button
                         colorScheme="blue"
                         onClick={handleAddStaff}
                         isDisabled={
                           !newStaff.full_name ||
                           !newStaff.email ||
-                          !newStaff.role
+                          newStaff.project.length === 0
                         }
                       >
                         Add Admin
