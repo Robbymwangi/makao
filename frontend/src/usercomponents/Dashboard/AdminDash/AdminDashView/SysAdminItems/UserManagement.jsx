@@ -12,30 +12,18 @@ import {
   Heading,
   useBreakpointValue,
   CloseButton,
-  // Ensure these are correctly imported based on your Chakra UI setup
-  // For Chakra UI v2 with Ark UI integration, these are the typical imports:
   Portal,
-  Select, // Assuming this imports the Select.Root, Select.Control, etc.
-  Menu, // Assuming this imports Menu.Root, Menu.Trigger, etc.
+  Select,
+  Menu,
 } from "@chakra-ui/react";
-// If you're using `@chakra-ui/react/components` for these, adjust imports accordingly.
-// For example:
-// import { Select } from "@chakra-ui/react/components"; // This is often how it's done for v2+
-
-// If Dialog is not from @chakra-ui/react, adjust this import.
-// It looks like it's behaving like Ark UI's Dialog, which Chakra UI integrates.
-import { Dialog } from "@chakra-ui/react"; // Adjust if your Dialog comes from a different package
-
+import { Dialog } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
-// Assuming createListCollection is still available from @chakra-ui/react or a utility
 import { createListCollection } from "@chakra-ui/react";
-
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [agents, setAgents] = useState([]);
   const [agentOptions, setAgentOptions] = useState(null);
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogUser, setDialogUser] = useState(null);
   const [dialogType, setDialogType] = useState(null);
@@ -57,14 +45,13 @@ const UserManagement = () => {
         id: u.id,
         full_name: u.full_name,
         email: u.email,
-        // Ensure last_sign_in_at is consistently handled as a Date or null
         last_sign_in_at: u.last_sign_in_at ? new Date(u.last_sign_in_at) : null,
         agent: u.agent || "",
       }));
 
       setUsers(formatted);
     } catch (err) {
-      console.error("Error fetching users:", err.message);
+      console.error("Error fetching users:", err);
       toaster.create({ title: "Error", description: err.message, type: "error" });
     }
   };
@@ -79,16 +66,18 @@ const UserManagement = () => {
       }
 
       setAgents(data);
-      // createListCollection is part of the Ark UI integration
       const options = createListCollection({
         items: [
-          { label: "Unassigned", value: "" }, // Ensure 'value' for unassigned is an empty string
-          ...data.map((a) => ({ label: a.name, value: a.id })),
+          { label: "Unassigned", value: "" },
+          ...data.map((a) => ({
+            label: a.name || "Unnamed Agent",
+            value: a.id,
+          })),
         ],
       });
       setAgentOptions(options);
     } catch (err) {
-      console.error("Error fetching agents:", err.message);
+      console.error("Error fetching agents:", err);
       toaster.create({ title: "Error", description: err.message, type: "error" });
     }
   };
@@ -96,18 +85,16 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
     fetchAgents();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const openDialog = (type, user = null) => {
     setDialogType(type);
     setDialogUser(user);
-    // Set assignAgent only if opening 'assign' dialog and a user is provided
     if (type === "assign" && user) {
       setAssignAgent(user.agent || "");
     } else {
-      setAssignAgent(""); // Clear for other dialog types
+      setAssignAgent("");
     }
-    // Clear new user data when opening other dialog types
     if (type !== "create") {
       setNewUser({ full_name: "", email: "", password: "" });
     }
@@ -116,17 +103,16 @@ const UserManagement = () => {
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    // Give time for exit animation before clearing content
     setTimeout(() => {
       setDialogType(null);
       setDialogUser(null);
       setAssignAgent("");
-      setNewUser({ full_name: "", email: "", password: "" }); // Clear new user form
+      setNewUser({ full_name: "", email: "", password: "" });
     }, 300);
   };
 
   const handleAssignAgent = async () => {
-    if (!dialogUser) return; // Should not happen if dialogUser is set correctly
+    if (!dialogUser) return;
 
     try {
       const res = await fetch("http://localhost:3000/users/assign-agent", {
@@ -134,7 +120,7 @@ const UserManagement = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: dialogUser.id,
-          agent_id: assignAgent || null, // Send null if unassigned
+          agent_id: assignAgent || null,
         }),
       });
 
@@ -152,39 +138,36 @@ const UserManagement = () => {
         type: "success",
       });
 
-      await fetchUsers(); // Re-fetch users to update UI with new agent assignment
+      await fetchUsers();
       handleCloseDialog();
     } catch (err) {
+      console.error("Error assigning agent:", err);
       toaster.create({ title: "Error", description: err.message, type: "error" });
     }
   };
 
   const handleCreateUser = async () => {
     if (!newUser.full_name || !newUser.email || !newUser.password) {
-      toaster.create({ title: "Validation Error", description: "All fields are required.", type: "warning" });
+      toaster.create({
+        title: "Validation Error",
+        description: "All fields are required.",
+        type: "warning",
+      });
       return;
     }
 
     try {
-      // API call to create a new user
-       const res = await fetch("http://localhost:3000/users", {
-         method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(newUser),
-       });
-       const result = await res.json();
-       if (!res.ok) throw new Error(result.error || "Failed to create user");
+      const res = await fetch("http://localhost:3000/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to create user");
+      }
 
-      setUsers((prev) => [
-        {
-          id: `new-${Date.now()}`, // Unique ID for new user
-          full_name: newUser.full_name,
-          email: newUser.email,
-          last_sign_in_at: null,
-          agent: "",
-        },
-        ...prev,
-      ]);
+      await fetchUsers();
 
       toaster.create({
         title: "User Created",
@@ -193,6 +176,7 @@ const UserManagement = () => {
       });
       handleCloseDialog();
     } catch (err) {
+      console.error("Error creating user:", err);
       toaster.create({ title: "Error", description: err.message, type: "error" });
     }
   };
@@ -201,14 +185,6 @@ const UserManagement = () => {
     if (!dialogUser) return;
 
     try {
-      // In a real app, this would be an API call to send a reset link
-      // Example:
-      // const res = await fetch(`http://localhost:3000/users/${dialogUser.id}/reset-password`, {
-      //   method: "POST",
-      // });
-      // const result = await res.json();
-      // if (!res.ok) throw new Error(result.error || "Failed to send reset link");
-
       toaster.create({
         title: "Password Reset",
         description: `Password reset link sent to ${dialogUser.email}`,
@@ -216,6 +192,7 @@ const UserManagement = () => {
       });
       handleCloseDialog();
     } catch (err) {
+      console.error("Error resetting password:", err);
       toaster.create({ title: "Error", description: err.message, type: "error" });
     }
   };
@@ -256,11 +233,7 @@ const UserManagement = () => {
                       Last Sign In: {user.last_sign_in_at ? user.last_sign_in_at.toLocaleString() : "Never"}
                     </Text>
                     <Text fontSize="xs" color="gray.400">
-                      Agent: {
-                        user.agent
-                          ? agents.find((a) => a.id === user.agent)?.name || user.agent
-                          : <span style={{ color: "#888" }}>Unassigned</span>
-                      }
+                      Agent: {user.agent ? agents.find((a) => a.id === user.agent)?.name || user.agent : <span style={{ color: "#888" }}>Unassigned</span>}
                     </Text>
                   </Box>
                   <Menu.Root>
@@ -288,7 +261,7 @@ const UserManagement = () => {
 
         {/* Dialog */}
         <Dialog.Root
-          key={dialogType || "none"} // Key helps re-mount dialog for cleaner state resets
+          key={dialogType || "none"}
           open={dialogOpen}
           onOpenChange={({ open }) => {
             setDialogOpen(open);
@@ -296,9 +269,9 @@ const UserManagement = () => {
           }}
         >
           <Portal>
-            <Dialog.Backdrop />
-            <Dialog.Positioner>
-              <Dialog.Content maxW="lg" p={6}> 
+            <Dialog.Backdrop zIndex={1400} />
+            <Dialog.Positioner zIndex={1500}>
+              <Dialog.Content maxW="lg" p={6} zIndex={1600}>
                 <Dialog.Header>
                   <Dialog.Title>
                     {dialogType === "assign" && "Assign / Change Agent"}
@@ -313,12 +286,6 @@ const UserManagement = () => {
                   {dialogType === "assign" && dialogUser && agentOptions && (
                     <VStack spacing={4} align="stretch">
                       <Text>Assign an agent to <b>{dialogUser.full_name}</b></Text>
-                      {/*
-                         *** KEY CHANGE FOR Z-INDEX ***
-                         Increased zIndex significantly.
-                         Common Chakra UI dialogs often have z-index in the 1200-1600 range.
-                         A value like 2000 or 3000 should ensure the select dropdown is on top.
-                      */}
                       <Select.Root
                         width="100%"
                         collection={agentOptions}
@@ -327,13 +294,12 @@ const UserManagement = () => {
                       >
                         <Select.Control>
                           <Select.Trigger>
-                            <Select.ValueText placeholder="Select Agent" />
+                            <Select.ValueText placeholder="Select an Agent" />
                           </Select.Trigger>
                         </Select.Control>
                         <Portal>
-                          {/* Applying zIndex directly to Select.Positioner */}
-                          <Select.Positioner zIndex={5000}>
-                            <Select.Content>
+                          <Select.Positioner zIndex={10000}>
+                            <Select.Content zIndex={10000}>
                               {agentOptions.items.map((agent) => (
                                 <Select.Item key={agent.value} item={agent}>
                                   {agent.label}
@@ -343,7 +309,12 @@ const UserManagement = () => {
                           </Select.Positioner>
                         </Portal>
                       </Select.Root>
-                      <Button colorScheme="blue" onClick={handleAssignAgent} mt={4}>
+                      <Button
+                        colorScheme="blue"
+                        onClick={handleAssignAgent}
+                        isDisabled={!agentOptions || !assignAgent}
+                        mt={4}
+                      >
                         Save Assignment
                       </Button>
                     </VStack>
@@ -354,18 +325,21 @@ const UserManagement = () => {
                         placeholder="Full Name"
                         value={newUser.full_name}
                         onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                        bg="white"
                       />
                       <Input
                         placeholder="Email"
-                        type="email" // Use type="email" for better validation
+                        type="email"
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        bg="white"
                       />
                       <Input
                         placeholder="Password"
                         type="password"
                         value={newUser.password}
                         onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        bg="white"
                       />
                       <Button
                         colorScheme="blue"
