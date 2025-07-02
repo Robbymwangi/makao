@@ -82,6 +82,11 @@ import userRoutes from './src/routes/users.js';
 // Register user routes
 app.use('/users', userRoutes);
 
+// Import agent routes
+import agentRoutes from './src/routes/agents.js';
+
+// Register agent routes
+app.use('/agents', agentRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
