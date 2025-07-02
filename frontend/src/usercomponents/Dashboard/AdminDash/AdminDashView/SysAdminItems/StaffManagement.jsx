@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -17,148 +17,151 @@ import {
   Portal,
   Select,
   Menu,
-  createListCollection,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
-
-// --- FIX 1: Update data model for multi-project ---
-const initialStaff = [
-  {
-    id: 1,
-    full_name: "Jane Doe",
-    email: "jane@example.com",
-    last_sign_in_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    project: ["Project Alpha"],
-  },
-  {
-    id: 2,
-    full_name: "Mike Wilson",
-    email: "mike@example.com",
-    last_sign_in_at: null,
-    project: ["Project Gamma", "Project Beta"],
-  },
-  {
-    id: 3,
-    full_name: "Alice Brown",
-    email: "alice@example.com",
-    last_sign_in_at: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    project: ["Project Beta"],
-  },
-];
-
-const projectOptions = createListCollection({
-  items: [
-    "Project Alpha",
-    "Project Beta",
-    "Project Gamma",
-    "Project Delta",
-  ].map((project) => ({
-    label: project,
-    value: project,
-  })),
-});
+import { createListCollection } from "@chakra-ui/react";
 
 const StaffManagement = () => {
-  const [staff, setStaff] = useState(initialStaff);
+  const [admins, setAdmins] = useState([]);
+  const [agents, setAgents] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [projectOptions, setProjectOptions] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogStaff, setDialogStaff] = useState(null);
-  const [dialogType, setDialogType] = useState(null); // 'assign', 'add', 'remove'
-  // --- FIX 1: Update state to handle an array ---
-  const [assignProject, setAssignProject] = useState([]);
-  const [newStaff, setNewStaff] = useState({
-    full_name: "",
-    email: "",
-    // --- FIX 1: Update state to handle an array ---
-    project: ["Project Alpha"],
-  });
+  const [dialogType, setDialogType] = useState(null); // 'assign', 'remove'
+  const [dialogAgent, setDialogAgent] = useState(null);
+  const [dialogAdmin, setDialogAdmin] = useState(null);
+  const [assignProjects, setAssignProjects] = useState([]);
 
-  const isMobileView = useBreakpointValue({ base: true, md: false });
+  useEffect(() => {
+    fetchAdmins();
+    fetchAgents();
+    fetchProjects();
+  }, []);
 
-  // Open dialog helpers
-  const openAssignProject = (staffMember) => {
-    setDialogStaff(staffMember);
-    // --- FIX 1: Ensure project is always an array ---
-    setAssignProject(staffMember.project || []);
+  const fetchAdmins = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/admins");
+      const data = await res.json();
+      setAdmins(data);
+    } catch (err) {
+      toaster.create({
+        title: "Error",
+        description: "Failed to fetch admins",
+        type: "error",
+      });
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/agents");
+      const data = await res.json();
+      setAgents(data);
+    } catch (err) {
+      toaster.create({
+        title: "Error",
+        description: "Failed to fetch agents",
+        type: "error",
+      });
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/projects");
+      const data = await res.json();
+      setProjects(data);
+      setProjectOptions(
+        createListCollection({
+          items: data.map((p) => ({
+            label: p.name,
+            value: p.id,
+          })),
+        })
+      );
+    } catch (err) {
+      toaster.create({
+        title: "Error",
+        description: "Failed to fetch projects",
+        type: "error",
+      });
+    }
+  };
+
+  // Dialog helpers
+  const openAssignProjects = (agent) => {
+    setDialogAgent(agent);
+    setAssignProjects(agent.projects || []);
     setDialogType("assign");
     setDialogOpen(true);
   };
 
-  const openAddStaff = () => {
-    setNewStaff({ full_name: "", email: "", project: [] });
-    setDialogType("add");
-    setDialogStaff(null);
-    setDialogOpen(true);
-  };
-
-  const openRemoveStaff = (staffMember) => {
-    setDialogStaff(staffMember);
+  const openRemoveAdmin = (admin) => {
+    setDialogAdmin(admin);
     setDialogType("remove");
     setDialogOpen(true);
   };
 
-  // Dialog close
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setTimeout(() => {
       setDialogType(null);
-      setDialogStaff(null);
+      setDialogAgent(null);
+      setDialogAdmin(null);
+      setAssignProjects([]);
     }, 300);
   };
 
-  // Assign Project submit
-  const handleAssignProject = () => {
-    toaster.create({
-      title: "Projects Assigned",
-      description: `Assigned ${assignProject.join(", ")} to ${
-        dialogStaff.full_name
-      }`,
-      type: "success",
-    });
-    setStaff((prev) =>
-      prev.map((s) =>
-        s.id === dialogStaff.id ? { ...s, project: assignProject } : s
-      )
-    );
-    handleCloseDialog();
+  // Assign projects to agent
+  const handleAssignProjects = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/agents/assign-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: dialogAgent.id,
+          project_ids: assignProjects,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to assign projects");
+      toaster.create({
+        title: "Projects Assigned",
+        description: `Assigned projects to ${dialogAgent.full_name}`,
+        type: "success",
+      });
+      fetchAgents();
+      handleCloseDialog();
+    } catch (err) {
+      toaster.create({ title: "Error", description: err.message, type: "error" });
+    }
   };
 
-  // Add Staff submit
-  const handleAddStaff = () => {
-    setStaff((prev) => [
-      {
-        id: prev.length + 1,
-        full_name: newStaff.full_name,
-        email: newStaff.email,
-        last_sign_in_at: null,
-        project: newStaff.project,
-      },
-      ...prev,
-    ]);
-    toaster.create({
-      title: "Staff Added",
-      description: `${newStaff.full_name} has been added.`,
-      type: "success",
-    });
-    handleCloseDialog();
-  };
-
-  // Remove Staff submit
-  const handleRemoveStaff = () => {
-    toaster.create({
-      title: "Staff Removed",
-      description: `${dialogStaff.full_name} has been removed.`,
-      type: "info",
-    });
-    setStaff((prev) => prev.filter((s) => s.id !== dialogStaff.id));
-    handleCloseDialog();
+  // Remove admin
+  const handleRemoveAdmin = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/admins/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_id: dialogAdmin.id }),
+      });
+      if (!res.ok) throw new Error("Failed to remove admin");
+      toaster.create({
+        title: "Admin Removed",
+        description: `${dialogAdmin.full_name} has been removed.`,
+        type: "info",
+      });
+      fetchAdmins();
+      handleCloseDialog();
+    } catch (err) {
+      toaster.create({ title: "Error", description: err.message, type: "error" });
+    }
   };
 
   return (
     <Flex direction="column" h="100vh" maxH="100vh" overflow="hidden">
       <Toaster />
       <Heading
-        size="4xl"
-        fontWeight="bold"
+        size="2xl"
         mb={6}
         fontFamily="'Playfair Display', serif"
         color="gray.800"
@@ -166,109 +169,85 @@ const StaffManagement = () => {
       >
         Staff Management
       </Heading>
-      <Flex flex="1" minH={0} gap={4} bg="white">
-        {/* Staff List (Left Side) */}
-        <Box
-          flex={{ base: "1", md: "1" }}
-          minW={{ base: "100%", md: "320px" }}
-          borderWidth="1px"
-          borderRadius="lg"
-          bg="white"
-          shadow="sm"
-          overflowY="auto"
-          display="flex"
-          flexDirection="column"
-        >
-          <HStack
-            p={4}
-            borderBottomWidth="1px"
-            borderColor="gray.200"
-            justify="space-between"
-          >
-            <Text fontSize="xl" fontWeight="bold">
-              Staff Directory
-            </Text>
-            <Button colorScheme="blue" size="sm" onClick={openAddStaff}>
-              Add Admin
-            </Button>
+      <Flex flex="1" gap={4} bg="white" direction={{ base: "column", md: "row" }} overflow="hidden">
+        {/* Admins List */}
+        <Box flex="1" minW={{ base: "100%", md: "320px" }} borderWidth="1px" borderRadius="lg" bg="white" shadow="sm" overflowY="auto">
+          <HStack p={4} borderBottomWidth="1px" justify="space-between">
+            <Text fontSize="xl" fontWeight="bold">Admins</Text>
           </HStack>
-          <VStack
-            spacing={0}
-            align="stretch"
-            flexGrow={1}
-            overflowY="auto"
-            divideY="1px"
-            divideColor="gray.100"
-          >
-            {staff.length === 0 && (
-              <Text color="gray.400" p={8} textAlign="center">
-                No staff found.
-              </Text>
-            )}
-            {staff.map((member) => (
-              <Box
-                key={member.id}
-                p={4}
-                cursor="pointer"
-                _hover={{ bg: "gray.100" }}
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Text fontWeight="bold">{member.full_name}</Text>
-                  <Text fontSize="sm" color="gray.500">
-                    {member.email}
-                  </Text>
-                  <Text fontSize="xs" color="gray.400">
-                    Last Sign In:{" "}
-                    {member.last_sign_in_at
-                      ? new Date(member.last_sign_in_at).toLocaleString()
-                      : "Never"}
-                  </Text>
-                  <HStack fontSize="xs" color="gray.400" mt={1}>
-                    <Text>Projects:</Text>
-                    {/* --- FIX 1: Map over projects array --- */}
-                    {member.project.map((p) => (
-                      <Badge key={p} colorScheme="green">
-                        {p}
-                      </Badge>
-                    ))}
-                  </HStack>
+          <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
+            {admins.length === 0 ? (
+              <Text color="gray.400" p={8} textAlign="center">No admins found.</Text>
+            ) : (
+              admins.map((admin) => (
+                <Box key={admin.id} p={4} _hover={{ bg: "gray.100" }} display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Text fontWeight="bold">{admin.full_name}</Text>
+                    <Text fontSize="sm" color="gray.500">{admin.email}</Text>
+                  </Box>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" size="xs">Actions</Button>
+                    </Menu.Trigger>
+                    <Portal>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item onClick={(e) => { e.stopPropagation(); openRemoveAdmin(admin); }}>
+                            Remove Admin
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Portal>
+                  </Menu.Root>
                 </Box>
-                <Menu.Root>
-                  <Menu.Trigger asChild>
-                    <Button variant="outline" size="xs">
-                      Actions
-                    </Button>
-                  </Menu.Trigger>
-                  <Portal>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Menu.Item
-                          value="assign-project"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openAssignProject(member);
-                          }}
-                        >
-                          Assign Project
-                        </Menu.Item>
-                        <Menu.Item
-                          value="remove-staff"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openRemoveStaff(member);
-                          }}
-                        >
-                          Remove Admin
-                        </Menu.Item>
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Portal>
-                </Menu.Root>
-              </Box>
-            ))}
+              ))
+            )}
+          </VStack>
+        </Box>
+
+        {/* Agents List */}
+        <Box flex="1" minW={{ base: "100%", md: "320px" }} borderWidth="1px" borderRadius="lg" bg="white" shadow="sm" overflowY="auto">
+          <HStack p={4} borderBottomWidth="1px" justify="space-between">
+            <Text fontSize="xl" fontWeight="bold">Agents</Text>
+          </HStack>
+          <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
+            {agents.length === 0 ? (
+              <Text color="gray.400" p={8} textAlign="center">No agents found.</Text>
+            ) : (
+              agents.map((agent) => (
+                <Box key={agent.id} p={4} _hover={{ bg: "gray.100" }} display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Text fontWeight="bold">{agent.name}</Text> {/* <-- Use agent.name here */}
+                    <Text fontSize="sm" color="gray.500">{agent.email}</Text>
+                    <HStack fontSize="xs" color="gray.400" mt={1}>
+                      <Text>Projects:</Text>
+                      {(agent.projects || []).map((pid) => {
+                        const project = projects.find((p) => p.id === pid);
+                        return (
+                          <Badge key={pid} colorScheme="green">
+                            {project ? project.name : pid}
+                          </Badge>
+                        );
+                      })}
+                    </HStack>
+                  </Box>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" size="xs">Actions</Button>
+                    </Menu.Trigger>
+                    <Portal>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item onClick={(e) => { e.stopPropagation(); openAssignProjects(agent); }}>
+                            Assign/Remove Projects
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Portal>
+                  </Menu.Root>
+                </Box>
+              ))
+            )}
           </VStack>
         </Box>
 
@@ -278,12 +257,7 @@ const StaffManagement = () => {
           open={dialogOpen}
           onOpenChange={({ open }) => {
             setDialogOpen(open);
-            if (!open) {
-              setTimeout(() => {
-                setDialogType(null);
-                setDialogStaff(null);
-              }, 300);
-            }
+            if (!open) handleCloseDialog();
           }}
         >
           <Portal>
@@ -292,39 +266,29 @@ const StaffManagement = () => {
               <Dialog.Content maxW="lg">
                 <Dialog.Header>
                   <Dialog.Title>
-                    {dialogType === "assign" && `Assign Project`}
-                    {dialogType === "add" && `Add Admin`}
-                    {dialogType === "remove" && `Remove Admin`}
+                    {dialogType === "assign" && "Assign/Remove Projects"}
+                    {dialogType === "remove" && "Remove Admin"}
                   </Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    <CloseButton
-                      size="sm"
-                      position="absolute"
-                      top="2"
-                      right="2"
-                      onClick={handleCloseDialog}
-                    />
+                    <CloseButton size="sm" position="absolute" top="2" right="2" onClick={handleCloseDialog} />
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body pb="8">
-                  {dialogType === "assign" && dialogStaff && (
+                  {dialogType === "assign" && dialogAgent && (
                     <VStack spacing={4} align="stretch">
-                      <Text>
-                        Assign a project to <b>{dialogStaff.full_name}</b>
-                      </Text>
+                      <Text>Assign up to 3 projects to <b>{dialogAgent.full_name}</b></Text>
                       <Select.Root
                         width="100%"
                         collection={projectOptions}
                         multiple
-                        value={assignProject}
-                        onValueChange={({ value }) => setAssignProject(value)}
+                        value={assignProjects}
+                        onValueChange={({ value }) => setAssignProjects(value)}
                       >
                         <Select.Control>
                           <Select.Trigger>
                             <Select.ValueText placeholder="Select up to 3 Projects" />
                           </Select.Trigger>
                         </Select.Control>
-                        {/* Use a Portal with a high zIndex to ensure dropdown appears above dialog */}
                         <Portal>
                           <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
                             <Select.Content>
@@ -333,8 +297,8 @@ const StaffManagement = () => {
                                   key={project.value}
                                   item={project}
                                   disabled={
-                                    assignProject.length >= 3 &&
-                                    !assignProject.includes(project.value)
+                                    assignProjects.length >= 3 &&
+                                    !assignProjects.includes(project.value)
                                   }
                                 >
                                   {project.label}
@@ -346,90 +310,17 @@ const StaffManagement = () => {
                       </Select.Root>
                       <Button
                         colorScheme="blue"
-                        onClick={handleAssignProject}
-                        isDisabled={assignProject.length === 0}
+                        onClick={handleAssignProjects}
+                        isDisabled={assignProjects.length === 0}
                       >
-                        Assign Projects
+                        Save Projects
                       </Button>
                     </VStack>
                   )}
-                  {dialogType === "add" && (
+                  {dialogType === "remove" && dialogAdmin && (
                     <VStack spacing={4} align="stretch">
-                      <Input
-                        placeholder="Full Name"
-                        value={newStaff.full_name}
-                        onChange={(e) =>
-                          setNewStaff((u) => ({
-                            ...u,
-                            full_name: e.target.value,
-                          }))
-                        }
-                        bg="white"
-                      />
-                      <Input
-                        placeholder="Email"
-                        value={newStaff.email}
-                        onChange={(e) =>
-                          setNewStaff((u) => ({
-                            ...u,
-                            email: e.target.value,
-                          }))
-                        }
-                        bg="white"
-                      />
-                      <Select.Root
-                        width="100%"
-                        collection={projectOptions}
-                        multiple
-                        value={newStaff.project}
-                        onValueChange={({ value }) =>
-                          setNewStaff((u) => ({ ...u, project: value }))
-                        }
-                      >
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Select up to 3 Projects" />
-                          </Select.Trigger>
-                        </Select.Control>
-                        {/* Use a Portal with a high zIndex to ensure dropdown appears above dialog */}
-                        <Portal>
-                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
-                            <Select.Content>
-                              {projectOptions.items.map((project) => (
-                                <Select.Item
-                                  key={project.value}
-                                  item={project}
-                                  disabled={
-                                    newStaff.project.length >= 3 &&
-                                    !newStaff.project.includes(project.value)
-                                  }
-                                >
-                                  {project.label}
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Portal>
-                      </Select.Root>
-                      <Button
-                        colorScheme="blue"
-                        onClick={handleAddStaff}
-                        isDisabled={
-                          !newStaff.full_name ||
-                          !newStaff.email ||
-                          newStaff.project.length === 0
-                        }
-                      >
-                        Add Admin
-                      </Button>
-                    </VStack>
-                  )}
-                  {dialogType === "remove" && dialogStaff && (
-                    <VStack spacing={4} align="stretch">
-                      <Text>
-                        Remove <b>{dialogStaff.full_name}</b> from staff?
-                      </Text>
-                      <Button colorScheme="red" onClick={handleRemoveStaff}>
+                      <Text>Remove <b>{dialogAdmin.full_name}</b> from admins?</Text>
+                      <Button colorScheme="red" onClick={handleRemoveAdmin}>
                         Remove
                       </Button>
                     </VStack>
