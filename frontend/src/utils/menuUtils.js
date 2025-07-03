@@ -33,6 +33,7 @@ export const getMenuByRole = (role) => {
       { label: "Staff Management", route: "/admin-dashboard/staff", icon: UserCog },
       { label: "Support Tools", route: "/admin-dashboard/support", icon: LifeBuoy },
       { label: "Messages", route: "/admin-dashboard/sysadmin-messages", icon: MessageCircle },
+      { label: "Project Approvals", route: "/admin-dashboard/project-approvals", icon: ClipboardList },
     ],
     consultantAdmin: [
       { label: "Dashboard Overview", route: "/admin-dashboard", icon: Home },

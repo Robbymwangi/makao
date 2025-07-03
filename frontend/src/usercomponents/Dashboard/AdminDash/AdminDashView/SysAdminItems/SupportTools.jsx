@@ -17,7 +17,7 @@ import {
   Select,
   Menu,
   Spinner,
-  createListCollection, // <-- Import createListCollection
+  createListCollection,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
@@ -127,6 +127,16 @@ const categoryColorPalette = {
 
 const categories = ["All", "System", "Agent", "Property", "Other"];
 
+const admins = [
+  { label: "Robbi Darwis", value: "Robbi Darwis" },
+  { label: "Sarah Smith", value: "Sarah Smith" },
+  { label: "Unassigned", value: "Unassigned" },
+];
+
+const adminOptions = createListCollection({
+  items: admins,
+});
+
 const SupportTools = () => {
   const currentAdmin = "Robbi Darwis";
   const [tickets, setTickets] = useState(mockTickets);
@@ -143,13 +153,20 @@ const SupportTools = () => {
   });
 
   // Create a collection for the category select dropdown, like in UserManagement
-  const categoryOptions = useMemo(() => createListCollection({
-    items: categories
-        .filter(c => c !== "All")
-        .map(cat => ({ label: cat, value: cat }))
-  }), []);
+  const categoryOptions = useMemo(
+    () =>
+      createListCollection({
+        items: categories
+          .filter((c) => c !== "All")
+          .map((cat) => ({ label: cat, value: cat })),
+      }),
+    []
+  );
 
+  // Show all tickets in global overview
+  const globalTickets = tickets;
 
+  // "My Tickets" are those assigned to or created by the current admin
   const myTickets = useMemo(
     () =>
       tickets.filter(
@@ -158,10 +175,36 @@ const SupportTools = () => {
     [tickets]
   );
 
-  const globalTickets = useMemo(() => {
-    if (filterCategory === "All") return tickets;
-    return tickets.filter((t) => t.category === filterCategory);
-  }, [tickets, filterCategory]);
+  // Assign a ticket to the current admin
+  const handleAssignToMe = (ticketId) => {
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId ? { ...t, assignedTo: currentAdmin } : t
+      )
+    );
+    toaster.create({
+      title: "Ticket Assigned",
+      description: `Ticket #${ticketId} assigned to you.`,
+      type: "success",
+    });
+  };
+
+  // Move ticket to another admin
+  const handleReassignTicket = (ticketId, newAdmin) => {
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId ? { ...t, assignedTo: newAdmin } : t
+      )
+    );
+    toaster.create({
+      title: "Ticket Reassigned",
+      description: `Ticket #${ticketId} assigned to ${newAdmin}.`,
+      type: "success",
+    });
+    setDialogTicket((t) =>
+      t && t.id === ticketId ? { ...t, assignedTo: newAdmin } : t
+    );
+  };
 
   const handleCloseTicket = (id) => {
     setTickets((prev) =>
@@ -180,11 +223,16 @@ const SupportTools = () => {
     setDialogTicket(ticket);
     setDialogOpen(true);
   };
-  
+
   function handleCloseCreateDialog() {
     setCreateDialogOpen(false);
     setTimeout(() => {
-        setNewTicket({ subject: "", description: "", category: "System", assignedTo: "" });
+      setNewTicket({
+        subject: "",
+        description: "",
+        category: "System",
+        assignedTo: "",
+      });
     }, 300);
   }
 
@@ -197,7 +245,7 @@ const SupportTools = () => {
       });
       return;
     }
-    
+
     setCreating(true);
     setTimeout(() => {
       setTickets((prev) => [
@@ -252,15 +300,32 @@ const SupportTools = () => {
           display="flex"
           flexDirection="column"
         >
-          <HStack p={4} borderBottomWidth="1px" borderColor="gray.200" justify="space-between">
+          <HStack
+            p={4}
+            borderBottomWidth="1px"
+            borderColor="gray.200"
+            justify="space-between"
+          >
             <Text fontSize="xl" fontWeight="bold">
               My Tickets
             </Text>
-            <Button size="sm" variant="outline" colorScheme="blue" onClick={() => setCreateDialogOpen(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              colorScheme="blue"
+              onClick={() => setCreateDialogOpen(true)}
+            >
               Open Ticket
             </Button>
           </HStack>
-          <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
+          <VStack
+            spacing={0}
+            align="stretch"
+            flexGrow={1}
+            overflowY="auto"
+            divideY="1px"
+            divideColor="gray.100"
+          >
             {myTickets.map((ticket) => (
               <Box
                 key={ticket.id}
@@ -271,11 +336,26 @@ const SupportTools = () => {
               >
                 <HStack justify="space-between" align="center">
                   <Box>
-                    <Text fontWeight="bold" noOfLines={1}>{ticket.subject}</Text>
-                    <Badge colorScheme={statusColorPalette[ticket.status] || "gray"} mt={2}>{ticket.status}</Badge>
+                    <Text fontWeight="bold" noOfLines={1}>
+                      {ticket.subject}
+                    </Text>
+                    <Badge
+                      colorScheme={statusColorPalette[ticket.status] || "gray"}
+                      mt={2}
+                    >
+                      {ticket.status}
+                    </Badge>
                   </Box>
                   {ticket.status !== "Closed" && (
-                    <Button size="xs" colorScheme="red" variant="outline" onClick={e => { e.stopPropagation(); handleCloseTicket(ticket.id); }}>
+                    <Button
+                      size="xs"
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCloseTicket(ticket.id);
+                      }}
+                    >
                       Close
                     </Button>
                   )}
@@ -296,7 +376,12 @@ const SupportTools = () => {
           flexDirection="column"
           overflowY="auto"
         >
-          <HStack p={4} borderBottomWidth="1px" borderColor="gray.200" justify="space-between">
+          <HStack
+            p={4}
+            borderBottomWidth="1px"
+            borderColor="gray.200"
+            justify="space-between"
+          >
             <Text fontSize="xl" fontWeight="bold">
               Global Ticket Overview
             </Text>
@@ -319,7 +404,14 @@ const SupportTools = () => {
               </Portal>
             </Menu.Root>
           </HStack>
-          <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
+          <VStack
+            spacing={0}
+            align="stretch"
+            flexGrow={1}
+            overflowY="auto"
+            divideY="1px"
+            divideColor="gray.100"
+          >
             {globalTickets.map((ticket) => (
               <Box
                 key={ticket.id}
@@ -330,16 +422,42 @@ const SupportTools = () => {
               >
                 <HStack justify="space-between" align="center">
                   <Box>
-                    <Text fontWeight="bold" noOfLines={1}>{ticket.subject}</Text>
+                    <Text fontWeight="bold" noOfLines={1}>
+                      {ticket.subject}
+                    </Text>
                     <HStack spacing={2} mt={2}>
-                      <Badge colorScheme={statusColorPalette[ticket.status] || "gray"}>{ticket.status}</Badge>
-                      <Badge colorScheme={categoryColorPalette[ticket.category] || "gray"}>{ticket.category}</Badge>
+                      <Badge
+                        colorScheme={statusColorPalette[ticket.status] || "gray"}
+                      >
+                        {ticket.status}
+                      </Badge>
+                      <Badge
+                        colorScheme={categoryColorPalette[ticket.category] || "gray"}
+                      >
+                        {ticket.category}
+                      </Badge>
                     </HStack>
                   </Box>
-                  <Text fontSize="xs" color="gray.500">
-                    {new Date(ticket.lastUpdate).toLocaleString()}
-                  </Text>
+                  <Box>
+                    {ticket.assignedTo !== currentAdmin &&
+                      ticket.status !== "Closed" && (
+                        <Button
+                          size="xs"
+                          colorScheme="blue"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAssignToMe(ticket.id);
+                          }}
+                        >
+                          Assign to Me
+                        </Button>
+                      )}
+                  </Box>
                 </HStack>
+                <Text fontSize="xs" color="gray.500">
+                  {new Date(ticket.lastUpdate).toLocaleString()}
+                </Text>
               </Box>
             ))}
           </VStack>
@@ -350,9 +468,9 @@ const SupportTools = () => {
           open={createDialogOpen}
           onOpenChange={({ open }) => {
             if (!open) {
-                handleCloseCreateDialog();
+              handleCloseCreateDialog();
             } else {
-                setCreateDialogOpen(true);
+              setCreateDialogOpen(true);
             }
           }}
         >
@@ -374,58 +492,94 @@ const SupportTools = () => {
                 <Dialog.Body pb="8">
                   <VStack spacing={4} align="stretch">
                     <Box>
-                      <Text mb={1} fontWeight="medium">Subject</Text>
+                      <Text mb={1} fontWeight="medium">
+                        Subject
+                      </Text>
                       <Input
                         value={newTicket.subject}
-                        onChange={e => setNewTicket({ ...newTicket, subject: e.target.value })}
+                        onChange={(e) =>
+                          setNewTicket({ ...newTicket, subject: e.target.value })
+                        }
                         placeholder="Enter ticket subject"
                         bg="white"
                       />
                     </Box>
                     <Box>
-                      <Text mb={1} fontWeight="medium">Description</Text>
+                      <Text mb={1} fontWeight="medium">
+                        Description
+                      </Text>
                       <Textarea
                         value={newTicket.description}
-                        onChange={e => setNewTicket({ ...newTicket, description: e.target.value })}
+                        onChange={(e) =>
+                          setNewTicket({
+                            ...newTicket,
+                            description: e.target.value,
+                          })
+                        }
                         placeholder="Describe the issue"
                         bg="white"
                       />
                     </Box>
                     {/* 👇 FIX: Replaced simple Select with robust Select.Root pattern */}
                     <Box>
-                      <Text mb={1} fontWeight="medium">Category</Text>
+                      <Text mb={1} fontWeight="medium">
+                        Category
+                      </Text>
                       <Select.Root
-                          width="100%"
-                          collection={categoryOptions}
-                          value={newTicket.category ? [newTicket.category] : []}
-                          onValueChange={({ value }) => setNewTicket({ ...newTicket, category: value[0] || "" })}
+                        width="100%"
+                        collection={categoryOptions}
+                        value={newTicket.category ? [newTicket.category] : []}
+                        onValueChange={({ value }) =>
+                          setNewTicket({ ...newTicket, category: value[0] || "" })
+                        }
                       >
                         <Select.Control>
-                            <Select.Trigger>
-                                <Select.ValueText placeholder="Select a Category" />
-                            </Select.Trigger>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select a Category" />
+                          </Select.Trigger>
                         </Select.Control>
                         <Portal>
-                            <Select.Positioner>
-                                <Select.Content>
-                                    {categoryOptions.items.map((item) => (
-                                        <Select.Item key={item.value} item={item}>
-                                            {item.label}
-                                        </Select.Item>
-                                    ))}
-                                </Select.Content>
-                            </Select.Positioner>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {categoryOptions.items.map((item) => (
+                                <Select.Item key={item.value} item={item}>
+                                  {item.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
                         </Portal>
                       </Select.Root>
                     </Box>
                     <Box>
-                      <Text mb={1} fontWeight="medium">Assign To</Text>
-                      <Input
-                        value={newTicket.assignedTo}
-                        onChange={e => setNewTicket({ ...newTicket, assignedTo: e.target.value })}
-                        placeholder="Assign to (admin name)"
-                        bg="white"
-                      />
+                      <Text mb={1} fontWeight="medium">
+                        Assign To
+                      </Text>
+                      <Select.Root
+                        width="100%"
+                        collection={adminOptions}
+                        value={newTicket.assignedTo ? [newTicket.assignedTo] : []}
+                        onValueChange={({ value }) =>
+                          setNewTicket({ ...newTicket, assignedTo: value[0] || "" })
+                        }
+                      >
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Assign to (admin)" />
+                          </Select.Trigger>
+                        </Select.Control>
+                        <Portal>
+                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
+                            <Select.Content>
+                              {adminOptions.items.map((item) => (
+                                <Select.Item key={item.value} item={item}>
+                                  {item.label}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
                     </Box>
                   </VStack>
                 </Dialog.Body>
@@ -447,15 +601,15 @@ const SupportTools = () => {
 
         {/* Ticket Details Dialog */}
         <Dialog.Root
-            key={dialogTicket?.id ?? 'no-ticket'}
-            open={dialogOpen}
-            onOpenChange={(props) => {
-                if (!props.open) {
-                    handleCloseDialog();
-                } else {
-                    setDialogOpen(true);
-                }
-            }}
+          key={dialogTicket?.id ?? "no-ticket"}
+          open={dialogOpen}
+          onOpenChange={(props) => {
+            if (!props.open) {
+              handleCloseDialog();
+            } else {
+              setDialogOpen(true);
+            }
+          }}
         >
           <Portal>
             <Dialog.Backdrop />
@@ -474,41 +628,97 @@ const SupportTools = () => {
                 </Dialog.Header>
                 <Dialog.Body pb="8">
                   {dialogTicket && (
-                    <DataList.Root orientation="horizontal">
-                      <DataList.Item>
-                        <DataList.ItemLabel>Status</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          <Badge colorScheme={statusColorPalette[dialogTicket.status] || "gray"}>{dialogTicket.status}</Badge>
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item>
-                        <DataList.ItemLabel>Category</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                          <Badge colorScheme={categoryColorPalette[dialogTicket.category] || "gray"}>{dialogTicket.category}</Badge>
-                        </DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item>
-                        <DataList.ItemLabel>Assigned To</DataList.ItemLabel>
-                        <DataList.ItemValue>{dialogTicket.assignedTo}</DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item>
-                        <DataList.ItemLabel>Created By</DataList.ItemLabel>
-                        <DataList.ItemValue>{dialogTicket.createdBy}</DataList.ItemValue>
-                      </DataList.Item>
-                      <DataList.Item>
-                        <DataList.ItemLabel>Last Update</DataList.ItemLabel>
-                        <DataList.ItemValue>{new Date(dialogTicket.lastUpdate).toLocaleString()}</DataList.ItemValue>
-                      </DataList.Item>
-                    </DataList.Root>
+                    <VStack spacing={4} align="stretch">
+                      <DataList.Root orientation="horizontal">
+                        <DataList.Item>
+                          <DataList.ItemLabel>Status</DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            <Badge
+                              colorScheme={
+                                statusColorPalette[dialogTicket.status] || "gray"
+                              }
+                            >
+                              {dialogTicket.status}
+                            </Badge>
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                        <DataList.Item>
+                          <DataList.ItemLabel>Category</DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            <Badge
+                              colorScheme={
+                                categoryColorPalette[dialogTicket.category] ||
+                                "gray"
+                              }
+                            >
+                              {dialogTicket.category}
+                            </Badge>
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                        <DataList.Item>
+                          <DataList.ItemLabel>Assigned To</DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            <Select.Root
+                              collection={adminOptions}
+                              size="sm"
+                              value={[dialogTicket?.assignedTo || "Unassigned"]}
+                              onValueChange={({ value }) =>
+                                handleReassignTicket(dialogTicket.id, value[0])
+                              }
+                            >
+                              <Select.HiddenSelect />
+                              <Select.Control>
+                                <Select.Trigger>
+                                  <Select.ValueText placeholder="Assign to admin" />
+                                </Select.Trigger>
+                                <Select.IndicatorGroup>
+                                  <Select.Indicator />
+                                </Select.IndicatorGroup>
+                              </Select.Control>
+                              <Select.Positioner>
+                                <Select.Content>
+                                  {adminOptions.items.map((item) => (
+                                    <Select.Item item={item} key={item.value}>
+                                      {item.label}
+                                    </Select.Item>
+                                  ))}
+                                </Select.Content>
+                              </Select.Positioner>
+                            </Select.Root>
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                        <DataList.Item>
+                          <DataList.ItemLabel>Created By</DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            {dialogTicket.createdBy}
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                        <DataList.Item>
+                          <DataList.ItemLabel>Last Update</DataList.ItemLabel>
+                          <DataList.ItemValue>
+                            {new Date(dialogTicket.lastUpdate).toLocaleString()}
+                          </DataList.ItemValue>
+                        </DataList.Item>
+                      </DataList.Root>
+                      <Box mt={6}>
+                        <Text fontWeight="bold" mb={2}>
+                          Description
+                        </Text>
+                        <Text>{dialogTicket?.description}</Text>
+                      </Box>
+                    </VStack>
                   )}
-                  <Box mt={6}>
-                    <Text fontWeight="bold" mb={2}>Description</Text>
-                    <Text>{dialogTicket?.description}</Text>
-                  </Box>
                 </Dialog.Body>
                 <Dialog.Footer>
                   {dialogTicket && dialogTicket.status !== "Closed" && (
-                    <Button colorScheme="red" variant="outline" onClick={() => { handleCloseTicket(dialogTicket.id); handleCloseDialog(); }}>
+                    <Button
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={() => {
+                        handleCloseTicket(dialogTicket.id);
+                        handleCloseDialog();
+                      }}
+                    >
                       Close Ticket
                     </Button>
                   )}
