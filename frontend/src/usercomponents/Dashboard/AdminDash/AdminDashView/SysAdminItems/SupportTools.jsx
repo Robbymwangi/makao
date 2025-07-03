@@ -17,49 +17,98 @@ import {
   Select,
   Menu,
   Spinner,
+  createListCollection, // <-- Import createListCollection
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
 const mockTickets = [
   {
     id: 1,
-    subject: "Cannot login to admin portal",
+    subject: "System performance issues on production server",
+    description:
+      "Users are reporting slow response times and occasional timeouts on the main production server. This started around 10:00 AM EAT. Initial checks show high CPU utilization.",
     status: "Open",
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60 * 2),
     category: "System",
     assignedTo: "Robbi Darwis",
-    createdBy: "Robbi Darwis",
-    description: "I am unable to login to the admin portal since yesterday.",
+    createdBy: "Alice Johnson",
+    lastUpdate: new Date("2025-07-03T10:30:00Z"),
   },
   {
     id: 2,
-    subject: "Agent assignment issue",
+    subject: "Agent 'John Doe' unable to log in",
+    description:
+      "Agent John Doe (ID: AGNT007) is repeatedly failing to log in. He claims his credentials are correct and has tried resetting his password multiple times. Error message 'Invalid credentials'.",
     status: "Pending",
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60 * 24),
     category: "Agent",
-    assignedTo: "Jane Smith",
+    assignedTo: "Sarah Smith",
     createdBy: "Robbi Darwis",
-    description: "Agent cannot be assigned to user X.",
+    lastUpdate: new Date("2025-07-02T15:00:00Z"),
   },
   {
     id: 3,
-    subject: "Property data not updating",
+    subject: "Property 'Park Avenue Residences' details incorrect",
+    description:
+      "The address and contact information for 'Park Avenue Residences' in the property management system are outdated. Please update to 123 Main St, Anytown, USA, Phone: (555) 123-4567.",
     status: "Closed",
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60 * 48),
     category: "Property",
-    assignedTo: "John Doe",
-    createdBy: "Alice Brown",
-    description: "Property data changes are not reflected in dashboard.",
+    assignedTo: "Robbi Darwis",
+    createdBy: "David Lee",
+    lastUpdate: new Date("2025-07-01T11:45:00Z"),
   },
   {
     id: 4,
-    subject: "Feature request: Export reports",
+    subject: "Request for new feature: Dark Mode toggle",
+    description:
+      "Users have requested a dark mode option for the application interface to reduce eye strain during extended use. This would be a beneficial accessibility feature.",
     status: "Open",
-    lastUpdate: new Date(Date.now() - 1000 * 60 * 60 * 5),
     category: "Other",
+    assignedTo: "Unassigned",
+    createdBy: "Emily White",
+    lastUpdate: new Date("2025-06-30T09:00:00Z"),
+  },
+  {
+    id: 5,
+    subject: "Database connection intermittent on dev environment",
+    description:
+      "The development database occasionally loses connection, leading to application crashes during testing. This issue seems to be random and difficult to reproduce consistently.",
+    status: "Open",
+    category: "System",
     assignedTo: "Robbi Darwis",
-    createdBy: "Jane Smith",
-    description: "Please add export to CSV for all reports.",
+    createdBy: "Michael Brown",
+    lastUpdate: new Date("2025-07-03T14:15:00Z"),
+  },
+  {
+    id: 6,
+    subject: "Agent profile picture upload failing",
+    description:
+      "Agents are unable to upload their profile pictures. The upload progress bar gets stuck at 0% and eventually times out. No error message is displayed.",
+    status: "Pending",
+    category: "Agent",
+    assignedTo: "Sarah Smith",
+    createdBy: "John Smith",
+    lastUpdate: new Date("2025-07-02T10:00:00Z"),
+  },
+  {
+    id: 7,
+    subject: "Missing lease agreement for 'Oakwood Apartments'",
+    description:
+      "The digital copy of the lease agreement for 'Oakwood Apartments' (Unit 3B) is missing from the system. Need to re-upload or locate the document.",
+    status: "Open",
+    category: "Property",
+    assignedTo: "Unassigned",
+    createdBy: "Maria Garcia",
+    lastUpdate: new Date("2025-07-03T16:00:00Z"),
+  },
+  {
+    id: 8,
+    subject: "Printer not responding in main office",
+    description:
+      "The network printer in the main office (IP: 192.168.1.100) is not responding to print jobs from any workstation. Power cycling did not resolve the issue.",
+    status: "Open",
+    category: "System",
+    assignedTo: "Robbi Darwis",
+    createdBy: "Jane Doe",
+    lastUpdate: new Date("2025-07-03T09:45:00Z"),
   },
 ];
 
@@ -79,7 +128,6 @@ const categoryColorPalette = {
 const categories = ["All", "System", "Agent", "Property", "Other"];
 
 const SupportTools = () => {
-  // Simulate current admin
   const currentAdmin = "Robbi Darwis";
   const [tickets, setTickets] = useState(mockTickets);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -94,21 +142,27 @@ const SupportTools = () => {
     assignedTo: "",
   });
 
-  // My tickets = assigned to me or created by me
+  // Create a collection for the category select dropdown, like in UserManagement
+  const categoryOptions = useMemo(() => createListCollection({
+    items: categories
+        .filter(c => c !== "All")
+        .map(cat => ({ label: cat, value: cat }))
+  }), []);
+
+
   const myTickets = useMemo(
-    () => tickets.filter(
-      (t) => t.assignedTo === currentAdmin || t.createdBy === currentAdmin
-    ),
+    () =>
+      tickets.filter(
+        (t) => t.assignedTo === currentAdmin || t.createdBy === currentAdmin
+      ),
     [tickets]
   );
 
-  // Global tickets, filtered
   const globalTickets = useMemo(() => {
     if (filterCategory === "All") return tickets;
     return tickets.filter((t) => t.category === filterCategory);
   }, [tickets, filterCategory]);
 
-  // Handle close ticket
   const handleCloseTicket = (id) => {
     setTickets((prev) =>
       prev.map((t) =>
@@ -122,39 +176,55 @@ const SupportTools = () => {
     });
   };
 
-  // Handle open ticket dialog
   const handleOpenTicketDialog = (ticket) => {
     setDialogTicket(ticket);
     setDialogOpen(true);
   };
+  
+  function handleCloseCreateDialog() {
+    setCreateDialogOpen(false);
+    setTimeout(() => {
+        setNewTicket({ subject: "", description: "", category: "System", assignedTo: "" });
+    }, 300);
+  }
 
-  // Handle create ticket
   const handleCreateTicket = () => {
+    if (!newTicket.subject || !newTicket.description) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Subject and description are required.",
+        type: "warning",
+      });
+      return;
+    }
+    
     setCreating(true);
     setTimeout(() => {
       setTickets((prev) => [
         {
           id: prev.length + 1,
-          subject: newTicket.subject,
-          description: newTicket.description,
+          ...newTicket,
           status: "Open",
           lastUpdate: new Date(),
-          category: newTicket.category,
           assignedTo: newTicket.assignedTo || currentAdmin,
           createdBy: currentAdmin,
         },
         ...prev,
       ]);
       setCreating(false);
-      setCreateDialogOpen(false);
-      setNewTicket({ subject: "", description: "", category: "System", assignedTo: "" });
       toaster.create({
         title: "Ticket Created",
         description: "Your ticket has been opened.",
         type: "success",
       });
+      handleCloseCreateDialog();
     }, 1200);
   };
+
+  function handleCloseDialog() {
+    setDialogOpen(false);
+    setDialogTicket(null);
+  }
 
   return (
     <Flex direction="column" h="100vh" maxH="100vh" overflow="hidden">
@@ -186,87 +256,11 @@ const SupportTools = () => {
             <Text fontSize="xl" fontWeight="bold">
               My Tickets
             </Text>
-            <Dialog.Root open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <Dialog.Trigger asChild>
-                <Button size="sm" variant="outline" colorScheme="blue">
-                  Open Ticket
-                </Button>
-              </Dialog.Trigger>
-              <Portal>
-                <Dialog.Backdrop />
-                <Dialog.Positioner>
-                  <Dialog.Content maxW="lg">
-                    <Dialog.Header>
-                      <Dialog.Title>Open New Ticket</Dialog.Title>
-                      <Dialog.CloseTrigger asChild>
-                        <CloseButton size="sm" position="absolute" top="2" right="2" />
-                      </Dialog.CloseTrigger>
-                    </Dialog.Header>
-                    <Dialog.Body pb="8">
-                      <VStack spacing={4} align="stretch">
-                        <Box>
-                          <Text mb={1} fontWeight="medium">Subject</Text>
-                          <Input
-                            value={newTicket.subject}
-                            onChange={e => setNewTicket({ ...newTicket, subject: e.target.value })}
-                            placeholder="Enter ticket subject"
-                            bg="white"
-                          />
-                        </Box>
-                        <Box>
-                          <Text mb={1} fontWeight="medium">Description</Text>
-                          <Textarea
-                            value={newTicket.description}
-                            onChange={e => setNewTicket({ ...newTicket, description: e.target.value })}
-                            placeholder="Describe the issue"
-                            bg="white"
-                          />
-                        </Box>
-                        <Box>
-                          <Text mb={1} fontWeight="medium">Category</Text>
-                          <Select
-                            value={newTicket.category}
-                            onChange={e => setNewTicket({ ...newTicket, category: e.target.value })}
-                            bg="white"
-                          >
-                            {categories.filter(c => c !== "All").map((cat) => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                          </Select>
-                        </Box>
-                        <Box>
-                          <Text mb={1} fontWeight="medium">Assign To</Text>
-                          <Input
-                            value={newTicket.assignedTo}
-                            onChange={e => setNewTicket({ ...newTicket, assignedTo: e.target.value })}
-                            placeholder="Assign to (admin name)"
-                            bg="white"
-                          />
-                        </Box>
-                      </VStack>
-                    </Dialog.Body>
-                    <Dialog.Footer>
-                      <Button
-                        colorScheme="blue"
-                        onClick={handleCreateTicket}
-                        isLoading={creating}
-                        loadingText="Creating..."
-                        isDisabled={!newTicket.subject || !newTicket.description}
-                      >
-                        Create Ticket
-                      </Button>
-                    </Dialog.Footer>
-                  </Dialog.Content>
-                </Dialog.Positioner>
-              </Portal>
-            </Dialog.Root>
+            <Button size="sm" variant="outline" colorScheme="blue" onClick={() => setCreateDialogOpen(true)}>
+              Open Ticket
+            </Button>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
-            {myTickets.length === 0 && (
-              <Text color="gray.400" p={8} textAlign="center">
-                No tickets yet.
-              </Text>
-            )}
             {myTickets.map((ticket) => (
               <Box
                 key={ticket.id}
@@ -278,7 +272,7 @@ const SupportTools = () => {
                 <HStack justify="space-between" align="center">
                   <Box>
                     <Text fontWeight="bold" noOfLines={1}>{ticket.subject}</Text>
-                    <Badge colorPalette={statusColorPalette[ticket.status] || "gray"} mt={2}>{ticket.status}</Badge>
+                    <Badge colorScheme={statusColorPalette[ticket.status] || "gray"} mt={2}>{ticket.status}</Badge>
                   </Box>
                   {ticket.status !== "Closed" && (
                     <Button size="xs" colorScheme="red" variant="outline" onClick={e => { e.stopPropagation(); handleCloseTicket(ticket.id); }}>
@@ -326,11 +320,6 @@ const SupportTools = () => {
             </Menu.Root>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
-            {globalTickets.length === 0 && (
-              <Text color="gray.400" p={8} textAlign="center">
-                No tickets in this category.
-              </Text>
-            )}
             {globalTickets.map((ticket) => (
               <Box
                 key={ticket.id}
@@ -343,12 +332,12 @@ const SupportTools = () => {
                   <Box>
                     <Text fontWeight="bold" noOfLines={1}>{ticket.subject}</Text>
                     <HStack spacing={2} mt={2}>
-                      <Badge colorPalette={statusColorPalette[ticket.status] || "gray"}>{ticket.status}</Badge>
-                      <Badge colorPalette={categoryColorPalette[ticket.category] || "gray"}>{ticket.category}</Badge>
+                      <Badge colorScheme={statusColorPalette[ticket.status] || "gray"}>{ticket.status}</Badge>
+                      <Badge colorScheme={categoryColorPalette[ticket.category] || "gray"}>{ticket.category}</Badge>
                     </HStack>
                   </Box>
                   <Text fontSize="xs" color="gray.500">
-                    {ticket.lastUpdate ? new Date(ticket.lastUpdate).toLocaleString() : ""}
+                    {new Date(ticket.lastUpdate).toLocaleString()}
                   </Text>
                 </HStack>
               </Box>
@@ -356,8 +345,118 @@ const SupportTools = () => {
           </VStack>
         </Box>
 
+        {/* Create Ticket Dialog */}
+        <Dialog.Root
+          open={createDialogOpen}
+          onOpenChange={({ open }) => {
+            if (!open) {
+                handleCloseCreateDialog();
+            } else {
+                setCreateDialogOpen(true);
+            }
+          }}
+        >
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content maxW="lg">
+                <Dialog.Header>
+                  <Dialog.Title>Open New Ticket</Dialog.Title>
+                  <Dialog.CloseTrigger asChild>
+                    <CloseButton
+                      size="sm"
+                      position="absolute"
+                      top="2"
+                      right="2"
+                    />
+                  </Dialog.CloseTrigger>
+                </Dialog.Header>
+                <Dialog.Body pb="8">
+                  <VStack spacing={4} align="stretch">
+                    <Box>
+                      <Text mb={1} fontWeight="medium">Subject</Text>
+                      <Input
+                        value={newTicket.subject}
+                        onChange={e => setNewTicket({ ...newTicket, subject: e.target.value })}
+                        placeholder="Enter ticket subject"
+                        bg="white"
+                      />
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">Description</Text>
+                      <Textarea
+                        value={newTicket.description}
+                        onChange={e => setNewTicket({ ...newTicket, description: e.target.value })}
+                        placeholder="Describe the issue"
+                        bg="white"
+                      />
+                    </Box>
+                    {/* 👇 FIX: Replaced simple Select with robust Select.Root pattern */}
+                    <Box>
+                      <Text mb={1} fontWeight="medium">Category</Text>
+                      <Select.Root
+                          width="100%"
+                          collection={categoryOptions}
+                          value={newTicket.category ? [newTicket.category] : []}
+                          onValueChange={({ value }) => setNewTicket({ ...newTicket, category: value[0] || "" })}
+                      >
+                        <Select.Control>
+                            <Select.Trigger>
+                                <Select.ValueText placeholder="Select a Category" />
+                            </Select.Trigger>
+                        </Select.Control>
+                        <Portal>
+                            <Select.Positioner>
+                                <Select.Content>
+                                    {categoryOptions.items.map((item) => (
+                                        <Select.Item key={item.value} item={item}>
+                                            {item.label}
+                                        </Select.Item>
+                                    ))}
+                                </Select.Content>
+                            </Select.Positioner>
+                        </Portal>
+                      </Select.Root>
+                    </Box>
+                    <Box>
+                      <Text mb={1} fontWeight="medium">Assign To</Text>
+                      <Input
+                        value={newTicket.assignedTo}
+                        onChange={e => setNewTicket({ ...newTicket, assignedTo: e.target.value })}
+                        placeholder="Assign to (admin name)"
+                        bg="white"
+                      />
+                    </Box>
+                  </VStack>
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <Button
+                    colorScheme="blue"
+                    onClick={handleCreateTicket}
+                    isLoading={creating}
+                    loadingText="Creating..."
+                    isDisabled={!newTicket.subject || !newTicket.description}
+                  >
+                    Create Ticket
+                  </Button>
+                </Dialog.Footer>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+
         {/* Ticket Details Dialog */}
-        <Dialog.Root key={dialogTicket?.id ?? 'no-ticket'} open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog.Root
+            key={dialogTicket?.id ?? 'no-ticket'}
+            open={dialogOpen}
+            onOpenChange={(props) => {
+                if (!props.open) {
+                    handleCloseDialog();
+                } else {
+                    setDialogOpen(true);
+                }
+            }}
+        >
           <Portal>
             <Dialog.Backdrop />
             <Dialog.Positioner>
@@ -365,7 +464,12 @@ const SupportTools = () => {
                 <Dialog.Header>
                   <Dialog.Title>{dialogTicket?.subject || "Ticket"}</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    <CloseButton size="sm" position="absolute" top="2" right="2" />
+                    <CloseButton
+                      size="sm"
+                      position="absolute"
+                      top="2"
+                      right="2"
+                    />
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body pb="8">
@@ -374,13 +478,13 @@ const SupportTools = () => {
                       <DataList.Item>
                         <DataList.ItemLabel>Status</DataList.ItemLabel>
                         <DataList.ItemValue>
-                          <Badge colorPalette={statusColorPalette[dialogTicket.status] || "gray"}>{dialogTicket.status}</Badge>
+                          <Badge colorScheme={statusColorPalette[dialogTicket.status] || "gray"}>{dialogTicket.status}</Badge>
                         </DataList.ItemValue>
                       </DataList.Item>
                       <DataList.Item>
                         <DataList.ItemLabel>Category</DataList.ItemLabel>
                         <DataList.ItemValue>
-                          <Badge colorPalette={categoryColorPalette[dialogTicket.category] || "gray"}>{dialogTicket.category}</Badge>
+                          <Badge colorScheme={categoryColorPalette[dialogTicket.category] || "gray"}>{dialogTicket.category}</Badge>
                         </DataList.ItemValue>
                       </DataList.Item>
                       <DataList.Item>
@@ -393,7 +497,7 @@ const SupportTools = () => {
                       </DataList.Item>
                       <DataList.Item>
                         <DataList.ItemLabel>Last Update</DataList.ItemLabel>
-                        <DataList.ItemValue>{dialogTicket.lastUpdate ? new Date(dialogTicket.lastUpdate).toLocaleString() : ""}</DataList.ItemValue>
+                        <DataList.ItemValue>{new Date(dialogTicket.lastUpdate).toLocaleString()}</DataList.ItemValue>
                       </DataList.Item>
                     </DataList.Root>
                   )}
@@ -404,7 +508,7 @@ const SupportTools = () => {
                 </Dialog.Body>
                 <Dialog.Footer>
                   {dialogTicket && dialogTicket.status !== "Closed" && (
-                    <Button colorScheme="red" variant="outline" onClick={() => { handleCloseTicket(dialogTicket.id); setDialogOpen(false); }}>
+                    <Button colorScheme="red" variant="outline" onClick={() => { handleCloseTicket(dialogTicket.id); handleCloseDialog(); }}>
                       Close Ticket
                     </Button>
                   )}

@@ -51,6 +51,7 @@ import ConsultantMessages from "./usercomponents/Dashboard/AdminDash/AdminDashVi
 import UserManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/UserManagement";
 import StaffManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/StaffManagement";
 import SupportTools from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/SupportTools";
+import SysAdminMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/Messages";
 
 const App = () => {
   const location = useLocation();
@@ -139,6 +140,7 @@ const App = () => {
           <Route path="users" element={<UserManagement />} />
          <Route path="staff" element={<StaffManagement />} />
           <Route path="support" element={<SupportTools />} />
+          <Route path="sysadmin-messages" element={<SysAdminMessages />} />
         </Route>
 
         {/* Catch-all */}
