@@ -1,6 +1,6 @@
 // routes/auth.js
 import express from 'express';
-import createSupabaseClient from '../utils/supabaseClient.js';
+import { createAnonClient, createServiceClient } from '../utils/supabaseClient.js';
 import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
@@ -63,7 +63,7 @@ router.post('/signup', async (req, res) => {
   }
 
   try {
-    const client = createSupabaseClient();
+    const client = createAnonClient();
     const { data: signUpData, error: signUpErr } = await withRetry(() =>
       client.auth.signUp({
         email: normalizedEmail,
@@ -117,46 +117,88 @@ if (insertError) {
 
 // ——— LOGIN ——— //
 router.post('/login', async (req, res) => {
+  console.log('=== LOGIN REQUEST START ===');
+  console.log('Request body:', req.body);
+  console.log('Environment check:');
+  console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'Set' : 'Missing');
+  console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Missing');
+  console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Missing');
+  
   const { email, password } = req.body;
   if (!email || !password) {
+    console.log('❌ Missing email or password');
     return fail(res, 400, 'validation_error', 'Email & password required');
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  console.log('Normalized email:', normalizedEmail);
 
   try {
-    const client = createSupabaseClient();
+    console.log('🔄 Creating Supabase client...');
+    const client = createAnonClient();
+    console.log('✅ Supabase client created');
 
+    console.log('🔄 Attempting signInWithPassword...');
     const { data: auth, error: authErr } = await withRetry(() =>
       client.auth.signInWithPassword({ email: normalizedEmail, password })
     );
 
     if (authErr) {
+      console.log('❌ Auth error:', authErr);
       if (authErr.message?.toLowerCase().includes('email not confirmed')) {
         return fail(res, 403, 'pending_verification', 'Please verify your email before logging in');
       }
       return fail(res, 401, 'invalid_credentials', 'Invalid email or password');
     }
 
-    const token = auth.session.access_token;
-    const authed = makeClient(process.env.SUPABASE_ANON_KEY, token);
+    console.log('✅ Auth successful, user ID:', auth.user.id);
+    console.log('✅ Session token exists:', !!auth.session.access_token);
 
-    // Block admin login on user route
-    const { data: adminRow } = await withRetry(() =>
-      authed.from('admins').select('role').eq('id', auth.user.id).maybeSingle()
+    const token = auth.session.access_token;
+    console.log('🔄 Creating authenticated client...');
+    const authed = makeClient(process.env.SUPABASE_ANON_KEY, token);
+    console.log('✅ Authenticated client created');
+
+    console.log('🔄 Checking admin table...');
+    // Block admin login on user route - FIXED: Use email instead of id
+    const { data: adminRow, error: adminCheckError } = await withRetry(() =>
+      authed.from('admins').select('role').eq('email', normalizedEmail).maybeSingle()
     );
 
+    if (adminCheckError) {
+      console.log('❌ Admin check error:', adminCheckError);
+      console.log('Admin check error details:', JSON.stringify(adminCheckError, null, 2));
+      return fail(res, 500, 'admin_check_error', adminCheckError.message);
+    }
+
+    console.log('Admin check result:', adminRow);
+
     if (adminRow) {
+      console.log('❌ User is admin, blocking login');
       return fail(res, 403, 'admin_misroute', 'Please log in via the staff portal');
     }
 
+    console.log('✅ User is not admin, proceeding...');
+
+    console.log('🔄 Fetching user data...');
     // Fetch user role + full name
-    const { data: userRow } = await withRetry(() =>
+    const { data: userRow, error: userError } = await withRetry(() =>
       authed.from('users').select('role, full_name').eq('id', auth.user.id).single()
     );
 
+    if (userError) {
+      console.log('❌ User fetch error:', userError);
+      console.log('User fetch error details:', JSON.stringify(userError, null, 2));
+      return fail(res, 500, 'user_fetch_error', userError.message);
+    }
+
+    console.log('User data:', userRow);
+
     const role = userRow?.role || null;
     const full_name = userRow?.full_name || '';
+
+    console.log('✅ Login successful for user:', normalizedEmail);
+    console.log('=== LOGIN REQUEST END ===');
 
     return res.json({
       user: {
@@ -168,7 +210,8 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Unexpected login error:', err);
+    console.error('💥 Unexpected login error:', err);
+    console.error('Error stack:', err.stack);
     return fail(res, 500, 'unexpected_error', err.message);
   }
 });
@@ -183,7 +226,8 @@ router.post('/staff-login', async (req, res) => {
   const normalizedEmail = email.trim().toLowerCase();
 
   try {
-    const client = createSupabaseClient();
+    // Use the correct anon client for user-facing auth
+    const client = createAnonClient();
 
     // Step 1: Sign in via Supabase Auth
     const { data: auth, error: authErr } = await withRetry(() =>
@@ -220,9 +264,8 @@ router.post('/staff-login', async (req, res) => {
     return res.json({
       user: {
         ...auth.user,
-          role,
-          full_name,
-        
+        role,
+        full_name,
       },
       session: auth.session,
       role,
@@ -242,7 +285,7 @@ router.post('/resend-confirmation', async (req, res) => {
     return fail(res, 400, 'validation_error', 'Email is required');
   }
 
-  const client = createSupabaseClient();
+  const client = createAnonClient();
   const { error } = await withRetry(() =>
     client.auth.resend({
       type: 'signup',
@@ -261,7 +304,7 @@ router.post('/logout', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader) {
     try {
-      const supabase = createSupabaseClient();
+      const supabase = createAnonClient();
       await withRetry(() => supabase.auth.signOut());
     } catch (e) {
       console.error('Logout error:', e);
@@ -279,7 +322,7 @@ router.get('/profile', async (req, res) => {
   }
   const token = authHeader.replace('Bearer ', '');
 
-  const client = createSupabaseClient();
+  const client = createAnonClient();
   const { data: userData, error: userErr } = await withRetry(() =>
     client.auth.getUser(token)
   );
@@ -296,4 +339,5 @@ router.get('/profile', async (req, res) => {
   res.json({ user: userData.user, profile });
 });
 
+// ES Module default export
 export default router;

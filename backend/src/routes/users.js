@@ -1,13 +1,13 @@
 // routes/users.js
 import express from 'express';
-import createSupabaseClient from '../utils/supabaseClient.js';
+import { createServiceClient } from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
 // Get all users
 router.get('/', async (req, res) => {
   try {
-    const supabase = createSupabaseClient();
+    const supabase = createServiceClient();
 
     const { data: users, error: userErr } = await supabase
       .from("users")
@@ -53,7 +53,7 @@ router.post('/assign-agent', async (req, res) => {
   // agent_id can be null for unassigning, so no check here
 
   try {
-    const supabase = createSupabaseClient();
+    const supabase = createServiceClient();
 
     // Update the user's agent_id in your 'users' profile table
     const { data, error } = await supabase
@@ -84,7 +84,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const supabase = createSupabaseClient();
+    const supabase = createServiceClient();
 
     // Create user in Supabase Auth
     // This handles password hashing, email verification, etc.

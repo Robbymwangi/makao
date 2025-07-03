@@ -1,11 +1,11 @@
 import express from 'express';
-import createSupabaseClient from '../utils/supabaseClient.js';
+import { createServiceClient } from '../utils/supabaseClient.js';
 
 const router = express.Router();
 
 // Assign or unassign an agent to a user
 router.post('/', async (req, res) => {
-  const supabase = createSupabaseClient();
+  const supabase = createServiceClient();
   const { user_id, agent_id } = req.body;
 
   if (!user_id) {
@@ -26,7 +26,7 @@ router.post('/', async (req, res) => {
 
 // Fetch all agents
 router.get('/', async (req, res) => {
-  const supabase = createSupabaseClient();
+  const supabase = createServiceClient();
   const { data, error } = await supabase.from('agents').select('*');
   if (error) {
     return res.status(500).json({ error: error.message });
