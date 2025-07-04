@@ -21,19 +21,7 @@ router.get("/agents", async (req, res) => {
 // Get all projects
 router.get("/projects", async (req, res) => {
   const supabase = createSupabaseClient();
-  const { data, error } = await supabase
-    .from("projects")
-    .select(`
-      id,
-      project_name,
-      client_id,
-      agent_id,
-      progress_pictures,
-      created_at,
-      agents (
-        full_name
-      )
-    `);
+  const { data, error } = await supabase.from("projects").select("*");
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
