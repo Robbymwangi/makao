@@ -15,8 +15,10 @@ import {
   Portal,
   Select,
   Menu,
+  Skeleton,
+  Stack,
+  Dialog 
 } from "@chakra-ui/react";
-import { Dialog } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { createListCollection } from "@chakra-ui/react";
 
@@ -29,6 +31,7 @@ const UserManagement = () => {
   const [dialogType, setDialogType] = useState(null);
   const [assignAgent, setAssignAgent] = useState("");
   const [newUser, setNewUser] = useState({ full_name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(true); // Add loading state
 
   const isMobileView = useBreakpointValue({ base: true, md: false });
 
@@ -83,8 +86,9 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchAgents();
+    setLoading(true);
+    Promise.all([fetchUsers(), fetchAgents()])
+      .finally(() => setLoading(false));
   }, []);
 
   const openDialog = (type, user = null) => {
@@ -221,7 +225,39 @@ const UserManagement = () => {
             </Button>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
-            {users.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Stack key={i} p={4} gap={2}>
+                  <Skeleton
+                    height="20px"
+                    width="40%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                  <Skeleton
+                    height="16px"
+                    width="60%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                  <Skeleton
+                    height="14px"
+                    width="30%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                </Stack>
+              ))
+            ) : users.length === 0 ? (
               <Text color="gray.400" p={8} textAlign="center">No users found.</Text>
             ) : (
               users.map((user) => (

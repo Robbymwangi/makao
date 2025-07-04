@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -17,6 +18,9 @@ import {
   Portal,
   Select,
   Menu,
+  createListCollection,
+  Skeleton,
+  Stack,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { createListCollection } from "@chakra-ui/react";
@@ -26,6 +30,8 @@ const StaffManagement = () => {
   const [agents, setAgents] = useState([]);
   const [projects, setProjects] = useState([]);
   const [projectOptions, setProjectOptions] = useState([]);
+  const [staff, setStaff] = useState(initialStaff);
+  const [loading, setLoading] = useState(true); // <-- Add loading state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState(null); // 'assign', 'remove'
   const [dialogAgent, setDialogAgent] = useState(null);
@@ -92,6 +98,32 @@ const StaffManagement = () => {
   const openAssignProjects = (agent) => {
     setDialogAgent(agent);
     setAssignProjects(agent.projects || []);
+  const [dialogStaff, setDialogStaff] = useState(null);
+  const [dialogType, setDialogType] = useState(null); // 'assign', 'add', 'remove'
+  // --- FIX 1: Update state to handle an array ---
+  const [assignProject, setAssignProject] = useState([]);
+  const [newStaff, setNewStaff] = useState({
+    full_name: "",
+    email: "",
+    // --- FIX 1: Update state to handle an array ---
+    project: ["Project Alpha"],
+  });
+
+  const isMobileView = useBreakpointValue({ base: true, md: false });
+
+  // Simulate data fetching
+  useEffect(() => {
+    setLoading(true);
+    // Replace this timeout with your real fetch logic
+    const timer = setTimeout(() => setLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Open dialog helpers
+  const openAssignProject = (staffMember) => {
+    setDialogStaff(staffMember);
+    // --- FIX 1: Ensure project is always an array ---
+    setAssignProject(staffMember.project || []);
     setDialogType("assign");
     setDialogOpen(true);
   };
@@ -240,6 +272,117 @@ const StaffManagement = () => {
                         <Menu.Content>
                           <Menu.Item onClick={(e) => { e.stopPropagation(); openAssignProjects(agent); }}>
                             Assign/Remove Projects
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Portal>
+                  </Menu.Root>
+                </Box>
+              ))
+            )}
+          <VStack
+            spacing={0}
+            align="stretch"
+            flexGrow={1}
+            overflowY="auto"
+            divideY="1px"
+            divideColor="gray.100"
+          >
+            {loading ? (
+              // Show 3 skeleton rows as placeholders
+              Array.from({ length: 3 }).map((_, i) => (
+                <Stack key={i} p={4} gap={2}>
+                  <Skeleton
+                    height="20px"
+                    width="40%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                  <Skeleton
+                    height="16px"
+                    width="60%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                  <Skeleton
+                    height="14px"
+                    width="30%"
+                    variant="shine"
+                    css={{
+                      "--start-color": "colors.gray.200",
+                      "--end-color": "colors.gray.400",
+                    }}
+                  />
+                </Stack>
+              ))
+            ) : staff.length === 0 ? (
+              <Text color="gray.400" p={8} textAlign="center">
+                No staff found.
+              </Text>
+            ) : (
+              staff.map((member) => (
+                <Box
+                  key={member.id}
+                  p={4}
+                  cursor="pointer"
+                  _hover={{ bg: "gray.100" }}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <Box>
+                    <Text fontWeight="bold">{member.full_name}</Text>
+                    <Text fontSize="sm" color="gray.500">
+                      {member.email}
+                    </Text>
+                    <Text fontSize="xs" color="gray.400">
+                      Last Sign In:{" "}
+                      {member.last_sign_in_at
+                        ? new Date(member.last_sign_in_at).toLocaleString()
+                        : "Never"}
+                    </Text>
+                    <HStack fontSize="xs" color="gray.400" mt={1}>
+                      <Text>Projects:</Text>
+                      {/* --- FIX 1: Map over projects array --- */}
+                      {member.project.map((p) => (
+                        <Badge key={p} colorScheme="green">
+                          {p}
+                        </Badge>
+                      ))}
+                    </HStack>
+                  </Box>
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" size="xs">
+                        Actions
+                      </Button>
+                    </Menu.Trigger>
+                    <Portal>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item
+                            value="assign-project"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAssignProject(member);
+                            }}
+                          >
+                            Assign Project
+                          </Menu.Item>
+                          <Menu.Item
+                            value="remove-staff"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRemoveStaff(member);
+                            }}
+                          >
+                            Remove Admin
                           </Menu.Item>
                         </Menu.Content>
                       </Menu.Positioner>
