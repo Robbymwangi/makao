@@ -93,6 +93,12 @@ app.use('/agents', agentRoutes);
 // Register staff routes
 app.use('/', staffRoutes);
 
+// Import projects routes
+
+import projectsRoutes from './src/routes/projects.js';
+
+// Register projects routes
+app.use('/projects', projectsRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
