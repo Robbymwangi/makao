@@ -144,7 +144,7 @@ router.post('/reset-password', async (req, res) => {
   if (!email) return res.status(400).json({ error: "Email is required" });
 
   try {
-    const supabase = createSupabaseClient();
+    const supabase = createServiceClient();
     // Send a password reset email
    const { data, error } = await supabase.auth.admin.resetPasswordForEmail(email, {
   redirectTo: "http://localhost:5173/forgot-password", 
