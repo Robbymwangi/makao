@@ -447,7 +447,7 @@ const SysAdminMessages = () => {
         color="gray.800"
         textAlign={{ base: "center", lg: "left" }}
       >
-        SysAdmin Messages
+        Messages
       </Heading>
       <AppLayout
         chatList={
