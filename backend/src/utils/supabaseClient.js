@@ -45,3 +45,6 @@ export const createServiceClient = () => {
     realtime: { params: { eventsPerSecond: 2 } },
   });
 };
+// Export both clients for convenience
+const createSupabaseClient = createServiceClient;
+export default createSupabaseClient;
