@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
       location,
       estimated_budget,
       estimated_timeline,
-      client:client_id(full_name, address),
+      client:client_id(full_name, address), -- JOIN users table!
       project_documents (
         id,
         name,
@@ -27,6 +27,19 @@ router.get("/", async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+router.post("/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
 });
 
 export default router;
