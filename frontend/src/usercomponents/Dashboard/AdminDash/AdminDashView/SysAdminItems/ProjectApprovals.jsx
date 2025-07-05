@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -8,64 +8,12 @@ import {
   Badge,
   Button,
   Heading,
-  Avatar,
-  Card,
-  Image,
-  Stack,
   CloseButton,
   Dialog,
   Portal,
   SimpleGrid,
 } from "@chakra-ui/react";
 import { FileText } from "lucide-react";
-
-// Mock data for demonstration
-const mockProjects = [
-  {
-    id: 1,
-    name: "Residential Casa du Panel",
-    client: "Jane Smith",
-    clientAddress: "123 Main St, Madrid, Spain",
-    submittedAt: new Date("2025-07-01T10:00:00Z"),
-    status: "Pending",
-    location: "Madrid, Spain",
-    estimatedBudget: "KES 2,000,000",
-    estimatedTimeline: "18 months",
-    documents: [
-      {
-        id: 1,
-        name: "Blueprint.pdf",
-        source: "Jane Smith",
-        date: "2025-07-01",
-      },
-      {
-        id: 2,
-        name: "Permit.pdf",
-        source: "Jane Smith",
-        date: "2025-07-01",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Urban Skyline Apartments",
-    client: "John Doe",
-    clientAddress: "456 Park Ave, New York, USA",
-    submittedAt: new Date("2025-07-02T14:30:00Z"),
-    status: "Pending",
-    location: "New York, USA",
-    estimatedBudget: "KES 5,500,000",
-    estimatedTimeline: "24 months",
-    documents: [
-      {
-        id: 1,
-        name: "Proposal.pdf",
-        source: "John Doe",
-        date: "2025-07-02",
-      },
-    ],
-  },
-];
 
 const statusColor = {
   Pending: "orange",
@@ -74,25 +22,40 @@ const statusColor = {
 };
 
 const ProjectApprovals = () => {
-  const [projects, setProjects] = useState(mockProjects);
+  const [projects, setProjects] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  const handleApprove = (id) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: "Approved" } : p
-      )
-    );
+  useEffect(() => {
+    fetch("http://localhost:3000/projects")
+      .then((res) => res.json())
+      .then((data) => setProjects(data))
+      .catch(() => setProjects([]));
+  }, []);
+
+  const handleApprove = async (id) => {
+    await fetch(`http://localhost:3000/projects/${id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "Approved" }),
+    });
+    // Re-fetch projects from backend
+    fetch("http://localhost:3000/projects")
+      .then((res) => res.json())
+      .then((data) => setProjects(data));
     setDialogOpen(false);
   };
 
-  const handleReject = (id) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: "Rejected" } : p
-      )
-    );
+  const handleReject = async (id) => {
+    await fetch(`http://localhost:3000/projects/${id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "Rejected" }),
+    });
+    // Re-fetch projects from backend
+    fetch("http://localhost:3000/projects")
+      .then((res) => res.json())
+      .then((data) => setProjects(data));
     setDialogOpen(false);
   };
 
@@ -126,10 +89,12 @@ const ProjectApprovals = () => {
           >
             <HStack justify="space-between" align="center">
               <Box>
-                <Text fontWeight="bold">{project.name}</Text>
+                <Text fontWeight="bold">{project.project_name}</Text>
                 <Text fontSize="sm" color="gray.500">
-                  Submitted by {project.client} on{" "}
-                  {new Date(project.submittedAt).toLocaleString()}
+                  Submitted by {project.client?.full_name} on{" "}
+                  {project.submitted_at
+                    ? new Date(project.submitted_at).toLocaleString()
+                    : ""}
                 </Text>
               </Box>
               <Badge colorScheme={statusColor[project.status] || "gray"}>
@@ -141,14 +106,17 @@ const ProjectApprovals = () => {
       </VStack>
 
       {/* Project Details Dialog */}
-      <Dialog.Root open={dialogOpen} onOpenChange={({ open }) => setDialogOpen(open)}>
+      <Dialog.Root
+        open={dialogOpen}
+        onOpenChange={({ open }) => setDialogOpen(open)}
+      >
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content maxW="lg">
               <Dialog.Header>
                 <Dialog.Title>
-                  {selectedProject?.name || "Project"}
+                  {selectedProject?.project_name || "Project"}
                 </Dialog.Title>
                 <Dialog.CloseTrigger asChild>
                   <CloseButton
@@ -169,32 +137,51 @@ const ProjectApprovals = () => {
                   >
                     {/* Client Info */}
                     <Box pt={0}>
-                      <Heading size="md" mb={3}>Client Information</Heading>
-                      <Text><b>Name:</b> {selectedProject.client}</Text>
-                      <Text><b>Address:</b> {selectedProject.clientAddress}</Text>
+                      <Heading size="md" mb={3}>
+                        Client Information
+                      </Heading>
+                      <Text>
+                        <b>Name:</b> {selectedProject.client?.full_name}
+                      </Text>
+                      <Text>
+                        <b>Address:</b> {selectedProject.client?.address}
+                      </Text>
                     </Box>
                     {/* Location */}
                     <Box pt={2}>
-                      <Heading size="md" mb={3}>Location</Heading>
+                      <Heading size="md" mb={3}>
+                        Location
+                      </Heading>
                       <Text>{selectedProject.location}</Text>
                     </Box>
                     {/* Estimated Budget & Timeline */}
                     <SimpleGrid columns={2} spacing={8} pt={2}>
                       <Box>
-                        <Heading size="sm" mb={2}>Estimated Budget</Heading>
-                        <Text fontSize="lg" fontWeight="semibold">{selectedProject.estimatedBudget}</Text>
+                        <Heading size="sm" mb={2}>
+                          Estimated Budget
+                        </Heading>
+                        <Text fontSize="lg" fontWeight="semibold">
+                          {selectedProject.estimated_budget}
+                        </Text>
                       </Box>
                       <Box>
-                        <Heading size="sm" mb={2}>Estimated Timeline</Heading>
-                        <Text fontSize="lg" fontWeight="semibold">{selectedProject.estimatedTimeline}</Text>
+                        <Heading size="sm" mb={2}>
+                          Estimated Timeline
+                        </Heading>
+                        <Text fontSize="lg" fontWeight="semibold">
+                          {selectedProject.estimated_timeline}
+                        </Text>
                       </Box>
                     </SimpleGrid>
                     {/* Uploaded Documents */}
                     <Box pt={2}>
-                      <Heading size="md" mb={3}>Support Documents</Heading>
-                      {selectedProject.documents && selectedProject.documents.length > 0 ? (
+                      <Heading size="md" mb={3}>
+                        Support Documents
+                      </Heading>
+                      {selectedProject.project_documents &&
+                      selectedProject.project_documents.length > 0 ? (
                         <VStack spacing={4} align="stretch">
-                          {selectedProject.documents.map((file) => (
+                          {selectedProject.project_documents.map((file) => (
                             <Box
                               key={file.id}
                               p={3}
@@ -215,6 +202,15 @@ const ProjectApprovals = () => {
                                 <Text fontSize="xs" color="gray.500" ml="auto">
                                   {file.date}
                                 </Text>
+                                {file.url && (
+                                  <a
+                                    href={file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download
+                                  </a>
+                                )}
                               </HStack>
                             </Box>
                           ))}
