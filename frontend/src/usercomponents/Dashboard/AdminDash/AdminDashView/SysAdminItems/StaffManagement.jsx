@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import React, { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -14,34 +13,34 @@ import {
   Heading,
   useBreakpointValue,
   CloseButton,
-  Dialog,
   Portal,
   Select,
   Menu,
-  createListCollection,
   Skeleton,
   Stack,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
-import { createListCollection } from "@chakra-ui/react";
+import { createListCollection, Dialog } from "@chakra-ui/react";
 
 const StaffManagement = () => {
   const [admins, setAdmins] = useState([]);
   const [agents, setAgents] = useState([]);
   const [projects, setProjects] = useState([]);
   const [projectOptions, setProjectOptions] = useState([]);
-  const [staff, setStaff] = useState(initialStaff);
-  const [loading, setLoading] = useState(true); // <-- Add loading state
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState(null); // 'assign', 'remove'
   const [dialogAgent, setDialogAgent] = useState(null);
   const [dialogAdmin, setDialogAdmin] = useState(null);
   const [assignProjects, setAssignProjects] = useState([]);
 
+  const isMobileView = useBreakpointValue({ base: true, md: false });
+
   useEffect(() => {
-    fetchAdmins();
-    fetchAgents();
-    fetchProjects();
+    // Combine all fetches and set loading to false when all are done
+    setLoading(true);
+    Promise.all([fetchAdmins(), fetchAgents(), fetchProjects()])
+      .finally(() => setLoading(false));
   }, []);
 
   const fetchAdmins = async () => {
@@ -97,33 +96,8 @@ const StaffManagement = () => {
   // Dialog helpers
   const openAssignProjects = (agent) => {
     setDialogAgent(agent);
+    // Initialize with existing projects, ensuring it's an array of IDs
     setAssignProjects(agent.projects || []);
-  const [dialogStaff, setDialogStaff] = useState(null);
-  const [dialogType, setDialogType] = useState(null); // 'assign', 'add', 'remove'
-  // --- FIX 1: Update state to handle an array ---
-  const [assignProject, setAssignProject] = useState([]);
-  const [newStaff, setNewStaff] = useState({
-    full_name: "",
-    email: "",
-    // --- FIX 1: Update state to handle an array ---
-    project: ["Project Alpha"],
-  });
-
-  const isMobileView = useBreakpointValue({ base: true, md: false });
-
-  // Simulate data fetching
-  useEffect(() => {
-    setLoading(true);
-    // Replace this timeout with your real fetch logic
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Open dialog helpers
-  const openAssignProject = (staffMember) => {
-    setDialogStaff(staffMember);
-    // --- FIX 1: Ensure project is always an array ---
-    setAssignProject(staffMember.project || []);
     setDialogType("assign");
     setDialogOpen(true);
   };
@@ -152,16 +126,16 @@ const StaffManagement = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agent_id: dialogAgent.id,
-          project_ids: assignProjects,
+          project_ids: assignProjects, // This should be an array of project IDs
         }),
       });
       if (!res.ok) throw new Error("Failed to assign projects");
       toaster.create({
         title: "Projects Assigned",
-        description: `Assigned projects to ${dialogAgent.full_name}`,
+        description: `Assigned projects to ${dialogAgent.name}`,
         type: "success",
       });
-      fetchAgents();
+      fetchAgents(); // Re-fetch agents to update the UI
       handleCloseDialog();
     } catch (err) {
       toaster.create({ title: "Error", description: err.message, type: "error" });
@@ -182,7 +156,7 @@ const StaffManagement = () => {
         description: `${dialogAdmin.full_name} has been removed.`,
         type: "info",
       });
-      fetchAdmins();
+      fetchAdmins(); // Re-fetch admins to update the UI
       handleCloseDialog();
     } catch (err) {
       toaster.create({ title: "Error", description: err.message, type: "error" });
@@ -208,7 +182,14 @@ const StaffManagement = () => {
             <Text fontSize="xl" fontWeight="bold">Admins</Text>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
-            {admins.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Stack key={`admin-skeleton-${i}`} p={4} gap={2}>
+                  <Skeleton height="20px" width="40%" variant="shine" css={{ "--start-color": "colors.gray.200", "--end-color": "colors.gray.400" }} />
+                  <Skeleton height="16px" width="60%" variant="shine" css={{ "--start-color": "colors.gray.200", "--end-color": "colors.gray.400" }} />
+                </Stack>
+              ))
+            ) : admins.length === 0 ? (
               <Text color="gray.400" p={8} textAlign="center">No admins found.</Text>
             ) : (
               admins.map((admin) => (
@@ -243,13 +224,21 @@ const StaffManagement = () => {
             <Text fontSize="xl" fontWeight="bold">Agents</Text>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
-            {agents.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Stack key={`agent-skeleton-${i}`} p={4} gap={2}>
+                  <Skeleton height="20px" width="40%" variant="shine" css={{ "--start-color": "colors.gray.200", "--end-color": "colors.gray.400" }} />
+                  <Skeleton height="16px" width="60%" variant="shine" css={{ "--start-color": "colors.gray.200", "--end-color": "colors.gray.400" }} />
+                  <Skeleton height="14px" width="30%" variant="shine" css={{ "--start-color": "colors.gray.200", "--end-color": "colors.gray.400" }} />
+                </Stack>
+              ))
+            ) : agents.length === 0 ? (
               <Text color="gray.400" p={8} textAlign="center">No agents found.</Text>
             ) : (
               agents.map((agent) => (
                 <Box key={agent.id} p={4} _hover={{ bg: "gray.100" }} display="flex" alignItems="center" justifyContent="space-between">
                   <Box>
-                    <Text fontWeight="bold">{agent.name}</Text> {/* <-- Use agent.name here */}
+                    <Text fontWeight="bold">{agent.name}</Text>
                     <Text fontSize="sm" color="gray.500">{agent.email}</Text>
                     <HStack fontSize="xs" color="gray.400" mt={1}>
                       <Text>Projects:</Text>
@@ -273,116 +262,9 @@ const StaffManagement = () => {
                           <Menu.Item onClick={(e) => { e.stopPropagation(); openAssignProjects(agent); }}>
                             Assign/Remove Projects
                           </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Portal>
-                  </Menu.Root>
-                </Box>
-              ))
-            )}
-          <VStack
-            spacing={0}
-            align="stretch"
-            flexGrow={1}
-            overflowY="auto"
-            divideY="1px"
-            divideColor="gray.100"
-          >
-            {loading ? (
-              // Show 3 skeleton rows as placeholders
-              Array.from({ length: 3 }).map((_, i) => (
-                <Stack key={i} p={4} gap={2}>
-                  <Skeleton
-                    height="20px"
-                    width="40%"
-                    variant="shine"
-                    css={{
-                      "--start-color": "colors.gray.200",
-                      "--end-color": "colors.gray.400",
-                    }}
-                  />
-                  <Skeleton
-                    height="16px"
-                    width="60%"
-                    variant="shine"
-                    css={{
-                      "--start-color": "colors.gray.200",
-                      "--end-color": "colors.gray.400",
-                    }}
-                  />
-                  <Skeleton
-                    height="14px"
-                    width="30%"
-                    variant="shine"
-                    css={{
-                      "--start-color": "colors.gray.200",
-                      "--end-color": "colors.gray.400",
-                    }}
-                  />
-                </Stack>
-              ))
-            ) : staff.length === 0 ? (
-              <Text color="gray.400" p={8} textAlign="center">
-                No staff found.
-              </Text>
-            ) : (
-              staff.map((member) => (
-                <Box
-                  key={member.id}
-                  p={4}
-                  cursor="pointer"
-                  _hover={{ bg: "gray.100" }}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Text fontWeight="bold">{member.full_name}</Text>
-                    <Text fontSize="sm" color="gray.500">
-                      {member.email}
-                    </Text>
-                    <Text fontSize="xs" color="gray.400">
-                      Last Sign In:{" "}
-                      {member.last_sign_in_at
-                        ? new Date(member.last_sign_in_at).toLocaleString()
-                        : "Never"}
-                    </Text>
-                    <HStack fontSize="xs" color="gray.400" mt={1}>
-                      <Text>Projects:</Text>
-                      {/* --- FIX 1: Map over projects array --- */}
-                      {member.project.map((p) => (
-                        <Badge key={p} colorScheme="green">
-                          {p}
-                        </Badge>
-                      ))}
-                    </HStack>
-                  </Box>
-                  <Menu.Root>
-                    <Menu.Trigger asChild>
-                      <Button variant="outline" size="xs">
-                        Actions
-                      </Button>
-                    </Menu.Trigger>
-                    <Portal>
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item
-                            value="assign-project"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openAssignProject(member);
-                            }}
-                          >
-                            Assign Project
-                          </Menu.Item>
-                          <Menu.Item
-                            value="remove-staff"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openRemoveStaff(member);
-                            }}
-                          >
-                            Remove Admin
+                          {/* Add a specific handler for agent removal if different from admin removal */}
+                          <Menu.Item onClick={(e) => { e.stopPropagation(); /* openRemoveAgent(agent); */ }}>
+                            Remove Agent
                           </Menu.Item>
                         </Menu.Content>
                       </Menu.Positioner>
@@ -419,7 +301,7 @@ const StaffManagement = () => {
                 <Dialog.Body pb="8">
                   {dialogType === "assign" && dialogAgent && (
                     <VStack spacing={4} align="stretch">
-                      <Text>Assign up to 3 projects to <b>{dialogAgent.full_name}</b></Text>
+                      <Text>Assign up to 3 projects to <b>{dialogAgent.name}</b></Text>
                       <Select.Root
                         width="100%"
                         collection={projectOptions}
@@ -429,7 +311,18 @@ const StaffManagement = () => {
                       >
                         <Select.Control>
                           <Select.Trigger>
-                            <Select.ValueText placeholder="Select up to 3 Projects" />
+                            {/* FIX: Map the selected project IDs back to their names for display */}
+                            <Select.ValueText>
+                              {assignProjects.length > 0
+                                ? assignProjects
+                                    .map((pid) => {
+                                      const project = projects.find((p) => p.id === pid);
+                                      return project ? project.name : null;
+                                    })
+                                    .filter(Boolean) // Remove any nulls if project not found
+                                    .join(", ")
+                                : "Select up to 3 Projects"}
+                            </Select.ValueText>
                           </Select.Trigger>
                         </Select.Control>
                         <Portal>
