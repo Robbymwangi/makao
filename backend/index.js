@@ -13,6 +13,8 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 // Now import other modules that depend on environment variables
 import express from 'express';
 import cors from 'cors';
+// Import routes
+import staffRoutes from './src/routes/staff.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -87,6 +89,10 @@ import agentRoutes from './src/routes/agents.js';
 
 // Register agent routes
 app.use('/agents', agentRoutes);
+
+// Register staff routes
+app.use('/', staffRoutes);
+
 
 // Error handling middleware
 app.use((error, req, res, next) => {
