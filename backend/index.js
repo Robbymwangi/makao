@@ -85,10 +85,10 @@ import userRoutes from './src/routes/users.js';
 app.use('/users', userRoutes);
 
 // Import agent routes
-import agentRoutes from './src/routes/agents.js';
+import agentsRoutes from './src/routes/agents.js';
 
 // Register agent routes
-app.use('/agents', agentRoutes);
+app.use('/agents', agentsRoutes);
 
 // Register staff routes
 app.use('/', staffRoutes);
