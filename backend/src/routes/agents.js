@@ -34,4 +34,17 @@ router.get('/', async (req, res) => {
   return res.json(data);
 });
 
+// GET /agents/:agentId/clients
+router.get('/:agentId/clients', async (req, res) => {
+  const { agentId } = req.params;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, full_name, email, avatar')
+    .eq('agent_id', agentId);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 export default router;
