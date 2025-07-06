@@ -10,7 +10,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
-import supabase from "@/utils/supabaseClient"; // Make sure this is your initialized Supabase client
+import supabase from "@/utils/supabaseClient";
 
 const EDGE_FUNCTION_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-assigned-clients";
 
@@ -24,39 +24,50 @@ const AssignedClients = () => {
 
   useEffect(() => {
     const fetchAssignedClients = async () => {
-      // Always get the latest session from Supabase client
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!user || !token) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const agentId = user.id;
-        const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-        console.log("Fetching clients for agent ID:", agentId);
-        console.log("Using auth header:", authHeader.substring(0, 15) + "...");
+        // Get the latest session from Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw new Error('Failed to get session: ' + sessionError.message);
+        }
 
-        const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${agentId}`, {
+        if (!session || !session.access_token) {
+          throw new Error('No valid session found');
+        }
+
+        if (!user?.id) {
+          throw new Error('No user ID available');
+        }
+
+        console.log("Fetching clients for agent ID:", user.id);
+        
+        // Format the auth header properly
+        const authHeader = `Bearer ${session.access_token}`;
+        console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+
+        const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
           headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
           },
         });
 
-        const data = await res.json();
-
         if (!res.ok) {
-          console.log("API Error:", data);
-          throw new Error(data.error || "Failed to fetch clients");
+          const errorData = await res.json();
+          console.error("API Error:", errorData);
+          throw new Error(errorData.error || 'Failed to fetch clients');
         }
 
+        const data = await res.json();
+        console.log("Received clients data:", data);
+        
         setClients(data);
-        if (data.length > 0) setSelectedClient(data[0].id);
+        if (data.length > 0) {
+          setSelectedClient(data[0].id);
+        }
       } catch (err) {
-        console.log("Error fetching clients:", err);
+        console.error("Error fetching clients:", err);
         toaster.create({
           title: "Error",
           description: err.message,
@@ -67,7 +78,11 @@ const AssignedClients = () => {
       }
     };
 
-    fetchAssignedClients();
+    if (user) {
+      fetchAssignedClients();
+    } else {
+      setLoading(false);
+    }
   }, [user]);
 
   // Helper: Get events for selected date
