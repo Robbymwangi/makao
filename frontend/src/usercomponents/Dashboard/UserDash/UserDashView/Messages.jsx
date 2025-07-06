@@ -16,9 +16,13 @@ import {
   Field,
   Textarea,
   useDisclosure,
+  Spinner,
+  Dialog
 } from "@chakra-ui/react"; // Assuming you are using Chakra UI
 import { ArrowLeftIcon as StepBackIcon, SearchIcon, FlagIcon, X as CloseIcon } from "lucide-react"; // Ensure lucide-react is installed
 import { Toaster, toaster } from "@/components/ui/toaster";
+import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Mocking react-router hooks for standalone example
 const useNavigate = () => {
@@ -690,8 +694,21 @@ const Messages = () => {
 
   ]);
   const [newMessageText, setNewMessageText] = useState("");
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState({
+    project_name: "",
+    location: "",
+    estimated_budget: "",
+    estimated_timeline: "",
+    client_address: "",
+    additional_details: "",
+  });
   const navigate = useNavigate(); // Mock navigate
   const { chatId: currentChatIdParam } = useParams(); // From mock useParams
+  const jwt = useAuthStore((state) => state.token); // Use the same selector as UserDashboard
 
   const messagesEndRef = useRef(null);
 
@@ -707,6 +724,19 @@ const Messages = () => {
     }
   }, [messagesData, currentChatIdParam, scrollToBottom]); // Dependency on messagesData ensures re-scroll on new message
 
+  useEffect(() => {
+    if (!jwt) {
+      setLoading(false);
+      setError("You are not logged in.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    withTimeout(getProjectStatus(jwt), 8000)
+      .then(setStatus)
+      .catch((err) => setError(err.message || "Failed to load project status"))
+      .finally(() => setLoading(false));
+  }, [jwt]);
 
   const handleSendMessage = useCallback(() => {
     if (newMessageText.trim() && currentChatIdParam) {
@@ -784,6 +814,110 @@ const Messages = () => {
   }, [messagesForCurrentChat, scrollToBottom]);
 
 
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Spinner size="xl" color="black" />
+        <Text mt={4}>Loading...</Text>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box textAlign="center" p={8}>
+        <Text color="red.500">{error}</Text>
+      </Box>
+    );
+  }
+
+  // --- Empty project logic from UserDashboard ---
+  if (!status?.has_approved_project) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Box maxW="lg" width="100%">
+          <Text
+            as="h2"
+            fontSize="2xl"
+            fontWeight="bold"
+            mb={2}
+            color="gray.800"
+          >
+            Project Approval
+          </Text>
+          <Text
+            fontSize="lg"
+            color="gray.700"
+            mb={4}
+          >
+            Please fill in your project details below to request approval and gain
+            full access to the platform. All information will be reviewed by our
+            team.
+          </Text>
+        </Box>
+        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+          Submit Project Details
+        </Button>
+        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+          <Dialog.Content maxW="lg">
+            <Dialog.Header>
+              <Dialog.Title>Submit Project Details</Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <Button onClick={() => setShowDialog(false)}>Close</Button>
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack spacing={4} align="stretch">
+                <Input placeholder="Project Name" value={form.project_name} onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))} />
+                <Input placeholder="Location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
+                <Input placeholder="Estimated Budget" value={form.estimated_budget} onChange={e => setForm(f => ({ ...f, estimated_budget: e.target.value }))} />
+                <Input placeholder="Estimated Timeline" value={form.estimated_timeline} onChange={e => setForm(f => ({ ...f, estimated_timeline: e.target.value }))} />
+                <Input placeholder="Client Address" value={form.client_address} onChange={e => setForm(f => ({ ...f, client_address: e.target.value }))} />
+                <Input placeholder="Additional Details" value={form.additional_details} onChange={e => setForm(f => ({ ...f, additional_details: e.target.value }))} />
+                <Button
+                  colorScheme="blue"
+                  onClick={async () => {
+                    await submitProjectApproval(jwt, form);
+                    setShowDialog(false);
+                    setLoading(true);
+                    getProjectStatus(jwt)
+                      .then(setStatus)
+                      .finally(() => setLoading(false));
+                  }}
+                  isDisabled={
+                    !form.project_name ||
+                    !form.location ||
+                    !form.estimated_budget ||
+                    !form.estimated_timeline ||
+                    !form.client_address
+                  }
+                >
+                  Submit
+                </Button>
+              </VStack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Root>
+      </Box>
+    );
+  }
+
   return (
     // This Flex container ensures the entire Messages component fits within 100vh and doesn't scroll
     <Flex direction="column" h="100vh" maxH="100vh" overflow="hidden">
@@ -824,5 +958,12 @@ const Messages = () => {
     </Flex>
   );
 };
+
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms)),
+  ]);
+}
 
 export default Messages;

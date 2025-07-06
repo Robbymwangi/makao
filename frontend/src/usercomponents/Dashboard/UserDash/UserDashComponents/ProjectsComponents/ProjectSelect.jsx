@@ -1,70 +1,221 @@
-import React from "react";
-import { Box, Text, VStack, Image, Badge, Stack, useBreakpointValue } from "@chakra-ui/react";
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Text,
+  VStack,
+  Badge,
+  Stack,
+  Button,
+  Dialog,
+  Spinner,
+  Portal,
+  Input,
+} from "@chakra-ui/react";
 import { useNavigate } from "react-router";
+import { useAuthStore } from "@/store/useAuthStore";
+import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
 
-const ProjectSelection = () => {
+const ProjectSelect = () => {
+  const jwt = useAuthStore((state) => state.token);
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState({
+    project_name: '',
+    location: '',
+    estimated_budget: '',
+    estimated_timeline: '',
+    client_address: '',
+    additional_details: ''
+  });
   const navigate = useNavigate();
 
-  const projects = [
-    {
-      id: 1,
-      name: "Residential Casa du Panel",
-      locations: ["Madrid", "Lisbon"],
-      progress: 65,
-      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-    },
-    {
-      id: 2,
-      name: "Urban Skyline Apartments",
-      locations: ["New York", "Chicago"],
-      progress: 80,
-      image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-    },
-  ];
+  useEffect(() => {
+    if (!jwt) return;
+    setLoading(true);
+    getProjectStatus(jwt)
+      .then(setStatus)
+      .finally(() => setLoading(false));
+  }, [jwt]);
 
-  return (
-    <VStack
-      spacing={6}
-      align={useBreakpointValue({ base: "center", md: "stretch" })} // Center on smaller screens
-      p={4}
-    >
-      <Text
-        fontSize="4xl"
-        fontWeight="bold"
-        mb={8}
-        fontFamily={"Playfair Display, serif"}
-        textAlign={useBreakpointValue({ base: "center", md: "left" })} // Center title on smaller screens
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
       >
-        Select a Project
-      </Text>
-      {projects.map((project) => (
-        <Box
-          key={project.id}
-          borderWidth="1px"
-          borderRadius="lg"
-          overflow="hidden"
-          boxShadow="md"
-          onClick={() => navigate(`/dashboard/myprojects/${project.id}`)}
-          cursor="pointer"
-          marginBottom={4}
-          w={useBreakpointValue({ base: "100%", md: "100%" })} 
-        >
-          <Image src={project.image} alt={project.name} objectFit="cover" w="100%" h="200px" />
-          <Box p={4}>
-            <Text fontSize="lg" fontWeight="bold" mb={2}>
-              {project.name}
-            </Text>
-            <Text fontSize="sm" color="gray.500" mb={4}>
-              Locations: {project.locations.join(", ")}
-            </Text>
-            <Stack direction="row" spacing={2}>
-              <Badge colorScheme="green">Progress: {project.progress}%</Badge>
+        <Spinner size="xl" color="black" />
+        <Text mt={4}>Loading...</Text>
+      </Box>
+    );
+  }
+
+  // Show pending projects grayed out
+  if (status?.pending_projects?.length > 0) {
+    return (
+      <VStack spacing={6} p={4}>
+        <Text fontSize="2xl" fontWeight="bold" mb={4}>
+          Your Projects
+        </Text>
+        {status.pending_projects.map((project) => (
+          <Box
+            key={project.id}
+            borderWidth="1px"
+            borderRadius="lg"
+            overflow="hidden"
+            boxShadow="md"
+            opacity={0.5}
+            cursor="not-allowed"
+            onClick={() => setShowDialog(true)}
+            w="100%"
+            _hover={{ bg: "gray.50" }}
+            p={4}
+          >
+            <Text fontWeight="bold" fontSize="lg">{project.project_name}</Text>
+            <Text color="gray.500">{project.location}</Text>
+            <Stack direction="row" spacing={2} mt={2}>
+              <Badge colorScheme="orange">Pending Approval</Badge>
             </Stack>
           </Box>
+        ))}
+        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+          <Dialog.Content maxW="sm">
+            <Dialog.Body>
+              <Text fontSize="lg" fontWeight="bold" mb={2}>
+                Project is due for approval.
+              </Text>
+              <Text>Please try again later.</Text>
+              <Button mt={4} onClick={() => setShowDialog(false)}>
+                Close
+              </Button>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Root>
+      </VStack>
+    );
+  }
+
+  // Use the same empty project logic as UserDashboard
+  if (!status?.has_approved_project) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Box maxW="lg" width="100%">
+          <Text
+            as="h2"
+            fontSize="2xl"
+            fontWeight="bold"
+            mb={2}
+            color="gray.800"
+          >
+            Project Approval
+          </Text>
+          <Text
+            fontSize="lg"
+            color="gray.700"
+            mb={4}
+          >
+            Please fill in your project details below to request approval and gain
+            full access to the platform. All information will be reviewed by our
+            team.
+          </Text>
         </Box>
-      ))}
+        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+          Submit Project Details
+        </Button>
+        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content maxW="lg">
+                <Dialog.Header>
+                  <Dialog.Title>Submit Project Details</Dialog.Title>
+                  <Dialog.CloseTrigger asChild>
+                    <Button onClick={() => setShowDialog(false)}>Close</Button>
+                  </Dialog.CloseTrigger>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <VStack spacing={4} align="stretch">
+                    <Input
+                      placeholder="Project Name"
+                      value={form.project_name}
+                      onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Location"
+                      value={form.location}
+                      onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Estimated Budget"
+                      value={form.estimated_budget}
+                      onChange={e => setForm(f => ({ ...f, estimated_budget: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Estimated Timeline"
+                      value={form.estimated_timeline}
+                      onChange={e => setForm(f => ({ ...f, estimated_timeline: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Client Address"
+                      value={form.client_address}
+                      onChange={e => setForm(f => ({ ...f, client_address: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Additional Details"
+                      value={form.additional_details}
+                      onChange={e => setForm(f => ({ ...f, additional_details: e.target.value }))}
+                    />
+                    <Button
+                      colorScheme="blue"
+                      onClick={async () => {
+                        await submitProjectApproval(jwt, form);
+                        setShowDialog(false);
+                        setLoading(true);
+                        getProjectStatus(jwt)
+                          .then(setStatus)
+                          .finally(() => setLoading(false));
+                      }}
+                      isDisabled={
+                        !form.project_name ||
+                        !form.location ||
+                        !form.estimated_budget ||
+                        !form.estimated_timeline ||
+                        !form.client_address
+                      }
+                    >
+                      Submit
+                    </Button>
+                  </VStack>
+                </Dialog.Body>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+      </Box>
+    );
+  }
+
+  return (
+    <VStack spacing={6} p={4}>
+      <Text fontSize="2xl" fontWeight="bold" mb={4}>
+        No Projects Available
+      </Text>
+      <Text color="gray.500">You have no projects to select.</Text>
     </VStack>
   );
 };
 
-export default ProjectSelection;
+export default ProjectSelect;

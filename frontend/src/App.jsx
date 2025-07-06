@@ -3,6 +3,7 @@ import { Box } from "@chakra-ui/react";
 import { Routes, Route, useLocation, useNavigate } from "react-router";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuthStore } from "@/store/useAuthStore";
+import supabase from "@/utils/supabaseClient";
 
 
 // Pages
@@ -151,5 +152,27 @@ const App = () => {
     </Box>
   );
 };
+
+function AuthHydrator() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const setToken = useAuthStore((s) => s.setToken);
+
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setUser(session.user);
+        setToken(session.access_token);
+      } else {
+        setUser(null);
+        setToken(null);
+      }
+    });
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, [setUser, setToken]);
+
+  return null;
+}
 
 export default App;

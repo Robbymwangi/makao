@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Heading,
   Text,
   Button,
-  SimpleGrid,
+  Input,
+  Dialog,
   VStack,
+  Spinner,
+  SimpleGrid,
   HStack,
   Flex,
   useBreakpointValue,
@@ -30,6 +33,15 @@ import {
 } from "lucide-react";
 import { toaster } from "@/components/ui/toaster";
 import { LuChevronRight } from "react-icons/lu";
+import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
+import { useAuthStore } from "@/store/useAuthStore";
+
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms)),
+  ]);
+}
 
 const initialFolders = [
   { id: 1, name: "Tech Innovations" },
@@ -85,11 +97,33 @@ const menuItems = [
   },
 ];
 
-const FileTransferUI = () => {
+const Reports = () => {
   const [fileView, setFileView] = useState("grid");
   const isMobile = useBreakpointValue({ base: true, md: false });
   const [folderMenuOpenId, setFolderMenuOpenId] = useState(null);
   const [fileMenuOpenId, setFileMenuOpenId] = useState(null);
+
+  // Use the same selector as UserDashboard for JWT
+  const jwt = useAuthStore((state) => state.token);
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [form, setForm] = useState({
+    project_name: "",
+    location: "",
+    estimated_budget: "",
+    estimated_timeline: "",
+    client_address: "",
+    additional_details: "",
+  });
+
+  useEffect(() => {
+    if (!jwt) return;
+    setLoading(true);
+    getProjectStatus(jwt)
+      .then(setStatus)
+      .finally(() => setLoading(false));
+  }, [jwt]);
 
   const handleItemClick = (item) => {
     toaster.create({ description: `Clicked: ${item.name}`, type: "info" });
@@ -211,6 +245,130 @@ const FileTransferUI = () => {
       </Portal>
     </Menu.Root>
   );
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Spinner size="xl" color="black" />
+        <Text mt={4}>Loading...</Text>
+      </Box>
+    );
+  }
+
+  if (!status?.has_approved_project) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Box maxW="lg" width="100%">
+          <Text
+            as="h2"
+            fontSize="2xl"
+            fontWeight="bold"
+            mb={2}
+            color="gray.800"
+          >
+            Project Approval
+          </Text>
+          <Text
+            fontSize="lg"
+            color="gray.700"
+            mb={4}
+          >
+            Please fill in your project details below to request approval and gain
+            full access to the platform. All information will be reviewed by our
+            team.
+          </Text>
+        </Box>
+        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+          Submit Project Details
+        </Button>
+        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content maxW="lg">
+                <Dialog.Header>
+                  <Dialog.Title>Submit Project Details</Dialog.Title>
+                  <Dialog.CloseTrigger asChild>
+                    <Button onClick={() => setShowDialog(false)}>Close</Button>
+                  </Dialog.CloseTrigger>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <VStack spacing={4} align="stretch">
+                    <Input
+                      placeholder="Project Name"
+                      value={form.project_name}
+                      onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Location"
+                      value={form.location}
+                      onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Estimated Budget"
+                      value={form.estimated_budget}
+                      onChange={e => setForm(f => ({ ...f, estimated_budget: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Estimated Timeline"
+                      value={form.estimated_timeline}
+                      onChange={e => setForm(f => ({ ...f, estimated_timeline: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Client Address"
+                      value={form.client_address}
+                      onChange={e => setForm(f => ({ ...f, client_address: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Additional Details"
+                      value={form.additional_details}
+                      onChange={e => setForm(f => ({ ...f, additional_details: e.target.value }))}
+                    />
+                    <Button
+                      colorScheme="blue"
+                      onClick={async () => {
+                        await submitProjectApproval(jwt, form);
+                        setShowDialog(false);
+                        setLoading(true);
+                        getProjectStatus(jwt)
+                          .then(setStatus)
+                          .finally(() => setLoading(false));
+                      }}
+                      isDisabled={
+                        !form.project_name ||
+                        !form.location ||
+                        !form.estimated_budget ||
+                        !form.estimated_timeline ||
+                        !form.client_address
+                      }
+                    >
+                      Submit
+                    </Button>
+                  </VStack>
+                </Dialog.Body>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+      </Box>
+    );
+  }
 
   return (
     <Box p={2}>
@@ -601,4 +759,4 @@ const FileTransferUI = () => {
   );
 };
 
-export default FileTransferUI;
+export default Reports;
