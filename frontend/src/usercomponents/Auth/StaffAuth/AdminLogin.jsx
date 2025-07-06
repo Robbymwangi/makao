@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 import AuthHeader from "@/usercomponents/Auth/UserAuth/AuthHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
+import supabase from "@/utils/supabaseClient"; // <-- Make sure this import is present
 
 const StaffLogin = () => {
   const [email, setEmail] = useState("");
@@ -76,7 +77,15 @@ const StaffLogin = () => {
       const { user, session, role } = result;
 
       if (["systemAdmin", "consultantAdmin", "agentAdmin"].includes(role)) {
-        // Set auth state directly for staff login
+        // 1. Sync Supabase session in browser for Edge Function auth!
+        if (session) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
+        }
+
+        // 2. Set your store as before
         useAuthStore.setState({
           isAuthenticated: true,
           user: user,
