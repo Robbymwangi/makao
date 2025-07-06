@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   VStack,
@@ -26,51 +26,71 @@ import {
 } from "lucide-react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import supabase from "../../../../../utils/supabaseClient"; // Adjust path if needed
 
 const AssignedClients = () => {
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [loading, setLoading] = useState(true);
+  const [agentId, setAgentId] = useState(null);
 
-  // Mock data for clients
-  const clients = [
-    {
-      id: 1,
-      name: "John Doe",
-      project: "Residential Casa",
-      progress: 75,
-      avatar: "https://bit.ly/dan-abramov",
-      documents: [
-        { id: 1, name: "Building Permit", type: "permit", status: "approved" },
-        { id: 2, name: "Floor Plans", type: "blueprint", status: "pending" },
-      ],
-      events: [
-        { date: "2024-03-20", title: "Site Visit" },
-        { date: "2024-03-21", title: "Document Review" },
-      ],
-    },
-    {
-      id: 2,
-      name: "Sarah Smith",
-      project: "Urban Apartments",
-      progress: 45,
-      avatar: "https://bit.ly/ryan-florence",
-      documents: [
-        { id: 3, name: "Contract", type: "legal", status: "pending" },
-      ],
-      events: [
-        { date: "2024-03-22", title: "Client Meeting" },
-      ],
-    },
-  ];
+  // Get the current agent's UUID from Supabase auth
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setAgentId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
-  // Get events for selected date
+  // Fetch clients assigned to this agent
+  useEffect(() => {
+    if (!agentId) return;
+    setLoading(true);
+    fetch(`http://localhost:3000/agents/${agentId}/clients`)
+      .then((res) => res.json())
+      .then(async (users) => {
+        const clientsWithProjects = await Promise.all(
+          users.map(async (user) => {
+            const projectsRes = await fetch(
+              `http://localhost:3000/users/${user.id}/projects`
+            );
+            const projects = await projectsRes.json();
+            return {
+              ...user,
+              projects,
+            };
+          })
+        );
+        setClients(clientsWithProjects);
+        setLoading(false);
+      })
+      .catch(() => {
+        setClients([]);
+        setLoading(false);
+      });
+  }, [agentId]);
+
+  // Helper: Get selected client object
+  const selectedClient = clients.find((c) => c.id === selectedClientId);
+
+  // Helper: Get events for selected date (if you add events to your schema)
   const getEventsForDate = (date) => {
     if (!selectedClient) return [];
-    const client = clients.find(c => c.id === selectedClient);
-    if (!client) return [];
-    
-    const dateStr = date.toISOString().split('T')[0];
-    return client.events.filter(event => event.date === dateStr);
+    let events = [];
+    selectedClient.projects?.forEach((project) => {
+      if (project.events) {
+        events = events.concat(
+          project.events.filter(
+            (event) => event.date === date.toISOString().split("T")[0]
+          )
+        );
+      }
+    });
+    return events;
   };
 
   return (
@@ -112,125 +132,93 @@ const AssignedClients = () => {
       <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
         {/* Left Column - Client List */}
         <VStack spacing={4} align="stretch">
-          {clients.map((client) => (
-            <Card.Root
-              key={client.id}
-              p={4}
-              onClick={() => setSelectedClient(client.id)}
-              cursor="pointer"
-              bg={selectedClient === client.id ? "gray.50" : "white"}
-              _hover={{ bg: "gray.50" }}
-              transition="all 0.2s"
-            >
-              <Flex justify="space-between" align="center">
-                <HStack spacing={4}>
-                  <Avatar.Root>
-                    <Avatar.Image src={client.avatar} />
-                    <Avatar.Fallback name={client.name} />
-                  </Avatar.Root>
-                  <Box>
-                    <Text fontWeight="bold">{client.name}</Text>
-                    <Text fontSize="sm" color="gray.500">
-                      {client.project}
-                    </Text>
-                  </Box>
-                </HStack>
-                <Badge
-                  colorScheme={
-                    client.progress >= 75
-                      ? "green"
-                      : client.progress >= 50
-                      ? "yellow"
-                      : "orange"
-                  }
-                >
-                  {client.progress}% Complete
-                </Badge>
-              </Flex>
-
-              {/* Quick Actions */}
-              <HStack mt={4} spacing={4}>
-                <Button
-                  size="sm"
-                  leftIcon={<Upload size={16} />}
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Handle document upload
-                  }}
-                >
-                  Upload
-                </Button>
-                <Button
-                  size="sm"
-                  leftIcon={<CalendarIcon size={16} />}
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Handle calendar event
-                  }}
-                >
-                  Schedule
-                </Button>
-              </HStack>
-            </Card.Root>
-          ))}
+          {loading ? (
+            <Text>Loading clients...</Text>
+          ) : clients.length === 0 ? (
+            <Text>No assigned clients found.</Text>
+          ) : (
+            clients.map((client) => (
+              <Card.Root
+                key={client.id}
+                p={4}
+                onClick={() => setSelectedClientId(client.id)}
+                cursor="pointer"
+                bg={selectedClientId === client.id ? "gray.50" : "white"}
+                _hover={{ bg: "gray.50" }}
+                transition="all 0.2s"
+              >
+                <Flex justify="space-between" align="center">
+                  <HStack spacing={4}>
+                    <Avatar.Root>
+                      <Avatar.Image src={client.avatar || ""} />
+                      <Avatar.Fallback name={client.full_name || client.email} />
+                    </Avatar.Root>
+                    <Box>
+                      <Text fontWeight="bold">{client.full_name || client.email}</Text>
+                      <Text fontSize="sm" color="gray.500">
+                        {client.projects && client.projects.length > 0
+                          ? client.projects.map((p) => p.project_name).join(", ")
+                          : "No projects"}
+                      </Text>
+                    </Box>
+                  </HStack>
+                  <Badge colorScheme="blue">
+                    {client.projects ? client.projects.length : 0} Project
+                    {client.projects && client.projects.length === 1 ? "" : "s"}
+                  </Badge>
+                </Flex>
+              </Card.Root>
+            ))
+          )}
         </VStack>
 
         {/* Right Column - Details */}
         <VStack spacing={8} align="stretch">
           {selectedClient ? (
             <>
-              {/* Document Upload Section */}
-              <Card.Root p={6}>
-                <Heading size="md" mb={6}>
-                  Documents
-                </Heading>
-                <Box
-                  borderWidth={2}
-                  borderRadius="lg"
-                  borderStyle="dashed"
-                  p={8}
-                  textAlign="center"
-                  bg="gray.50"
-                  mb={6}
-                >
-                  <Icon as={FileText} w={8} h={8} color="gray.400" mb={4} />
-                  <Text mb={4}>
-                    Drag and drop files here, or click to select files
-                  </Text>
-                  <Button size="sm" variant="outline">
-                    Select Files
-                  </Button>
-                </Box>
-                {/* Document List */}
-                <VStack align="stretch" spacing={3}>
-                  {clients
-                    .find((c) => c.id === selectedClient)
-                    ?.documents.map((doc) => (
-                      <Flex
-                        key={doc.id}
-                        p={3}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        justify="space-between"
-                        align="center"
-                      >
-                        <HStack>
-                          <FileText size={16} />
-                          <Text>{doc.name}</Text>
-                        </HStack>
-                        <Badge
-                          colorScheme={
-                            doc.status === "approved" ? "green" : "yellow"
-                          }
-                        >
-                          {doc.status}
-                        </Badge>
-                      </Flex>
-                    ))}
-                </VStack>
-              </Card.Root>
+              {/* Projects Section */}
+              {selectedClient.projects && selectedClient.projects.length > 0 ? (
+                selectedClient.projects.map((project) => (
+                  <Card.Root p={6} key={project.id} mb={4}>
+                    <Heading size="md" mb={4}>
+                      {project.project_name}
+                    </Heading>
+                    <Text mb={2}>Status: {project.status}</Text>
+                    <Text mb={2}>Location: {project.location}</Text>
+                    <Text mb={2}>Budget: {project.estimated_budget}</Text>
+                    {/* Documents */}
+                    <Heading size="sm" mt={4} mb={2}>
+                      Documents
+                    </Heading>
+                    <VStack align="stretch" spacing={3}>
+                      {project.project_documents && project.project_documents.length > 0 ? (
+                        project.project_documents.map((doc) => (
+                          <Flex
+                            key={doc.id}
+                            p={3}
+                            borderWidth="1px"
+                            borderRadius="md"
+                            justify="space-between"
+                            align="center"
+                          >
+                            <HStack>
+                              <FileText size={16} />
+                              <Text>{doc.name}</Text>
+                            </HStack>
+                            <Badge colorScheme="green">{doc.status || "uploaded"}</Badge>
+                          </Flex>
+                        ))
+                      ) : (
+                        <Text fontSize="sm" color="gray.500">
+                          No documents uploaded.
+                        </Text>
+                      )}
+                    </VStack>
+                  </Card.Root>
+                ))
+              ) : (
+                <Text>No projects for this client.</Text>
+              )}
 
               {/* Calendar Section */}
               <Card.Root p={6}>
