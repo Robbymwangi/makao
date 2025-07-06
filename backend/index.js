@@ -90,6 +90,8 @@ import agentRoutes from './src/routes/agents.js';
 // Register agent routes
 app.use('/agents', agentRoutes);
 
+
+
 // Register staff routes
 app.use('/', staffRoutes);
 

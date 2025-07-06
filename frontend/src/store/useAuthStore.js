@@ -81,11 +81,11 @@ export const useAuthStore = create(persist((set, get) => ({
   },
 
   // --- SIGNUP ---
-  signup: async (email, password) => {
+  signup: async (payload) => { // Expect a payload object
     set({ loading: true, error: null });
-
     try {
-      const data = await handleAuthRequest(`${API}/auth/signup`, { email, password });
+      // The handleAuthRequest helper already stringifies the payload
+      const data = await handleAuthRequest(`${API}/auth/signup`, payload);
       return data;
     } catch (err) {
       set({ error: err });

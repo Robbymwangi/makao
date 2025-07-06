@@ -601,13 +601,12 @@ const SupportTools = () => {
 
         {/* Ticket Details Dialog */}
         <Dialog.Root
-          key={dialogTicket?.id ?? "no-ticket"}
           open={dialogOpen}
-          onOpenChange={(props) => {
-            if (!props.open) {
-              handleCloseDialog();
-            } else {
-              setDialogOpen(true);
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              // Wait for the dialog close animation before clearing dialogTicket
+              setTimeout(() => setDialogTicket(null), 300);
             }
           }}
         >
@@ -623,91 +622,97 @@ const SupportTools = () => {
                       position="absolute"
                       top="2"
                       right="2"
+                      onClick={() => setDialogOpen(false)}
                     />
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body pb="8">
-                  {dialogTicket && (
-                    <VStack spacing={4} align="stretch">
-                      <DataList.Root orientation="horizontal">
-                        <DataList.Item>
-                          <DataList.ItemLabel>Status</DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            <Badge
-                              colorScheme={
-                                statusColorPalette[dialogTicket.status] || "gray"
-                              }
-                            >
-                              {dialogTicket.status}
-                            </Badge>
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                        <DataList.Item>
-                          <DataList.ItemLabel>Category</DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            <Badge
-                              colorScheme={
-                                categoryColorPalette[dialogTicket.category] ||
-                                "gray"
-                              }
-                            >
-                              {dialogTicket.category}
-                            </Badge>
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                        <DataList.Item>
-                          <DataList.ItemLabel>Assigned To</DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            <Select.Root
-                              collection={adminOptions}
-                              size="sm"
-                              value={[dialogTicket?.assignedTo || "Unassigned"]}
-                              onValueChange={({ value }) =>
-                                handleReassignTicket(dialogTicket.id, value[0])
-                              }
-                            >
-                              <Select.HiddenSelect />
-                              <Select.Control>
-                                <Select.Trigger>
-                                  <Select.ValueText placeholder="Assign to admin" />
-                                </Select.Trigger>
-                                <Select.IndicatorGroup>
-                                  <Select.Indicator />
-                                </Select.IndicatorGroup>
-                              </Select.Control>
-                              <Select.Positioner>
-                                <Select.Content>
-                                  {adminOptions.items.map((item) => (
-                                    <Select.Item item={item} key={item.value}>
-                                      {item.label}
-                                    </Select.Item>
-                                  ))}
-                                </Select.Content>
-                              </Select.Positioner>
-                            </Select.Root>
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                        <DataList.Item>
-                          <DataList.ItemLabel>Created By</DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            {dialogTicket.createdBy}
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                        <DataList.Item>
-                          <DataList.ItemLabel>Last Update</DataList.ItemLabel>
-                          <DataList.ItemValue>
-                            {new Date(dialogTicket.lastUpdate).toLocaleString()}
-                          </DataList.ItemValue>
-                        </DataList.Item>
-                      </DataList.Root>
-                      <Box mt={6}>
-                        <Text fontWeight="bold" mb={2}>
-                          Description
-                        </Text>
-                        <Text>{dialogTicket?.description}</Text>
-                      </Box>
-                    </VStack>
-                  )}
+                  {/* Always render the content, even if dialogTicket is null */}
+                  <VStack spacing={4} align="stretch">
+                    {dialogTicket ? (
+                      <>
+                        <DataList.Root orientation="horizontal">
+                          <DataList.Item>
+                            <DataList.ItemLabel>Status</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              <Badge
+                                colorScheme={
+                                  statusColorPalette[dialogTicket.status] || "gray"
+                                }
+                              >
+                                {dialogTicket.status}
+                              </Badge>
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                          <DataList.Item>
+                            <DataList.ItemLabel>Category</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              <Badge
+                                colorScheme={
+                                  categoryColorPalette[dialogTicket.category] ||
+                                  "gray"
+                                }
+                              >
+                                {dialogTicket.category}
+                              </Badge>
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                          <DataList.Item>
+                            <DataList.ItemLabel>Assigned To</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              <Select.Root
+                                collection={adminOptions}
+                                size="sm"
+                                value={[dialogTicket?.assignedTo || "Unassigned"]}
+                                onValueChange={({ value }) =>
+                                  handleReassignTicket(dialogTicket.id, value[0])
+                                }
+                              >
+                                <Select.HiddenSelect />
+                                <Select.Control>
+                                  <Select.Trigger>
+                                    <Select.ValueText placeholder="Assign to admin" />
+                                  </Select.Trigger>
+                                  <Select.IndicatorGroup>
+                                    <Select.Indicator />
+                                  </Select.IndicatorGroup>
+                                </Select.Control>
+                                <Select.Positioner>
+                                  <Select.Content>
+                                    {adminOptions.items.map((item) => (
+                                      <Select.Item item={item} key={item.value}>
+                                        {item.label}
+                                      </Select.Item>
+                                    ))}
+                                  </Select.Content>
+                                </Select.Positioner>
+                              </Select.Root>
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                          <DataList.Item>
+                            <DataList.ItemLabel>Created By</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              {dialogTicket.createdBy}
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                          <DataList.Item>
+                            <DataList.ItemLabel>Last Update</DataList.ItemLabel>
+                            <DataList.ItemValue>
+                              {new Date(dialogTicket.lastUpdate).toLocaleString()}
+                            </DataList.ItemValue>
+                          </DataList.Item>
+                        </DataList.Root>
+                        <Box mt={6}>
+                          <Text fontWeight="bold" mb={2}>
+                            Description
+                          </Text>
+                          <Text>{dialogTicket.description}</Text>
+                        </Box>
+                      </>
+                    ) : (
+                      <Text color="gray.500">No ticket selected.</Text>
+                    )}
+                  </VStack>
                 </Dialog.Body>
                 <Dialog.Footer>
                   {dialogTicket && dialogTicket.status !== "Closed" && (
@@ -716,7 +721,7 @@ const SupportTools = () => {
                       variant="outline"
                       onClick={() => {
                         handleCloseTicket(dialogTicket.id);
-                        handleCloseDialog();
+                        setDialogOpen(false);
                       }}
                     >
                       Close Ticket

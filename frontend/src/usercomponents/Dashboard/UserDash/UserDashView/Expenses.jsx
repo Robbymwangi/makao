@@ -1,18 +1,21 @@
 "use client";
-import React, { useState, memo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Heading,
-  VStack,
-  HStack,
   Text,
   Button,
-  useBreakpointValue,
-  Menu,
-  Portal,
+  Input,
+  Dialog,
+  VStack,
+  Spinner,
+  HStack,
   Flex,
   SimpleGrid,
   Stat,
+  useBreakpointValue,
+  Menu,
+  Portal,
 } from "@chakra-ui/react";
 import {
   Area,
@@ -30,9 +33,12 @@ import {
 } from "recharts";
 import { Chart, useChart, BarSegment } from "@chakra-ui/charts";
 import { ChevronDown, Expand } from "lucide-react";
+import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
+import { useAuthStore } from "@/store/useAuthStore";
+import ProjectApprovalForm from "@/usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectApprovalForm";
 
 // ExpensesList component for Team Expenses (color bullets)
-const ExpensesList = memo(({ data }) => {
+const ExpensesList = ({ data }) => {
   // Calculate total for percentage calculation
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
@@ -76,10 +82,10 @@ const ExpensesList = memo(({ data }) => {
       })}
     </VStack>
   );
-});
+};
 
 // ReceiptsList component for Receipts (with additional columns)
-const ReceiptsList = memo(({ data }) => {
+const ReceiptsList = ({ data }) => {
   const isMobile = useBreakpointValue({ base: true, md: false }); // Check screen size
 
   return (
@@ -169,7 +175,7 @@ const ReceiptsList = memo(({ data }) => {
       ))}
     </VStack>
   );
-});
+};
 
 // Add this above the Expenses component or in a suitable place in the file
 const estimatedActualChart = (selectedFilter) => {
@@ -231,8 +237,12 @@ const estimatedActualChart = (selectedFilter) => {
 // Main Expenses component
 const Expenses = () => {
   const [activeMenu, setActiveMenu] = useState("Overview");
-  const [selectedFilter, setSelectedFilter] = useState("This Month"); // Track selected filter
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  const [selectedFilter, setSelectedFilter] = useState("This Month");
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [error, setError] = useState("");
+  const jwt = useAuthStore((state) => state.token); // <-- Use the same selector as UserDashboard
 
   const menuItems = [
     { label: "Overview", value: "overview" },
@@ -299,6 +309,112 @@ const Expenses = () => {
       cost: 1800,
     },
   ];
+
+  useEffect(() => {
+    if (!jwt) return;
+    setLoading(true);
+    setError("");
+    getProjectStatus(jwt)
+      .then(setStatus)
+      .catch((err) => setError(err.message || "Failed to load project status"))
+      .finally(() => setLoading(false));
+  }, [jwt]);
+
+  const handleFormSubmit = async (formData) => {
+    await submitProjectApproval(jwt, formData);
+    setIsFormOpen(false);
+    setLoading(true);
+    getProjectStatus(jwt)
+      .then(setStatus)
+      .finally(() => setLoading(false));
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Spinner size="xl" color="black" />
+        <Text mt={4}>Loading...</Text>
+      </Box>
+    );
+  }
+  if (error) {
+    return (
+      <Box textAlign="center" p={8}>
+        <Text color="red.500">{error}</Text>
+      </Box>
+    );
+  }
+
+  if (!status?.has_approved_project) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minH="100vh"
+        textAlign="center"
+        p={8}
+      >
+        <Box maxW="lg" width="100%">
+          <Text
+            as="h2"
+            fontSize="2xl"
+            fontWeight="bold"
+            mb={2}
+            color="gray.800"
+          >
+            Project Approval
+          </Text>
+          <Text
+            fontSize="lg"
+            color="gray.700"
+            mb={4}
+          >
+            Please fill in your project details below to request approval and gain
+            full access to the platform. All information will be reviewed by our
+            team.
+          </Text>
+        </Box>
+        <Button colorScheme="blue" mt={4} onClick={() => setIsFormOpen(true)}>
+          Submit Project Details
+        </Button>
+        <Dialog.Root
+          open={isFormOpen}
+          onOpenChange={(details) => setIsFormOpen(details.open)}
+        >
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content maxW="lg">
+                <Dialog.Header>
+                  <Dialog.Title>Submit Project Details</Dialog.Title>
+                  <Dialog.CloseTrigger asChild>
+                    <Button onClick={() => setIsFormOpen(false)}>Close</Button>
+                  </Dialog.CloseTrigger>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <ProjectApprovalForm
+                    loading={loading}
+                    onClose={() => setIsFormOpen(false)}
+                    onSubmit={handleFormSubmit}
+                  />
+                </Dialog.Body>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+      </Box>
+    );
+  }
 
   return (
     <>

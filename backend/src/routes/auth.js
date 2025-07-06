@@ -37,9 +37,12 @@ const fail = (res, status, code, message) =>
 
 // ——— SIGNUP ——— //
 router.post('/signup', async (req, res) => {
-  const { email, password, role = 'user' } = req.body;
-  if (!email || !password) {
-    return fail(res, 400, 'validation_error', 'Email & password required');
+  // Destructure fullName from the request body
+  const { fullName, email, password, role = 'user' } = req.body;
+
+  // Add validation for fullName
+  if (!fullName || !email || !password) {
+    return fail(res, 400, 'validation_error', 'Full name, email, and password are required');
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -70,7 +73,11 @@ router.post('/signup', async (req, res) => {
         password,
         options: {
           emailRedirectTo: `${getFrontendUrl()}/verify-email`,
-          data: { role },
+          // ✅ Store fullName in Supabase Auth's metadata
+          data: {
+            role,
+            full_name: fullName,
+          },
         },
       })
     );
@@ -79,34 +86,30 @@ router.post('/signup', async (req, res) => {
       return fail(res, 400, 'signup_failed', signUpErr.message);
     }
 
-    // After user signs up successfully, insert into users table
     if (signUpData && signUpData.user) {
-      try {
-       const { error: insertError } = await service
-  .from("users")
-  .insert({
-    id: signUpData.user.id,
-    email: signUpData.user.email,
-    full_name: "",
-    role,
-  })
-  .select(); // needed to trigger return/error check
-
-if (insertError) {
-  console.error('Failed to insert into users table:', insertError.message);
-  return fail(res, 500, 'insert_error', insertError.message);
-}
-
-        return res.status(201).json({
-          code: 'verification_sent',
-          message: 'Verification email sent',
+      // ✅ Insert the fullName into your public 'users' table
+      const { error: insertError } = await service
+        .from("users")
+        .insert({
+          id: signUpData.user.id,
+          email: signUpData.user.email,
+          full_name: fullName, // Use the variable here
+          role,
         });
-      } catch (err) {
-        console.error('Failed to insert into users table:', err.message);
-        return fail(res, 500, 'insert_error', err.message);
+
+      if (insertError) {
+        console.error('Failed to insert into users table:', insertError.message);
+        // Important: If this fails, you should consider deleting the auth user
+        // to prevent inconsistent state. For now, we'll just log the error.
+        await service.auth.admin.deleteUser(signUpData.user.id);
+        return fail(res, 500, 'insert_error', 'Could not create user profile.');
       }
+
+      return res.status(201).json({
+        code: 'verification_sent',
+        message: 'Verification email sent',
+      });
     } else {
-      // If for some reason signUpData.user is missing
       return fail(res, 500, 'signup_failed', 'User not created');
     }
   } catch (err) {
