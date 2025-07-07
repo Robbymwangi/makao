@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -23,5 +24,11 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true
   }
 });
+
+// In your logout handler (wherever you handle logout)
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  useAuthStore.getState().logout(); // or clearAuth(), depending on your store
+};
 
 export default supabase;

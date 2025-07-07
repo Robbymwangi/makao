@@ -158,7 +158,8 @@ export const useAuthStore = create(persist((set, get) => ({
         set({
           isAuthenticated: true,
           user,
-          role: user.user_metadata?.role || null,
+          // FIX: Support both user.user_metadata.role and user.role
+          role: user.user_metadata?.role || user.role || null,
           token: access_token,
         });
       }
