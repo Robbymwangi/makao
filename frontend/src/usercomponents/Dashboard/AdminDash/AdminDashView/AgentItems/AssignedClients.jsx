@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box, VStack, HStack, Text, Heading, Avatar, Badge, Button, Card,
   SimpleGrid, Flex, Icon, Menu, Portal, Spinner,
@@ -19,6 +19,7 @@ const AssignedClients = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef();
 
   const user = useAuthStore((state) => state.user);
 
@@ -101,6 +102,86 @@ const AssignedClients = () => {
     const client = clients.find((c) => c.id === selectedClient);
     if (!client) return [];
     return client.projects?.flatMap((p) => p.documents || []) || [];
+  };
+
+  // Upload handler
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedClient) return;
+
+    // Build a unique file path for this client
+    const filePath = `client-${selectedClient}/${Date.now()}-${file.name}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('project-documents')
+      .upload(filePath, file);
+
+    if (error) {
+      toaster.create({ description: "Upload failed", type: "error" });
+      return;
+    }
+
+    // Get public URL for the uploaded file
+    const { data: publicUrlData } = supabase
+      .storage
+      .from('project-documents')
+      .getPublicUrl(filePath);
+
+    // Add the uploaded document to the selected client's documents in state
+    setClients((prev) =>
+      prev.map((client) =>
+        client.id === selectedClient
+          ? {
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                documents: [
+                  ...(project.documents || []),
+                  {
+                    id: Date.now(),
+                    name: file.name,
+                    status: "pending",
+                    url: publicUrlData?.publicUrl || "",
+                  },
+                ],
+              })),
+            }
+          : client
+      )
+    );
+    toaster.create({
+      description: `Uploaded "${file.name}"`,
+      type: "success",
+    });
+  };
+
+  // Schedule handler (simple prompt for demo)
+  const handleSchedule = () => {
+    const title = prompt("Event title:");
+    if (!title) return;
+    const date = prompt("Event date (YYYY-MM-DD):", new Date().toISOString().split("T")[0]);
+    if (!date) return;
+    setClients((prev) =>
+      prev.map((client) =>
+        client.id === selectedClient
+          ? {
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                events: [
+                  ...(project.events || []),
+                  { title, date },
+                ],
+              })),
+            }
+          : client
+      )
+    );
+    toaster.create({
+      description: `Scheduled "${title}" on ${date}`,
+      type: "success",
+    });
   };
 
   if (loading) {
@@ -206,10 +287,7 @@ const AssignedClients = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toaster.create({
-                        description: "Upload functionality coming soon.",
-                        type: "info",
-                      });
+                      fileInputRef.current.click();
                     }}
                   >
                     Upload
@@ -220,10 +298,7 @@ const AssignedClients = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toaster.create({
-                        description: "Schedule functionality coming soon.",
-                        type: "info",
-                      });
+                      handleSchedule();
                     }}
                   >
                     Schedule
@@ -272,7 +347,11 @@ const AssignedClients = () => {
                       >
                         <HStack>
                           <FileText size={16} />
-                          <Text>{doc.name}</Text>
+                          {doc.url ? (
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a>
+                          ) : (
+                            <Text>{doc.name}</Text>
+                          )}
                         </HStack>
                         <Badge
                           colorScheme={doc.status === "approved" ? "green" : "yellow"}
@@ -354,9 +433,14 @@ const AssignedClients = () => {
           </VStack>
         </SimpleGrid>
       )}
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleUpload}
+      />
     </Box>
   );
 };
 
-    export default AssignedClients;
-    
+export default AssignedClients;
