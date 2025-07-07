@@ -50,25 +50,29 @@ router.post('/assign-agent', async (req, res) => {
   if (!user_id) {
     return res.status(400).json({ error: "user_id is required" });
   }
-  // agent_id can be null for unassigning, so no check here
 
   try {
     const supabase = createServiceClient();
 
-    // Update the user's agent_id in your 'users' profile table
+    // Update the user's agent_id
     const { data, error } = await supabase
       .from('users')
-      .update({ agent_id: agent_id || null }) // Set to null if agent_id is empty string
+      .update({ agent_id: agent_id || null })
       .eq('id', user_id)
-      .select() // Use select() to return the updated row
+      .select()
       .single();
 
     if (error) {
-      console.error("Error assigning agent:", error.message);
       return res.status(500).json({ error: error.message });
     }
 
-    res.json({ success: true, message: "Agent assigned successfully", user: data });
+    // Also update all projects for this user
+    await supabase
+      .from('projects')
+      .update({ agent_id: agent_id || null })
+      .eq('client_id', user_id);
+
+    res.json({ success: true, message: "Agent assignment updated for user and projects", user: data });
   } catch (err) {
     console.error("Unhandled error in /assign-agent:", err.message);
     res.status(500).json({ error: "Failed to assign agent" });
