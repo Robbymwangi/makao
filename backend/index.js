@@ -102,6 +102,12 @@ import projectsRoutes from './src/routes/projects.js';
 // Register projects routes
 app.use('/projects', projectsRoutes);
 
+// Import timelines routes
+import timelinesRouter from "./routes/timelines.js";
+
+// Register timelines routes
+app.use("/api/timelines", timelinesRouter);
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
