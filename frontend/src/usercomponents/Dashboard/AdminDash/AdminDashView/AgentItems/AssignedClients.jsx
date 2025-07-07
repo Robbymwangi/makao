@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box, VStack, HStack, Text, Heading, Avatar, Badge, Button, Card,
   SimpleGrid, Flex, Icon, Menu, Portal, Spinner,
@@ -10,7 +10,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toaster } from "@/components/ui/toaster";
-import supabase from "@/utils/supabaseClient"; // Make sure this is your initialized Supabase client
+import supabase from "@/utils/supabaseClient";
 
 const EDGE_FUNCTION_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-assigned-clients";
 
@@ -19,56 +19,86 @@ const AssignedClients = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef();
 
   const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    const fetchAssignedClients = async () => {
-      // Always get the latest session from Supabase client
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+  // Function to fetch assigned clients and their documents
+  const fetchAssignedClients = async () => {
+    try {
+      // Get the latest session from Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!user || !token) {
-        setLoading(false);
-        return;
+      if (sessionError) {
+        throw new Error('Failed to get session: ' + sessionError.message);
       }
 
-      try {
-        const agentId = user.id;
-        const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-        console.log("Fetching clients for agent ID:", agentId);
-        console.log("Using auth header:", authHeader.substring(0, 15) + "...");
+      if (!session || !session.access_token) {
+        throw new Error('No valid session found');
+      }
 
-        const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${agentId}`, {
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
-        });
+      if (!user?.id) {
+        throw new Error('No user ID available');
+      }
 
-        const data = await res.json();
+      console.log("Fetching clients for agent ID:", user.id);
 
-        if (!res.ok) {
-          console.log("API Error:", data);
-          throw new Error(data.error || "Failed to fetch clients");
+      // Format the auth header properly
+      const authHeader = `Bearer ${session.access_token}`;
+      console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+
+      const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("API Error:", errorData);
+        throw new Error(errorData.error || 'Failed to fetch clients');
+      }
+
+      const data = await res.json();
+
+      // For each client, fetch documents for each project
+      for (const client of data) {
+        if (client.projects && client.projects.length > 0) {
+          for (const project of client.projects) {
+            const { data: docs, error: docsError } = await supabase
+              .from('project_documents')
+              .select('*')
+              .eq('project_id', project.id);
+
+            project.documents = docsError ? [] : docs;
+          }
         }
-
-        setClients(data);
-        if (data.length > 0) setSelectedClient(data[0].id);
-      } catch (err) {
-        console.log("Error fetching clients:", err);
-        toaster.create({
-          title: "Error",
-          description: err.message,
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchAssignedClients();
-  }, [user]);
+      setClients(data);
+      if (data.length > 0) {
+        setSelectedClient(data[0].id);
+      }
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+      toaster.create({
+        title: "Error",
+        description: err.message,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAssignedClients();
+    } else {
+      setLoading(false);
+    }
+  }, [user]); // Depend on 'user' to refetch if user state changes
 
   // Helper: Get events for selected date
   const getEventsForDate = (date) => {
@@ -88,11 +118,109 @@ const AssignedClients = () => {
     return client.projects?.flatMap((p) => p.documents || []) || [];
   };
 
-  // Helper: Get projects for selected client
-  const getProjectsForSelectedClient = () => {
-    const client = clients.find((c) => c.id === selectedClient);
-    if (!client) return [];
-    return client.projects || [];
+  // Upload handler
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedClient) return;
+
+    // Build a unique file path for this client
+    const filePath = `client-${selectedClient}/${Date.now()}-${file.name}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('project-documents')
+      .upload(filePath, file);
+
+    if (error) {
+      toaster.create({ description: "Upload failed: " + error.message, type: "error" });
+      return;
+    }
+
+    // Get public URL for the uploaded file
+    const { data: publicUrlData } = supabase
+      .storage
+      .from('project-documents')
+      .getPublicUrl(filePath);
+
+    // Add the uploaded document to the selected client's documents in state
+    setClients((prev) =>
+      prev.map((client) =>
+        client.id === selectedClient
+          ? {
+            ...client,
+            projects: client.projects.map((project) => ({
+              ...project,
+              documents: [
+                ...(project.documents || []),
+                {
+                  id: Date.now(), // Temporary ID for immediate UI update
+                  name: file.name,
+                  status: "pending",
+                  url: publicUrlData?.publicUrl || "",
+                  project_id: project.id, // Ensure project_id is available
+                },
+              ],
+            })),
+          }
+          : client
+      )
+    );
+
+    // Also, insert the document record into the database
+    const clientToUpdate = clients.find((c) => c.id === selectedClient);
+    if (clientToUpdate && clientToUpdate.projects && clientToUpdate.projects.length > 0) {
+      const project = clientToUpdate.projects[0]; // Just take the first project for now
+      const { error: insertError } = await supabase
+        .from('project_documents')
+        .insert([{
+          project_id: project.id,
+          name: file.name,
+          url: publicUrlData?.publicUrl || "",
+          date: new Date().toISOString().split("T")[0],
+          // ...other fields as needed
+        }]);
+
+      if (insertError) {
+        toaster.create({ description: "Failed to record document in database: " + insertError.message, type: "error" });
+        // Optionally, revert the UI state change if DB insert fails
+      }
+    }
+
+    toaster.create({
+      description: `Uploaded "${file.name}" for ${clientToUpdate?.full_name || "selected client"}`,
+      type: "success",
+    });
+
+    // Refresh clients to get actual document IDs and ensure data consistency
+    fetchAssignedClients();
+  };
+
+  // Schedule handler (simple prompt for demo)
+  const handleSchedule = () => {
+    const title = prompt("Event title:");
+    if (!title) return;
+    const date = prompt("Event date (YYYY-MM-DD):", new Date().toISOString().split("T")[0]);
+    if (!date) return;
+    setClients((prev) =>
+      prev.map((client) =>
+        client.id === selectedClient
+          ? {
+            ...client,
+            projects: client.projects.map((project) => ({
+              ...project,
+              events: [
+                ...(project.events || []),
+                { title, date },
+              ],
+            })),
+          }
+          : client
+      )
+    );
+    toaster.create({
+      description: `Scheduled "${title}" on ${date}`,
+      type: "success",
+    });
   };
 
   if (loading) {
@@ -111,23 +239,6 @@ const AssignedClients = () => {
         <Heading size="2xl" fontWeight="bold" fontFamily="'Playfair Display', serif">
           Assigned Clients
         </Heading>
-        <HStack spacing={4} mt={{ base: 4, md: 0 }}>
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <Button variant="outline" leftIcon={<Plus size={16} />}>
-                Add New Client
-              </Button>
-            </Menu.Trigger>
-            <Portal>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.Item>Import from CSV</Menu.Item>
-                  <Menu.Item>Manual Entry</Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Portal>
-          </Menu.Root>
-        </HStack>
       </Flex>
 
       {clients.length === 0 ? (
@@ -136,19 +247,6 @@ const AssignedClients = () => {
           <Text fontSize="sm" color="gray.500" mt={2}>
             {user?.email && `Logged in as: ${user.email}`}
           </Text>
-          <Button
-            mt={4}
-            colorScheme="blue"
-            leftIcon={<Plus size={16} />}
-            onClick={() =>
-              toaster.create({
-                description: "Add client functionality coming soon.",
-                type: "info",
-              })
-            }
-          >
-            Add Your First Client
-          </Button>
         </Box>
       ) : (
         <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
@@ -182,8 +280,8 @@ const AssignedClients = () => {
                         client.projects[0].progress >= 75
                           ? "green"
                           : client.projects[0].progress >= 50
-                          ? "yellow"
-                          : "orange"
+                            ? "yellow"
+                            : "orange"
                       }
                     >
                       {client.projects[0].progress}% Complete
@@ -198,10 +296,7 @@ const AssignedClients = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toaster.create({
-                        description: "Upload functionality coming soon.",
-                        type: "info",
-                      });
+                      fileInputRef.current.click();
                     }}
                   >
                     Upload
@@ -212,10 +307,7 @@ const AssignedClients = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toaster.create({
-                        description: "Schedule functionality coming soon.",
-                        type: "info",
-                      });
+                      handleSchedule();
                     }}
                   >
                     Schedule
@@ -234,8 +326,96 @@ const AssignedClients = () => {
                   <Heading size="md" mb={6}>
                     Projects
                   </Heading>
-                  <VStack align="stretch" spacing={4}>
-                    {getProjectsForSelectedClient().length === 0 ? (
+                  <Box
+                    borderWidth={2}
+                    borderRadius="lg"
+                    borderStyle="dashed"
+                    p={8}
+                    textAlign="center"
+                    bg="gray.50"
+                    mb={6}
+                    onClick={() => fileInputRef.current.click()} // Make the dashed box clickable for upload
+                    cursor="pointer"
+                  >
+                    <Icon as={FileText} w={8} h={8} color="gray.400" mb={4} />
+                    <Text mb={4}>
+                      Drag and drop files here, or click to select files
+                    </Text>
+                    <Button size="sm" variant="outline">
+                      Select Files
+                    </Button>
+                  </Box>
+                  {/* Document List */}
+                  <VStack align="stretch" spacing={3}>
+                    {getDocumentsForSelectedClient().map((doc) => (
+                      <Flex
+                        key={doc.id}
+                        p={3}
+                        borderWidth="1px"
+                        borderRadius="md"
+                        justify="space-between"
+                        align="center"
+                      >
+                        <HStack>
+                          <FileText size={16} />
+                          {doc.url ? (
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer">{doc.name}</a>
+                          ) : (
+                            <Text>{doc.name}</Text>
+                          )}
+                        </HStack>
+                        <HStack>
+                          <Badge
+                            colorScheme={doc.status === "approved" ? "green" : "yellow"}
+                          >
+                            {doc.status || "pending"}
+                          </Badge>
+                          <Button
+                            size="xs"
+                            colorScheme="red"
+                            onClick={async () => {
+                              // Extract the file path from the URL or save it in your doc object
+                              const filePath = doc.url
+                                ? decodeURIComponent(new URL(doc.url).pathname.replace(/^\/storage\/v1\/object\/public\/project-documents\//, ''))
+                                : null;
+
+                              if (!filePath) {
+                                toaster.create({ description: "File path not found for deletion", type: "error" });
+                                return;
+                              }
+
+                              // First, remove from Supabase Storage
+                              const { error: storageError } = await supabase.storage
+                                .from('project-documents')
+                                .remove([filePath]);
+
+                              if (storageError) {
+                                toaster.create({ description: "File deletion from storage failed: " + storageError.message, type: "error" });
+                                return;
+                              }
+
+                              // Then, delete the document record from the database
+                              const { error: dbError } = await supabase
+                                .from('project_documents')
+                                .delete()
+                                .eq('id', doc.id);
+
+                              if (dbError) {
+                                toaster.create({ description: "Database record deletion failed: " + dbError.message, type: "error" });
+                                return; // Stop if database deletion fails
+                              }
+
+                              toaster.create({ description: "File and record deleted successfully", type: "success" });
+                              // Refresh clients to reflect the deletion
+                              fetchAssignedClients();
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </HStack>
+                      </Flex>
+                    ))}
+                    {getDocumentsForSelectedClient().length === 0 && (
                       <Text color="gray.500" textAlign="center" py={4}>
                         No projects available
                       </Text>
@@ -337,6 +517,12 @@ const AssignedClients = () => {
           </VStack>
         </SimpleGrid>
       )}
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleUpload}
+      />
     </Box>
   );
 };

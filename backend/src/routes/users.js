@@ -158,4 +158,31 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// GET /users/:userId/projects
+router.get("/:userId/projects", async (req, res) => {
+  const { userId } = req.params;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select(`
+      id,
+      project_name,
+      status,
+      location,
+      estimated_budget,
+      project_documents (
+        id,
+        name,
+        source,
+        date,
+        url,
+        status
+      )
+    `)
+    .eq("client_id", userId);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 export default router;
