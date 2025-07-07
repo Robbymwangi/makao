@@ -28,7 +28,8 @@ import {
 } from "@chakra-ui/react";
 import { ChevronRight, FileText, Construction, Check, Package, Ship, Upload } from "lucide-react";
 import { LuUpload } from "react-icons/lu";
-import { toaster } from "@/components/ui/toaster"; // Assuming toaster is in this path
+import { toaster } from "@/components/ui/toaster";
+import supabase from "@/utils/supabaseClient"; // Use supabase client for session
 
 // Allowed types for each section
 const allowedTypes = {
@@ -53,6 +54,63 @@ const allowedTypes = {
 };
 const maxSize = 10 * 1024 * 1024; // 10MB
 
+// Example upload handler for a single file
+async function handleFileUpload(file, category, projectId, accessToken) {
+  // 1. Get a signed upload URL
+  const uploadUrlRes = await fetch(
+    "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/storage-upload/get-upload-url",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        projectId,
+        category, // use 'photo', 'document', etc.
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      }),
+    }
+  );
+  const uploadUrlData = await uploadUrlRes.json();
+  if (!uploadUrlRes.ok) throw new Error(uploadUrlData.error);
+
+  // 2. Upload the file to the signed URL
+  await fetch(uploadUrlData.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+
+  // 3. Register the file in the database (upload-complete)
+  const registerRes = await fetch(
+    "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/storage-upload/upload-complete",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        projectId,
+        category,
+        filePath: uploadUrlData.filePath,
+        fileUrl: uploadUrlData.fileUrl,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        description: "",
+      }),
+    }
+  );
+  const registerData = await registerRes.json();
+  if (!registerRes.ok) throw new Error(registerData.error);
+
+  return registerData.file;
+}
+
 // Reusable Upload Section
 const UploadSection = ({
   title,
@@ -69,6 +127,8 @@ const UploadSection = ({
   setFileUploadKey,
   onUploadSuccess
 }) => {
+  const { id: projectId } = useParams();
+
   const handleFileChange = (acceptedFiles) => {
     setFiles(acceptedFiles);
     if (acceptedFiles?.length > 0) {
@@ -114,7 +174,21 @@ const UploadSection = ({
 
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get latest access token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error("No access token found");
+
+      // Determine category for upload
+      let category = "report";
+      if (title.toLowerCase().includes("photo")) category = "photo";
+      else if (title.toLowerCase().includes("document")) category = "document";
+
+      // Upload each file using your real upload logic
+      for (const file of files) {
+        await handleFileUpload(file, category, projectId, accessToken);
+      }
+
       toaster.create({
         description: `Your ${title.toLowerCase()} has been uploaded successfully.`,
         type: "success",
@@ -180,10 +254,13 @@ const UploadSection = ({
   );
 };
 
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-project-details";
+
 const MyProjects = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
-  const [fileUploads, setFileUploads] = useState([]); // For the bottom section
+  const [loading, setLoading] = useState(true);
+  const [fileUploads, setFileUploads] = useState([]);
   const [filter, setFilter] = useState("All");
 
   // State for the report upload section
@@ -204,14 +281,24 @@ const MyProjects = () => {
   const [isDocSubmitting, setIsDocSubmitting] = useState(false);
   const [docUploadKey, setDocUploadKey] = useState(Date.now());
 
-  // Simulate fetching project data based on the ID
+  // Fetch project data based on the ID and latest access token
   useEffect(() => {
-    const projects = [
-      { id: 1, name: "Residential Casa du Panel", description: "A modern residential project." },
-      { id: 2, name: "Urban Skyline Apartments", description: "Luxury apartments in the city." },
-    ];
-    const selectedProject = projects.find((p) => String(p.id) === String(id));
-    setProject(selectedProject);
+    async function fetchProject() {
+      setLoading(true);
+      // Get the latest session and access token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        setLoading(false);
+        return;
+      }
+      const res = await fetch(`${EDGE_URL}?id=${id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      setProject(data.project || null);
+      setLoading(false);
+    }
+    if (id) fetchProject();
   }, [id]);
 
   // Demo milestones
@@ -257,7 +344,7 @@ const MyProjects = () => {
     setFileUploads(prev => [...prev, ...newUploads]);
   };
 
-  if (!project) {
+  if (loading) {
     return (
       <VStack spacing={4} align="center" justify="center" minH="300px">
         <ProgressCircle.Root value={null} size="md" aria-label="Loading project details">
@@ -271,10 +358,27 @@ const MyProjects = () => {
     );
   }
 
+  if (!project) {
+    return <Text>Project not found or you do not have access.</Text>;
+  }
+
   return (
     <VStack spacing={6} align="stretch">
+      <Breadcrumb.Root mb={2}>
+        <Breadcrumb.List>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link href="/admin-dashboard/projects">My Projects</Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.CurrentLink>{project.name}</Breadcrumb.CurrentLink>
+          </Breadcrumb.Item>
+        </Breadcrumb.List>
+      </Breadcrumb.Root>
+      <Heading>{project.name}</Heading>
+
       {/* Handoff Project Button */}
-      <Flex justify="flex-end">
+      <Flex justify={{ base: "center", md: "flex-start" }} mb={2}>
         <Dialog.Root
           open={handoffOpen}
           onOpenChange={(open) => setHandoffOpen(open)}
@@ -323,25 +427,30 @@ const MyProjects = () => {
         </Dialog.Root>
       </Flex>
 
-      <Breadcrumb.Root mb={2}>
-        <Breadcrumb.List>
-          <Breadcrumb.Item>
-            <Breadcrumb.Link href="/admin-dashboard/projects">My Projects</Breadcrumb.Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Separator />
-          <Breadcrumb.Item>
-            <Breadcrumb.CurrentLink>{project.name}</Breadcrumb.CurrentLink>
-          </Breadcrumb.Item>
-        </Breadcrumb.List>
-      </Breadcrumb.Root>
-      <Heading>{project.name}</Heading>
-      <Text>{project.description}</Text>
-
+      
+      {/* Project Card with actual location and status */}
       <Card.Root w="100%" position="relative" mt={10} borderRadius="lg" overflow="hidden">
-        <Image src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80" alt={project.name} objectFit="cover" w="100%" h="300px" />
-        <Box p={6} position="absolute" bottom="0" left="0" color="white" bg="rgba(0, 0, 0, 0.6)" w="100%" borderBottomRadius="lg">
+        <Image
+          src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80"
+          alt={project.name}
+          objectFit="cover"
+          w="100%"
+          h="300px"
+        />
+        <Box
+          p={6}
+          position="absolute"
+          bottom="0"
+          left="0"
+          color="white"
+          bg="rgba(0, 0, 0, 0.6)"
+          w="100%"
+          borderBottomRadius="lg"
+        >
           <Text fontSize="lg" fontWeight="bold" mb={2}>{project.name}</Text>
-          <Text fontSize="md" color="gray.300" mb={4}>Madrid, Lisbon</Text>
+          <Text fontSize="md" color="gray.300" mb={4}>
+            {project.location || 'No location specified'}
+          </Text>
           <Stack direction="row" spacing={2} mb={4}>
             <Badge colorPalette="green" fontSize="sm"><Construction /> Ongoing</Badge>
             <Badge colorPalette="blue" fontSize="sm"><Check /> On Track</Badge>
