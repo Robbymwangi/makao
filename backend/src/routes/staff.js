@@ -26,21 +26,6 @@ router.get("/projects", async (req, res) => {
   res.json(data);
 });
 
-// Assign projects to agent (max 3)
-router.post("/agents/assign-projects", async (req, res) => {
-  const { agent_id, project_ids } = req.body;
-  if (!agent_id || !Array.isArray(project_ids) || project_ids.length > 3) {
-    return res.status(400).json({ error: "Invalid input" });
-  }
-  const supabase = createSupabaseClient();
-  const { error } = await supabase
-    .from("agents")
-    .update({ projects: project_ids })
-    .eq("id", agent_id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ message: "Projects assigned" });
-});
-
 // Remove admin
 router.post("/admins/delete", async (req, res) => {
   const { admin_id } = req.body;
@@ -49,6 +34,16 @@ router.post("/admins/delete", async (req, res) => {
   const { error } = await supabase.from("admins").delete().eq("id", admin_id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ message: "Admin removed" });
+});
+
+// Remove agent
+router.post("/agents/delete", async (req, res) => {
+  const { agent_id } = req.body;
+  if (!agent_id) return res.status(400).json({ error: "Agent ID required" });
+  const supabase = createSupabaseClient();
+  const { error } = await supabase.from("agents").delete().eq("id", agent_id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: "Agent removed" });
 });
 
 export default router;
