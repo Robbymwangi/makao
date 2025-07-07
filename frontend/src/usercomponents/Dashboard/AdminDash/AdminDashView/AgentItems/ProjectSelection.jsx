@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   Box,
   Text,
@@ -6,63 +7,70 @@ import {
   Image,
   Badge,
   Stack,
-  useBreakpointValue,
   SimpleGrid,
   Button,
   HStack,
   Avatar,
+  useBreakpointValue,
+  Spinner,
+  Flex,
 } from "@chakra-ui/react";
-import { useNavigate } from "react-router";
-import { Plus, Users, Construction } from "lucide-react";
+import { Plus } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore"; // adjust path as needed
+import supabase from "@/utils/supabaseClient"; // Make sure you have this
 
-const mockClients = [
-  {
-    id: 1,
-    name: "John Doe",
-    avatar: "https://i.pravatar.cc/150?u=johndoe",
-    projects: [
-      {
-        id: 1,
-        name: "Residential Casa du Panel",
-        locations: ["Madrid", "Lisbon"],
-        progress: 65,
-        clientCount: 3,
-        image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Sarah Smith",
-    avatar: "https://i.pravatar.cc/150?u=sarahsmith",
-    projects: [
-      {
-        id: 2,
-        name: "Urban Skyline Apartments",
-        locations: ["New York", "Chicago"],
-        progress: 80,
-        clientCount: 5,
-        image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-      },
-      {
-        id: 3,
-        name: "Green Valley Villas",
-        locations: ["Berlin"],
-        progress: 50,
-        clientCount: 2,
-        image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-      },
-    ],
-  },
-];
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-agent-projects";
 
 const ProjectSelection = () => {
   const navigate = useNavigate();
+  const token = useAuthStore((s) => s.token);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Move all hooks to the top level, including useBreakpointValue
+  const align = useBreakpointValue({ base: "center", md: "stretch" });
+  const textAlign = useBreakpointValue({ base: "center", md: "left" });
+
+  useEffect(() => {
+    async function fetchProjects() {
+      setLoading(true);
+      // Get the latest session and access token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        setLoading(false);
+        return;
+      }
+      const res = await fetch(EDGE_URL, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      setClients(data.clients || []);
+      setLoading(false);
+    }
+    fetchProjects();
+  }, []);
+
+  if (loading) {
+    return (
+      <Flex
+        direction="column"
+        align="center"
+        justify="center"
+        minH="400px"
+        w="100%"
+      >
+        <Spinner size="xl" />
+        <Text mt={4} color="gray.500">
+          Loading projects...
+        </Text>
+      </Flex>
+    );
+  }
 
   return (
     <VStack
       spacing={6}
-      align={useBreakpointValue({ base: "center", md: "stretch" })}
+      align={align}
       p={4}
     >
       <HStack justify="space-between" align="center" w="100%">
@@ -71,7 +79,7 @@ const ProjectSelection = () => {
           fontWeight="bold"
           mb={8}
           fontFamily={"Playfair Display, serif"}
-          textAlign={useBreakpointValue({ base: "center", md: "left" })}
+          textAlign={textAlign}
         >
           Manage Projects
         </Text>
@@ -82,15 +90,14 @@ const ProjectSelection = () => {
 
       {/* Grouped by client */}
       <Box w="100%" divideY="2px">
-        {mockClients.map((client, idx) => (
+        {clients.map((client, idx) => (
           <Box key={client.id} w="100%" py={4} {...(idx !== 0 && { borderTopWidth: "2px", borderColor: "gray.100" })}>
             <HStack mb={4} spacing={4}>
               <Avatar.Root>
-                <Avatar.Fallback name={client.name} />
-                <Avatar.Image src={client.avatar} />
+                <Avatar.Fallback name={client.full_name || client.email} />
               </Avatar.Root>
               <Text fontSize="2xl" fontWeight="bold">
-                {client.name}
+                {client.full_name || client.email}
               </Text>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
@@ -106,29 +113,14 @@ const ProjectSelection = () => {
                   _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
                   transition="all 0.2s"
                 >
-                  <Image
-                    src={project.image}
-                    alt={project.name}
-                    objectFit="cover"
-                    w="100%"
-                    h="200px"
-                  />
+                  {/* You may want to add a project image if available */}
                   <Box p={4}>
-                    <Text fontSize="xl" fontWeight="bold" mb={2}>
-                      {project.name}
-                    </Text>
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>{project.project_name}</Text>
                     <Text fontSize="sm" color="gray.500" mb={4}>
-                      Locations: {project.locations.join(", ")}
+                      Location: {project.location}
                     </Text>
                     <Stack direction="row" spacing={2} mb={4}>
-                      <Badge colorScheme="green" display="flex" alignItems="center" gap={2}>
-                        <Construction size={14} />
-                        Progress: {project.progress}%
-                      </Badge>
-                      <Badge colorScheme="blue" display="flex" alignItems="center" gap={2}>
-                        <Users size={14} />
-                        {project.clientCount} Clients
-                      </Badge>
+                      <Badge colorScheme="green">Status: {project.status}</Badge>
                     </Stack>
                   </Box>
                 </Box>
