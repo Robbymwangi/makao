@@ -30,7 +30,7 @@ const AssignedClients = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
-        throw new Error('Failed to get session: ' + sessionError.message);
+        throw new Error(`Failed to get session: ${sessionError.message}`);
       }
 
       if (!session || !session.access_token) {
@@ -45,7 +45,7 @@ const AssignedClients = () => {
 
       // Format the auth header properly
       const authHeader = `Bearer ${session.access_token}`;
-      console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+      console.log("Using auth header:", `${authHeader.substring(0, 20)}...`);
 
       const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
         headers: {
@@ -132,7 +132,7 @@ const AssignedClients = () => {
       .upload(filePath, file);
 
     if (error) {
-      toaster.create({ description: "Upload failed: " + error.message, type: "error" });
+      toaster.create({ description: `Upload failed: ${error.message}`, type: "error" });
       return;
     }
 
@@ -147,21 +147,21 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-            ...client,
-            projects: client.projects.map((project) => ({
-              ...project,
-              documents: [
-                ...(project.documents || []),
-                {
-                  id: Date.now(), // Temporary ID for immediate UI update
-                  name: file.name,
-                  status: "pending",
-                  url: publicUrlData?.publicUrl || "",
-                  project_id: project.id, // Ensure project_id is available
-                },
-              ],
-            })),
-          }
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                documents: [
+                  ...(project.documents || []),
+                  {
+                    id: Date.now(), // Temporary ID for immediate UI update
+                    name: file.name,
+                    status: "pending",
+                    url: publicUrlData?.publicUrl || "",
+                    project_id: project.id, // Ensure project_id is available
+                  },
+                ],
+              })),
+            }
           : client
       )
     );
@@ -181,7 +181,7 @@ const AssignedClients = () => {
         }]);
 
       if (insertError) {
-        toaster.create({ description: "Failed to record document in database: " + insertError.message, type: "error" });
+        toaster.create({ description: `Failed to record document in database: ${insertError.message}`, type: "error" });
         // Optionally, revert the UI state change if DB insert fails
       }
     }
@@ -205,15 +205,15 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-            ...client,
-            projects: client.projects.map((project) => ({
-              ...project,
-              events: [
-                ...(project.events || []),
-                { title, date },
-              ],
-            })),
-          }
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                events: [
+                  ...(project.events || []),
+                  { title, date },
+                ],
+              })),
+            }
           : client
       )
     );
@@ -390,7 +390,7 @@ const AssignedClients = () => {
                                 .remove([filePath]);
 
                               if (storageError) {
-                                toaster.create({ description: "File deletion from storage failed: " + storageError.message, type: "error" });
+                                toaster.create({ description: `File deletion from storage failed: ${storageError.message}`, type: "error" });
                                 return;
                               }
 
@@ -401,7 +401,7 @@ const AssignedClients = () => {
                                 .eq('id', doc.id);
 
                               if (dbError) {
-                                toaster.create({ description: "Database record deletion failed: " + dbError.message, type: "error" });
+                                toaster.create({ description: `Database record deletion failed: ${dbError.message}`, type: "error" });
                                 return; // Stop if database deletion fails
                               }
 

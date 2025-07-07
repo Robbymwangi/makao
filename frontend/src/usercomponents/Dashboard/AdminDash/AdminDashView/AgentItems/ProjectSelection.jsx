@@ -10,31 +10,54 @@ import {
   SimpleGrid,
   Button,
   HStack,
+  Avatar,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router";
 import { Plus, Users, Construction } from "lucide-react";
 
+const mockClients = [
+  {
+    id: 1,
+    name: "John Doe",
+    avatar: "https://i.pravatar.cc/150?u=johndoe",
+    projects: [
+      {
+        id: 1,
+        name: "Residential Casa du Panel",
+        locations: ["Madrid", "Lisbon"],
+        progress: 65,
+        clientCount: 3,
+        image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: "Sarah Smith",
+    avatar: "https://i.pravatar.cc/150?u=sarahsmith",
+    projects: [
+      {
+        id: 2,
+        name: "Urban Skyline Apartments",
+        locations: ["New York", "Chicago"],
+        progress: 80,
+        clientCount: 5,
+        image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
+      },
+      {
+        id: 3,
+        name: "Green Valley Villas",
+        locations: ["Berlin"],
+        progress: 50,
+        clientCount: 2,
+        image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
+      },
+    ],
+  },
+];
+
 const ProjectSelection = () => {
   const navigate = useNavigate();
-
-  const projects = [
-    {
-      id: 1,
-      name: "Residential Casa du Panel",
-      locations: ["Madrid", "Lisbon"],
-      progress: 65,
-      clientCount: 3,
-      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-    },
-    {
-      id: 2,
-      name: "Urban Skyline Apartments",
-      locations: ["New York", "Chicago"],
-      progress: 80,
-      clientCount: 5,
-      image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80",
-    },
-  ];
 
   return (
     <VStack
@@ -57,49 +80,65 @@ const ProjectSelection = () => {
         </Button>
       </HStack>
 
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-        {projects.map((project) => (
-          <Box
-            key={project.id}
-            borderWidth="1px"
-            borderRadius="lg"
-            overflow="hidden"
-            boxShadow="md"
-            onClick={() => navigate(`/admin-dashboard/projects/${project.id}`)}
-            cursor="pointer"
-            _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
-            transition="all 0.2s"
-          >
-            <Image
-              src={project.image}
-              alt={project.name}
-              objectFit="cover"
-              w="100%"
-              h="200px"
-            />
-            <Box p={4}>
-              <Text fontSize="xl" fontWeight="bold" mb={2}>
-                {project.name}
+      {/* Grouped by client */}
+      <Box w="100%" divideY="2px">
+        {mockClients.map((client, idx) => (
+          <Box key={client.id} w="100%" py={4} {...(idx !== 0 && { borderTopWidth: "2px", borderColor: "gray.100" })}>
+            <HStack mb={4} spacing={4}>
+              <Avatar.Root>
+                <Avatar.Fallback name={client.name} />
+                <Avatar.Image src={client.avatar} />
+              </Avatar.Root>
+              <Text fontSize="2xl" fontWeight="bold">
+                {client.name}
               </Text>
-              <Text fontSize="sm" color="gray.500" mb={4}>
-                Locations: {project.locations.join(", ")}
-              </Text>
-              <Stack direction="row" spacing={2} mb={4}>
-                <Badge colorScheme="green" display="flex" alignItems="center" gap={2}>
-                  <Construction size={14} />
-                  Progress: {project.progress}%
-                </Badge>
-                <Badge colorScheme="blue" display="flex" alignItems="center" gap={2}>
-                  <Users size={14} />
-                  {project.clientCount} Clients
-                </Badge>
-              </Stack>
-            </Box>
+            </HStack>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+              {client.projects.map((project) => (
+                <Box
+                  key={project.id}
+                  borderWidth="1px"
+                  borderRadius="lg"
+                  overflow="hidden"
+                  boxShadow="md"
+                  onClick={() => navigate(`/admin-dashboard/projects/${project.id}`)}
+                  cursor="pointer"
+                  _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
+                  transition="all 0.2s"
+                >
+                  <Image
+                    src={project.image}
+                    alt={project.name}
+                    objectFit="cover"
+                    w="100%"
+                    h="200px"
+                  />
+                  <Box p={4}>
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>
+                      {project.name}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500" mb={4}>
+                      Locations: {project.locations.join(", ")}
+                    </Text>
+                    <Stack direction="row" spacing={2} mb={4}>
+                      <Badge colorScheme="green" display="flex" alignItems="center" gap={2}>
+                        <Construction size={14} />
+                        Progress: {project.progress}%
+                      </Badge>
+                      <Badge colorScheme="blue" display="flex" alignItems="center" gap={2}>
+                        <Users size={14} />
+                        {project.clientCount} Clients
+                      </Badge>
+                    </Stack>
+                  </Box>
+                </Box>
+              ))}
+            </SimpleGrid>
           </Box>
         ))}
-      </SimpleGrid>
+      </Box>
     </VStack>
   );
 };
 
-export default ProjectSelection; 
+export default ProjectSelection;
