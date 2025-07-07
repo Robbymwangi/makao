@@ -239,23 +239,6 @@ const AssignedClients = () => {
         <Heading size="2xl" fontWeight="bold" fontFamily="'Playfair Display', serif">
           Assigned Clients
         </Heading>
-        <HStack spacing={4} mt={{ base: 4, md: 0 }}>
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <Button variant="outline" leftIcon={<Plus size={16} />}>
-                Add New Client
-              </Button>
-            </Menu.Trigger>
-            <Portal>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.Item>Import from CSV</Menu.Item>
-                  <Menu.Item>Manual Entry</Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Portal>
-          </Menu.Root>
-        </HStack>
       </Flex>
 
       {clients.length === 0 ? (
@@ -264,19 +247,6 @@ const AssignedClients = () => {
           <Text fontSize="sm" color="gray.500" mt={2}>
             {user?.email && `Logged in as: ${user.email}`}
           </Text>
-          <Button
-            mt={4}
-            colorScheme="blue"
-            leftIcon={<Plus size={16} />}
-            onClick={() =>
-              toaster.create({
-                description: "Add client functionality coming soon.",
-                type: "info",
-              })
-            }
-          >
-            Add Your First Client
-          </Button>
         </Box>
       ) : (
         <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
