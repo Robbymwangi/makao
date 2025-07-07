@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   VStack,
@@ -24,7 +24,6 @@ const mockProjects = [
   {
     id: 1,
     name: "Park Avenue Residences",
-    status: "In Progress",
     location: "123 Main St",
     timelines: [
       {
@@ -48,7 +47,6 @@ const mockProjects = [
   {
     id: 2,
     name: "Oakwood Apartments",
-    status: "Pending",
     location: "456 Oakwood Ave",
     timelines: [
       {
@@ -56,7 +54,6 @@ const mockProjects = [
         title: "Plumbing Installation",
         contractor: "PlumbPro Services",
         status: "in_progress",
-        status_description: "70% completed",
         date: "2024-03-15",
         description: "Install main water supply lines",
       },
@@ -82,22 +79,62 @@ const TimelineView = () => {
     date: "",
     description: "",
   });
+  const [reportFiles, setReportFiles] = useState({}); // { [timelineId]: File }
+  const [uploading, setUploading] = useState(false);
+
+  const fileInputRef = useRef();
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const timelines = selectedProject?.timelines || [];
   const selectedTimeline = timelines.find((t) => t.id === selectedTimelineId);
 
-  const handleCheckoff = (timelineId) => {
-    console.log("Status Updated for timeline:", timelineId);
-    // Update the timeline status in the state
-    setProjects(prev => 
-      prev.map(project => ({
-        ...project,
-        timelines: project.timelines.map(timeline => 
-          timeline.id === timelineId 
-            ? { ...timeline, status: timeline.status === "completed" ? "pending" : "completed" }
-            : timeline
+  // Simulate upload and attach report to timeline
+  const handleReportUpload = (timelineId, file) => {
+    setUploading(true);
+    // Simulate upload delay
+    setTimeout(() => {
+      setReportFiles((prev) => ({
+        ...prev,
+        [timelineId]: file,
+      }));
+      // Optionally, update the timeline to indicate report is attached
+      setProjects((prev) =>
+        prev.map((project) =>
+          project.id === selectedProjectId
+            ? {
+                ...project,
+                timelines: project.timelines.map((t) =>
+                  t.id === timelineId
+                    ? { ...t, reportAttached: true }
+                    : t
+                ),
+              }
+            : project
         )
+      );
+      setUploading(false);
+    }, 1000);
+  };
+
+  const handleCheckoff = (timelineId) => {
+    // Only allow marking as completed if report is attached
+    const hasReport = !!reportFiles[timelineId];
+    const timeline = timelines.find((t) => t.id === timelineId);
+    if (timeline.status !== "completed" && !hasReport) {
+      alert("You must attach a report before marking as completed.");
+      return;
+    }
+    setProjects((prev) =>
+      prev.map((project) => ({
+        ...project,
+        timelines: project.timelines.map((timeline) =>
+          timeline.id === timelineId
+            ? {
+                ...timeline,
+                status: timeline.status === "completed" ? "pending" : "completed",
+              }
+            : timeline
+        ),
       }))
     );
   };
@@ -420,20 +457,38 @@ const TimelineView = () => {
                 colorScheme={selectedTimeline.status === "completed" ? "green" : "gray"}
                 variant="outline"
                 onClick={() => handleCheckoff(selectedTimeline.id)}
+                isDisabled={
+                  selectedTimeline.status !== "completed" && !reportFiles[selectedTimeline.id]
+                }
               >
                 {selectedTimeline.status === "completed" ? "Mark as Pending" : "Mark as Completed"}
               </Button>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.png"
+                style={{ display: "none" }}
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) handleReportUpload(selectedTimeline.id, file);
+                  e.target.value = "";
+                }}
+              />
               <Button
                 leftIcon={<FileText size={20} />}
-                colorScheme="blue"
+                colorScheme={reportFiles[selectedTimeline.id] ? "green" : "blue"}
                 variant="outline"
-                onClick={() => {
-                  console.log("Submit Report clicked - Feature coming soon");
-                }}
+                isLoading={uploading}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
               >
-                Submit Report
+                {reportFiles[selectedTimeline.id] ? "Report Attached" : "Submit Report"}
               </Button>
             </HStack>
+            {reportFiles[selectedTimeline.id] && (
+              <Text mt={2} fontSize="sm" color="green.600">
+                Attached: {reportFiles[selectedTimeline.id].name}
+              </Text>
+            )}
           </>
         ) : (
           <Flex h="100%" align="center" justify="center" color="gray.400">
