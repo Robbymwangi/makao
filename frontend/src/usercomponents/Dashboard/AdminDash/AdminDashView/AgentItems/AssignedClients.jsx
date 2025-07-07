@@ -353,11 +353,51 @@ const AssignedClients = () => {
                             <Text>{doc.name}</Text>
                           )}
                         </HStack>
-                        <Badge
-                          colorScheme={doc.status === "approved" ? "green" : "yellow"}
-                        >
-                          {doc.status || "pending"}
-                        </Badge>
+                        <HStack>
+                          <Badge
+                            colorScheme={doc.status === "approved" ? "green" : "yellow"}
+                          >
+                            {doc.status || "pending"}
+                          </Badge>
+                          <Button
+                            size="xs"
+                            colorScheme="red"
+                            onClick={async () => {
+                              // Extract the file path from the URL or save it in your doc object
+                              const filePath = doc.url
+                                ? decodeURIComponent(new URL(doc.url).pathname.replace(/^\/storage\/v1\/object\/public\/project-documents\//, ''))
+                                : null;
+                              if (!filePath) {
+                                toaster.create({ description: "File path not found", type: "error" });
+                                return;
+                              }
+                              const { error } = await supabase.storage
+                                .from('project-documents')
+                                .remove([filePath]);
+                              if (error) {
+                                toaster.create({ description: "Delete failed", type: "error" });
+                                return;
+                              }
+                              // Remove from UI
+                              setClients((prev) =>
+                                prev.map((client) =>
+                                  client.id === selectedClient
+                                    ? {
+                                        ...client,
+                                        projects: client.projects.map((project) => ({
+                                          ...project,
+                                          documents: (project.documents || []).filter((d) => d.id !== doc.id),
+                                        })),
+                                      }
+                                    : client
+                                )
+                              );
+                              toaster.create({ description: "File deleted", type: "success" });
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </HStack>
                       </Flex>
                     ))}
                     {getDocumentsForSelectedClient().length === 0 && (
