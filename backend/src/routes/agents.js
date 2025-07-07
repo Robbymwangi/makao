@@ -12,7 +12,7 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Missing user_id" });
   }
 
-  // Note: The correct column is 'agent_id', not 'agent'
+  // Note: The correct column is 'agent_id',
   const { error } = await supabase
     .from("users")
     .update({ agent_id: agent_id || null }) // null means unassigned
