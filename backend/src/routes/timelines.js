@@ -8,7 +8,7 @@ router.get("/project/:projectId", async (req, res) => {
   const { projectId } = req.params;
   const supabase = createServiceClient();
   const { data, error } = await supabase
-    .from("timelines")
+    .from("project_timelines") 
     .select("*")
     .eq("project_id", projectId)
     .order("date", { ascending: true });
@@ -21,8 +21,8 @@ router.post("/", async (req, res) => {
   const { project_id, agent_id, title, date, contractor, description } = req.body;
   const supabase = createServiceClient();
   const { data, error } = await supabase
-    .from("timelines")
-    .insert([{ project_id, agent_id, title, date, contractor, description }])
+    .from("project_timelines") // changed from "timelines" to "project_timelines"
+    .insert([{ project_id, agent_id, title, date, contractor, description, status: "pending" }])
     .select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
