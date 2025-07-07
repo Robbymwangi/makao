@@ -30,7 +30,7 @@ const AssignedClients = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
-        throw new Error('Failed to get session: ' + sessionError.message);
+        throw new Error(`Failed to get session: ${sessionError.message}`);
       }
 
       if (!session || !session.access_token) {
@@ -45,7 +45,7 @@ const AssignedClients = () => {
 
       // Format the auth header properly
       const authHeader = `Bearer ${session.access_token}`;
-      console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+      console.log("Using auth header:", `${authHeader.substring(0, 20)}...`);
 
       const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
         headers: {
@@ -132,7 +132,7 @@ const AssignedClients = () => {
       .upload(filePath, file);
 
     if (error) {
-      toaster.create({ description: "Upload failed: " + error.message, type: "error" });
+      toaster.create({ description: `Upload failed: ${error.message}`, type: "error" });
       return;
     }
 
@@ -147,21 +147,21 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-            ...client,
-            projects: client.projects.map((project) => ({
-              ...project,
-              documents: [
-                ...(project.documents || []),
-                {
-                  id: Date.now(), // Temporary ID for immediate UI update
-                  name: file.name,
-                  status: "pending",
-                  url: publicUrlData?.publicUrl || "",
-                  project_id: project.id, // Ensure project_id is available
-                },
-              ],
-            })),
-          }
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                documents: [
+                  ...(project.documents || []),
+                  {
+                    id: Date.now(), // Temporary ID for immediate UI update
+                    name: file.name,
+                    status: "pending",
+                    url: publicUrlData?.publicUrl || "",
+                    project_id: project.id, // Ensure project_id is available
+                  },
+                ],
+              })),
+            }
           : client
       )
     );
@@ -181,7 +181,7 @@ const AssignedClients = () => {
         }]);
 
       if (insertError) {
-        toaster.create({ description: "Failed to record document in database: " + insertError.message, type: "error" });
+        toaster.create({ description: `Failed to record document in database: ${insertError.message}`, type: "error" });
         // Optionally, revert the UI state change if DB insert fails
       }
     }
@@ -205,15 +205,15 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-            ...client,
-            projects: client.projects.map((project) => ({
-              ...project,
-              events: [
-                ...(project.events || []),
-                { title, date },
-              ],
-            })),
-          }
+              ...client,
+              projects: client.projects.map((project) => ({
+                ...project,
+                events: [
+                  ...(project.events || []),
+                  { title, date },
+                ],
+              })),
+            }
           : client
       )
     );
@@ -321,10 +321,10 @@ const AssignedClients = () => {
           <VStack spacing={8} align="stretch">
             {selectedClient ? (
               <>
-                {/* Projects Section */}
+                {/* Document Upload Section */}
                 <Card.Root p={6}>
                   <Heading size="md" mb={6}>
-                    Projects
+                    Documents
                   </Heading>
                   <Box
                     borderWidth={2}
@@ -390,7 +390,7 @@ const AssignedClients = () => {
                                 .remove([filePath]);
 
                               if (storageError) {
-                                toaster.create({ description: "File deletion from storage failed: " + storageError.message, type: "error" });
+                                toaster.create({ description: `File deletion from storage failed: ${storageError.message}`, type: "error" });
                                 return;
                               }
 
@@ -401,7 +401,7 @@ const AssignedClients = () => {
                                 .eq('id', doc.id);
 
                               if (dbError) {
-                                toaster.create({ description: "Database record deletion failed: " + dbError.message, type: "error" });
+                                toaster.create({ description: `Database record deletion failed: ${dbError.message}`, type: "error" });
                                 return; // Stop if database deletion fails
                               }
 
@@ -417,37 +417,8 @@ const AssignedClients = () => {
                     ))}
                     {getDocumentsForSelectedClient().length === 0 && (
                       <Text color="gray.500" textAlign="center" py={4}>
-                        No projects available
+                        No documents available
                       </Text>
-                    ) : (
-                      getProjectsForSelectedClient().map((project) => (
-                        <Box
-                          key={project.id}
-                          p={4}
-                          borderWidth="1px"
-                          borderRadius="md"
-                          bg="gray.50"
-                          mb={2}
-                        >
-                          <Heading size="sm" mb={2}>{project.project_name}</Heading>
-                          <Text fontSize="sm" color="gray.600" mb={1}>
-                            Status: <b>{project.status}</b>
-                          </Text>
-                          <Text fontSize="sm" color="gray.600" mb={1}>
-                            Location: {project.location || "N/A"}
-                          </Text>
-                          <Text fontSize="sm" color="gray.600" mb={1}>
-                            Budget: {project.estimated_budget || "N/A"}
-                          </Text>
-                          <Text fontSize="sm" color="gray.600" mb={1}>
-                            Timeline: {project.estimated_timeline || "N/A"}
-                          </Text>
-                          <Text fontSize="sm" color="gray.600" mb={1}>
-                            Submitted: {project.submitted_at ? new Date(project.submitted_at).toLocaleDateString() : "N/A"}
-                          </Text>
-                          {/* Add more project details as needed */}
-                        </Box>
-                      ))
                     )}
                   </VStack>
                 </Card.Root>
