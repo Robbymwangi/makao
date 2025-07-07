@@ -90,13 +90,10 @@ import agentsRoutes from './src/routes/agents.js';
 // Register agent routes
 app.use('/agents', agentsRoutes);
 
-
-
 // Register staff routes
 app.use('/', staffRoutes);
 
 // Import projects routes
-
 import projectsRoutes from './src/routes/projects.js';
 
 // Register projects routes
