@@ -23,68 +23,82 @@ const AssignedClients = () => {
 
   const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    const fetchAssignedClients = async () => {
-      try {
-        // Get the latest session from Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw new Error('Failed to get session: ' + sessionError.message);
-        }
+  // Function to fetch assigned clients and their documents
+  const fetchAssignedClients = async () => {
+    try {
+      // Get the latest session from Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (!session || !session.access_token) {
-          throw new Error('No valid session found');
-        }
-
-        if (!user?.id) {
-          throw new Error('No user ID available');
-        }
-
-        console.log("Fetching clients for agent ID:", user.id);
-        
-        // Format the auth header properly
-        const authHeader = `Bearer ${session.access_token}`;
-        console.log("Using auth header:", authHeader.substring(0, 20) + "...");
-
-        const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("API Error:", errorData);
-          throw new Error(errorData.error || 'Failed to fetch clients');
-        }
-
-        const data = await res.json();
-        console.log("Received clients data:", data);
-        
-        setClients(data);
-        if (data.length > 0) {
-          setSelectedClient(data[0].id);
-        }
-      } catch (err) {
-        console.error("Error fetching clients:", err);
-        toaster.create({
-          title: "Error",
-          description: err.message,
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
+      if (sessionError) {
+        throw new Error('Failed to get session: ' + sessionError.message);
       }
-    };
 
+      if (!session || !session.access_token) {
+        throw new Error('No valid session found');
+      }
+
+      if (!user?.id) {
+        throw new Error('No user ID available');
+      }
+
+      console.log("Fetching clients for agent ID:", user.id);
+
+      // Format the auth header properly
+      const authHeader = `Bearer ${session.access_token}`;
+      console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+
+      const res = await fetch(`${EDGE_FUNCTION_URL}?agent_id=${user.id}`, {
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("API Error:", errorData);
+        throw new Error(errorData.error || 'Failed to fetch clients');
+      }
+
+      const data = await res.json();
+
+      // For each client, fetch documents for each project
+      for (const client of data) {
+        if (client.projects && client.projects.length > 0) {
+          for (const project of client.projects) {
+            const { data: docs, error: docsError } = await supabase
+              .from('project_documents')
+              .select('*')
+              .eq('project_id', project.id);
+
+            project.documents = docsError ? [] : docs;
+          }
+        }
+      }
+
+      setClients(data);
+      if (data.length > 0) {
+        setSelectedClient(data[0].id);
+      }
+    } catch (err) {
+      console.error("Error fetching clients:", err);
+      toaster.create({
+        title: "Error",
+        description: err.message,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (user) {
       fetchAssignedClients();
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user]); // Depend on 'user' to refetch if user state changes
 
   // Helper: Get events for selected date
   const getEventsForDate = (date) => {
@@ -118,7 +132,7 @@ const AssignedClients = () => {
       .upload(filePath, file);
 
     if (error) {
-      toaster.create({ description: "Upload failed", type: "error" });
+      toaster.create({ description: "Upload failed: " + error.message, type: "error" });
       return;
     }
 
@@ -133,27 +147,52 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-              ...client,
-              projects: client.projects.map((project) => ({
-                ...project,
-                documents: [
-                  ...(project.documents || []),
-                  {
-                    id: Date.now(),
-                    name: file.name,
-                    status: "pending",
-                    url: publicUrlData?.publicUrl || "",
-                  },
-                ],
-              })),
-            }
+            ...client,
+            projects: client.projects.map((project) => ({
+              ...project,
+              documents: [
+                ...(project.documents || []),
+                {
+                  id: Date.now(), // Temporary ID for immediate UI update
+                  name: file.name,
+                  status: "pending",
+                  url: publicUrlData?.publicUrl || "",
+                  project_id: project.id, // Ensure project_id is available
+                },
+              ],
+            })),
+          }
           : client
       )
     );
+
+    // Also, insert the document record into the database
+    const clientToUpdate = clients.find((c) => c.id === selectedClient);
+    if (clientToUpdate && clientToUpdate.projects && clientToUpdate.projects.length > 0) {
+      const project = clientToUpdate.projects[0]; // Just take the first project for now
+      const { error: insertError } = await supabase
+        .from('project_documents')
+        .insert([{
+          project_id: project.id,
+          name: file.name,
+          url: publicUrlData?.publicUrl || "",
+          date: new Date().toISOString().split("T")[0],
+          // ...other fields as needed
+        }]);
+
+      if (insertError) {
+        toaster.create({ description: "Failed to record document in database: " + insertError.message, type: "error" });
+        // Optionally, revert the UI state change if DB insert fails
+      }
+    }
+
     toaster.create({
-      description: `Uploaded "${file.name}"`,
+      description: `Uploaded "${file.name}" for ${clientToUpdate?.full_name || "selected client"}`,
       type: "success",
     });
+
+    // Refresh clients to get actual document IDs and ensure data consistency
+    fetchAssignedClients();
   };
 
   // Schedule handler (simple prompt for demo)
@@ -166,15 +205,15 @@ const AssignedClients = () => {
       prev.map((client) =>
         client.id === selectedClient
           ? {
-              ...client,
-              projects: client.projects.map((project) => ({
-                ...project,
-                events: [
-                  ...(project.events || []),
-                  { title, date },
-                ],
-              })),
-            }
+            ...client,
+            projects: client.projects.map((project) => ({
+              ...project,
+              events: [
+                ...(project.events || []),
+                { title, date },
+              ],
+            })),
+          }
           : client
       )
     );
@@ -271,8 +310,8 @@ const AssignedClients = () => {
                         client.projects[0].progress >= 75
                           ? "green"
                           : client.projects[0].progress >= 50
-                          ? "yellow"
-                          : "orange"
+                            ? "yellow"
+                            : "orange"
                       }
                     >
                       {client.projects[0].progress}% Complete
@@ -325,6 +364,8 @@ const AssignedClients = () => {
                     textAlign="center"
                     bg="gray.50"
                     mb={6}
+                    onClick={() => fileInputRef.current.click()} // Make the dashed box clickable for upload
+                    cursor="pointer"
                   >
                     <Icon as={FileText} w={8} h={8} color="gray.400" mb={4} />
                     <Text mb={4}>
@@ -367,32 +408,36 @@ const AssignedClients = () => {
                               const filePath = doc.url
                                 ? decodeURIComponent(new URL(doc.url).pathname.replace(/^\/storage\/v1\/object\/public\/project-documents\//, ''))
                                 : null;
+
                               if (!filePath) {
-                                toaster.create({ description: "File path not found", type: "error" });
+                                toaster.create({ description: "File path not found for deletion", type: "error" });
                                 return;
                               }
-                              const { error } = await supabase.storage
+
+                              // First, remove from Supabase Storage
+                              const { error: storageError } = await supabase.storage
                                 .from('project-documents')
                                 .remove([filePath]);
-                              if (error) {
-                                toaster.create({ description: "Delete failed", type: "error" });
+
+                              if (storageError) {
+                                toaster.create({ description: "File deletion from storage failed: " + storageError.message, type: "error" });
                                 return;
                               }
-                              // Remove from UI
-                              setClients((prev) =>
-                                prev.map((client) =>
-                                  client.id === selectedClient
-                                    ? {
-                                        ...client,
-                                        projects: client.projects.map((project) => ({
-                                          ...project,
-                                          documents: (project.documents || []).filter((d) => d.id !== doc.id),
-                                        })),
-                                      }
-                                    : client
-                                )
-                              );
-                              toaster.create({ description: "File deleted", type: "success" });
+
+                              // Then, delete the document record from the database
+                              const { error: dbError } = await supabase
+                                .from('project_documents')
+                                .delete()
+                                .eq('id', doc.id);
+
+                              if (dbError) {
+                                toaster.create({ description: "Database record deletion failed: " + dbError.message, type: "error" });
+                                return; // Stop if database deletion fails
+                              }
+
+                              toaster.create({ description: "File and record deleted successfully", type: "success" });
+                              // Refresh clients to reflect the deletion
+                              fetchAssignedClients();
                             }}
                           >
                             Delete
