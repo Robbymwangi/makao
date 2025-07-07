@@ -7,40 +7,29 @@ import {
   VStack,
   HStack,
   Text,
-  Input,
   Button,
-  Badge,
   Heading,
-  useBreakpointValue,
-  CloseButton,
   Portal,
-  Select,
   Menu,
   Skeleton,
   Stack,
+  CloseButton,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
-import { createListCollection, Dialog } from "@chakra-ui/react";
+import { Dialog } from "@chakra-ui/react";
 
 const StaffManagement = () => {
   const [admins, setAdmins] = useState([]);
   const [agents, setAgents] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [projectOptions, setProjectOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState(null); // 'assign', 'remove'
+  const [dialogType, setDialogType] = useState(null); // 'remove', 'remove-agent'
   const [dialogAgent, setDialogAgent] = useState(null);
   const [dialogAdmin, setDialogAdmin] = useState(null);
-  const [assignProjects, setAssignProjects] = useState([]);
-
-  const isMobileView = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
-    // Combine all fetches and set loading to false when all are done
     setLoading(true);
-    Promise.all([fetchAdmins(), fetchAgents(), fetchProjects()])
-      .finally(() => setLoading(false));
+    Promise.all([fetchAdmins(), fetchAgents()]).finally(() => setLoading(false));
   }, []);
 
   const fetchAdmins = async () => {
@@ -71,40 +60,16 @@ const StaffManagement = () => {
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      const res = await fetch("http://localhost:3000/projects");
-      const data = await res.json();
-      setProjects(data);
-      setProjectOptions(
-        createListCollection({
-          items: data.map((p) => ({
-            label: p.name,
-            value: p.id,
-          })),
-        })
-      );
-    } catch (err) {
-      toaster.create({
-        title: "Error",
-        description: "Failed to fetch projects",
-        type: "error",
-      });
-    }
-  };
-
   // Dialog helpers
-  const openAssignProjects = (agent) => {
-    setDialogAgent(agent);
-    // Initialize with existing projects, ensuring it's an array of IDs
-    setAssignProjects(agent.projects || []);
-    setDialogType("assign");
-    setDialogOpen(true);
-  };
-
   const openRemoveAdmin = (admin) => {
     setDialogAdmin(admin);
     setDialogType("remove");
+    setDialogOpen(true);
+  };
+
+  const openRemoveAgent = (agent) => {
+    setDialogAgent(agent);
+    setDialogType("remove-agent");
     setDialogOpen(true);
   };
 
@@ -114,32 +79,7 @@ const StaffManagement = () => {
       setDialogType(null);
       setDialogAgent(null);
       setDialogAdmin(null);
-      setAssignProjects([]);
     }, 300);
-  };
-
-  // Assign projects to agent
-  const handleAssignProjects = async () => {
-    try {
-      const res = await fetch("http://localhost:3000/agents/assign-projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agent_id: dialogAgent.id,
-          project_ids: assignProjects, // This should be an array of project IDs
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to assign projects");
-      toaster.create({
-        title: "Projects Assigned",
-        description: `Assigned projects to ${dialogAgent.name}`,
-        type: "success",
-      });
-      fetchAgents(); // Re-fetch agents to update the UI
-      handleCloseDialog();
-    } catch (err) {
-      toaster.create({ title: "Error", description: err.message, type: "error" });
-    }
   };
 
   // Remove admin
@@ -156,7 +96,28 @@ const StaffManagement = () => {
         description: `${dialogAdmin.full_name} has been removed.`,
         type: "info",
       });
-      fetchAdmins(); // Re-fetch admins to update the UI
+      fetchAdmins();
+      handleCloseDialog();
+    } catch (err) {
+      toaster.create({ title: "Error", description: err.message, type: "error" });
+    }
+  };
+
+  // Remove agent
+  const handleRemoveAgent = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/agents/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent_id: dialogAgent.id }),
+      });
+      if (!res.ok) throw new Error("Failed to remove agent");
+      toaster.create({
+        title: "Agent Removed",
+        description: `${dialogAgent.name} has been removed.`,
+        type: "info",
+      });
+      fetchAgents();
       handleCloseDialog();
     } catch (err) {
       toaster.create({ title: "Error", description: err.message, type: "error" });
@@ -240,17 +201,6 @@ const StaffManagement = () => {
                   <Box>
                     <Text fontWeight="bold">{agent.name}</Text>
                     <Text fontSize="sm" color="gray.500">{agent.email}</Text>
-                    <HStack fontSize="xs" color="gray.400" mt={1}>
-                      <Text>Projects:</Text>
-                      {(agent.projects || []).map((pid) => {
-                        const project = projects.find((p) => p.id === pid);
-                        return (
-                          <Badge key={pid} colorScheme="green">
-                            {project ? project.name : pid}
-                          </Badge>
-                        );
-                      })}
-                    </HStack>
                   </Box>
                   <Menu.Root>
                     <Menu.Trigger asChild>
@@ -259,11 +209,7 @@ const StaffManagement = () => {
                     <Portal>
                       <Menu.Positioner>
                         <Menu.Content>
-                          <Menu.Item onClick={(e) => { e.stopPropagation(); openAssignProjects(agent); }}>
-                            Assign/Remove Projects
-                          </Menu.Item>
-                          {/* Add a specific handler for agent removal if different from admin removal */}
-                          <Menu.Item onClick={(e) => { e.stopPropagation(); /* openRemoveAgent(agent); */ }}>
+                          <Menu.Item onClick={(e) => { e.stopPropagation(); openRemoveAgent(agent); }}>
                             Remove Agent
                           </Menu.Item>
                         </Menu.Content>
@@ -280,83 +226,25 @@ const StaffManagement = () => {
         <Dialog.Root
           key={dialogType || "none"}
           open={dialogOpen}
-          onOpenChange={({ open }) => {
-            setDialogOpen(open);
-            if (!open) handleCloseDialog();
-          }}
+          onOpenChange={({ open }) => setDialogOpen(open)}
         >
           <Portal>
-            <Dialog.Backdrop />
             <Dialog.Positioner>
-              <Dialog.Content maxW="lg">
-                <Dialog.Header>
-                  <Dialog.Title>
-                    {dialogType === "assign" && "Assign/Remove Projects"}
-                    {dialogType === "remove" && "Remove Admin"}
-                  </Dialog.Title>
-                  <Dialog.CloseTrigger asChild>
-                    <CloseButton size="sm" position="absolute" top="2" right="2" onClick={handleCloseDialog} />
-                  </Dialog.CloseTrigger>
-                </Dialog.Header>
-                <Dialog.Body pb="8">
-                  {dialogType === "assign" && dialogAgent && (
-                    <VStack spacing={4} align="stretch">
-                      <Text>Assign up to 3 projects to <b>{dialogAgent.name}</b></Text>
-                      <Select.Root
-                        width="100%"
-                        collection={projectOptions}
-                        multiple
-                        value={assignProjects}
-                        onValueChange={({ value }) => setAssignProjects(value)}
-                      >
-                        <Select.Control>
-                          <Select.Trigger>
-                            {/* FIX: Map the selected project IDs back to their names for display */}
-                            <Select.ValueText>
-                              {assignProjects.length > 0
-                                ? assignProjects
-                                    .map((pid) => {
-                                      const project = projects.find((p) => p.id === pid);
-                                      return project ? project.name : null;
-                                    })
-                                    .filter(Boolean) // Remove any nulls if project not found
-                                    .join(", ")
-                                : "Select up to 3 Projects"}
-                            </Select.ValueText>
-                          </Select.Trigger>
-                        </Select.Control>
-                        <Portal>
-                          <Select.Positioner zIndex={1700} style={{ zIndex: 1700 }}>
-                            <Select.Content>
-                              {projectOptions.items.map((project) => (
-                                <Select.Item
-                                  key={project.value}
-                                  item={project}
-                                  disabled={
-                                    assignProjects.length >= 3 &&
-                                    !assignProjects.includes(project.value)
-                                  }
-                                >
-                                  {project.label}
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Portal>
-                      </Select.Root>
-                      <Button
-                        colorScheme="blue"
-                        onClick={handleAssignProjects}
-                        isDisabled={assignProjects.length === 0}
-                      >
-                        Save Projects
-                      </Button>
-                    </VStack>
-                  )}
+              <Dialog.Content>
+                <Dialog.CloseButton onClick={handleCloseDialog} />
+                <Dialog.Body>
                   {dialogType === "remove" && dialogAdmin && (
                     <VStack spacing={4} align="stretch">
                       <Text>Remove <b>{dialogAdmin.full_name}</b> from admins?</Text>
                       <Button colorScheme="red" onClick={handleRemoveAdmin}>
+                        Remove
+                      </Button>
+                    </VStack>
+                  )}
+                  {dialogType === "remove-agent" && dialogAgent && (
+                    <VStack spacing={4} align="stretch">
+                      <Text>Remove <b>{dialogAgent.name}</b> from agents?</Text>
+                      <Button colorScheme="red" onClick={handleRemoveAgent}>
                         Remove
                       </Button>
                     </VStack>
