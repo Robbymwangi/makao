@@ -220,9 +220,6 @@ const UserManagement = () => {
         >
           <HStack p={4} borderBottomWidth="1px" justify="space-between">
             <Text fontSize="xl" fontWeight="bold">Users Directory</Text>
-            <Button colorScheme="blue" size="sm" onClick={() => openDialog("create")}>
-              Create New User
-            </Button>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto" divideY="1px" divideColor="gray.100">
             {loading ? (
@@ -265,9 +262,6 @@ const UserManagement = () => {
                   <Box>
                     <Text fontWeight="bold">{user.full_name}</Text>
                     <Text fontSize="sm" color="gray.500">{user.email}</Text>
-                    <Text fontSize="xs" color="gray.400">
-                      Last Sign In: {user.last_sign_in_at ? user.last_sign_in_at.toLocaleString() : "Never"}
-                    </Text>
                     <Text fontSize="xs" color="gray.400">
                       Agent: {user.agent ? agents.find((a) => a.id === user.agent)?.name || user.agent : <span style={{ color: "#888" }}>Unassigned</span>}
                     </Text>
