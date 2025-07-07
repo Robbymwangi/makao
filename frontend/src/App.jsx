@@ -54,6 +54,7 @@ import StaffManagement from "./usercomponents/Dashboard/AdminDash/AdminDashView/
 import SupportTools from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/SupportTools";
 import SysAdminMessages from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/Messages";
 import ProjectApprovals from "./usercomponents/Dashboard/AdminDash/AdminDashView/SysAdminItems/ProjectApprovals";
+import AgentProjectSelection from "./usercomponents/Dashboard/AdminDash/AdminDashView/AgentItems/ProjectSelection.jsx";
 
 const App = () => {
   const location = useLocation();
@@ -130,7 +131,7 @@ const App = () => {
           {/* Agent Admin Routes */}
           <Route path="clients" element={<AgentAssignedClients />} />
           <Route path="timeline" element={<AgentTimelineView />} />
-          <Route path="projects" element={<AgentMyProjects />} />
+          <Route path="projects" element={<AgentProjectSelection />} /> {/* <-- FIXED */}
           <Route path="projects/:id" element={<AgentMyProjects />} />
           <Route path="messages" element={<AgentMessages />} />
           {/* Consultant Admin Routes */}

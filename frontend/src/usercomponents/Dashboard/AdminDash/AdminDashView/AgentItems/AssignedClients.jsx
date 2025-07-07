@@ -88,6 +88,13 @@ const AssignedClients = () => {
     return client.projects?.flatMap((p) => p.documents || []) || [];
   };
 
+  // Helper: Get projects for selected client
+  const getProjectsForSelectedClient = () => {
+    const client = clients.find((c) => c.id === selectedClient);
+    if (!client) return [];
+    return client.projects || [];
+  };
+
   if (loading) {
     return (
       <Box p={6} textAlign="center">
@@ -222,54 +229,45 @@ const AssignedClients = () => {
           <VStack spacing={8} align="stretch">
             {selectedClient ? (
               <>
-                {/* Document Upload Section */}
+                {/* Projects Section */}
                 <Card.Root p={6}>
                   <Heading size="md" mb={6}>
-                    Documents
+                    Projects
                   </Heading>
-                  <Box
-                    borderWidth={2}
-                    borderRadius="lg"
-                    borderStyle="dashed"
-                    p={8}
-                    textAlign="center"
-                    bg="gray.50"
-                    mb={6}
-                  >
-                    <Icon as={FileText} w={8} h={8} color="gray.400" mb={4} />
-                    <Text mb={4}>
-                      Drag and drop files here, or click to select files
-                    </Text>
-                    <Button size="sm" variant="outline">
-                      Select Files
-                    </Button>
-                  </Box>
-                  {/* Document List */}
-                  <VStack align="stretch" spacing={3}>
-                    {getDocumentsForSelectedClient().map((doc) => (
-                      <Flex
-                        key={doc.id}
-                        p={3}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        justify="space-between"
-                        align="center"
-                      >
-                        <HStack>
-                          <FileText size={16} />
-                          <Text>{doc.name}</Text>
-                        </HStack>
-                        <Badge
-                          colorScheme={doc.status === "approved" ? "green" : "yellow"}
-                        >
-                          {doc.status || "pending"}
-                        </Badge>
-                      </Flex>
-                    ))}
-                    {getDocumentsForSelectedClient().length === 0 && (
+                  <VStack align="stretch" spacing={4}>
+                    {getProjectsForSelectedClient().length === 0 ? (
                       <Text color="gray.500" textAlign="center" py={4}>
-                        No documents available
+                        No projects available
                       </Text>
+                    ) : (
+                      getProjectsForSelectedClient().map((project) => (
+                        <Box
+                          key={project.id}
+                          p={4}
+                          borderWidth="1px"
+                          borderRadius="md"
+                          bg="gray.50"
+                          mb={2}
+                        >
+                          <Heading size="sm" mb={2}>{project.project_name}</Heading>
+                          <Text fontSize="sm" color="gray.600" mb={1}>
+                            Status: <b>{project.status}</b>
+                          </Text>
+                          <Text fontSize="sm" color="gray.600" mb={1}>
+                            Location: {project.location || "N/A"}
+                          </Text>
+                          <Text fontSize="sm" color="gray.600" mb={1}>
+                            Budget: {project.estimated_budget || "N/A"}
+                          </Text>
+                          <Text fontSize="sm" color="gray.600" mb={1}>
+                            Timeline: {project.estimated_timeline || "N/A"}
+                          </Text>
+                          <Text fontSize="sm" color="gray.600" mb={1}>
+                            Submitted: {project.submitted_at ? new Date(project.submitted_at).toLocaleDateString() : "N/A"}
+                          </Text>
+                          {/* Add more project details as needed */}
+                        </Box>
+                      ))
                     )}
                   </VStack>
                 </Card.Root>
