@@ -100,7 +100,7 @@ import projectsRoutes from './src/routes/projects.js';
 app.use('/projects', projectsRoutes);
 
 // Import timelines routes
-import timelinesRouter from "./routes/timelines.js";
+import timelinesRouter from './src/routes/timelines.js';
 
 // Register timelines routes
 app.use("/api/timelines", timelinesRouter);
