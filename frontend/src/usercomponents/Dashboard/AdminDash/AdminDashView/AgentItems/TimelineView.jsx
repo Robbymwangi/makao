@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   VStack,
@@ -11,6 +11,7 @@ import {
   Input,
   Textarea,
   CloseButton,
+  Spinner,
 } from "@chakra-ui/react";
 import {
   CheckCircle,
@@ -18,48 +19,8 @@ import {
   FileText,
   Plus,
 } from "lucide-react";
-
-// Mock projects (replace with real data/fetch)
-const mockProjects = [
-  {
-    id: 1,
-    name: "Park Avenue Residences",
-    location: "123 Main St",
-    timelines: [
-      {
-        id: 1,
-        title: "Foundation Inspection",
-        contractor: "ABC Contractors",
-        status: "pending",
-        date: "2024-03-20",
-        description: "Complete foundation inspection and submit report",
-      },
-      {
-        id: 2,
-        title: "Electrical Wiring Phase 1",
-        contractor: "ElectriCo Ltd",
-        status: "completed",
-        date: "2024-03-18",
-        description: "Install main electrical wiring in ground floor",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Oakwood Apartments",
-    location: "456 Oakwood Ave",
-    timelines: [
-      {
-        id: 3,
-        title: "Plumbing Installation",
-        contractor: "PlumbPro Services",
-        status: "in_progress",
-        date: "2024-03-15",
-        description: "Install main water supply lines",
-      },
-    ],
-  },
-];
+import { toaster } from "@/components/ui/toaster";
+import supabase from "@/utils/supabaseClient";
 
 const statusColorPalette = {
   completed: "green",
@@ -67,9 +28,11 @@ const statusColorPalette = {
   in_progress: "blue",
 };
 
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/storage-upload";
+
 const TimelineView = () => {
-  const [projects, setProjects] = useState(mockProjects);
-  const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id || null);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedTimelineId, setSelectedTimelineId] = useState(null);
   const [showAddTimeline, setShowAddTimeline] = useState(false);
   const [newTimeline, setNewTimeline] = useState({
@@ -79,89 +42,265 @@ const TimelineView = () => {
     date: "",
     description: "",
   });
-  const [reportFiles, setReportFiles] = useState({}); // { [timelineId]: File }
+  const [reportFiles, setReportFiles] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadingTimelines, setLoadingTimelines] = useState(false);
+  const [timelines, setTimelines] = useState([]);
 
   const fileInputRef = useRef();
 
+  // Fetch projects assigned to this agent (similar to AssignedClients)
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        // Get session and user
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw new Error(`Failed to get session: ${sessionError.message}`);
+        const user = session?.user;
+        if (!user?.id) throw new Error("No user ID available");
+
+        // Fetch projects where agent_id = user.id
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("agent_id", user.id);
+
+        if (error) throw new Error(error.message);
+
+        setProjects(data || []);
+        if (data && data.length > 0) setSelectedProjectId(data[0].id);
+      } catch (err) {
+        toaster.create({
+          title: "Error",
+          description: err.message,
+          type: "error",
+        });
+        setProjects([]);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  // Fetch timelines for selected project
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setTimelines([]);
+      return;
+    }
+    const fetchTimelines = async () => {
+      setLoadingTimelines(true);
+      try {
+        const { data, error } = await supabase
+          .from("project_timelines")
+          .select("*")
+          .eq("project_id", selectedProjectId)
+          .order("date", { ascending: true });
+        if (error) throw new Error(error.message);
+        setTimelines(data || []);
+      } catch (err) {
+        toaster.create({
+          title: "Error loading timelines",
+          description: err.message,
+          type: "error",
+        });
+        setTimelines([]);
+      } finally {
+        setLoadingTimelines(false);
+      }
+    };
+    fetchTimelines();
+  }, [selectedProjectId]);
+
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
-  const timelines = selectedProject?.timelines || [];
   const selectedTimeline = timelines.find((t) => t.id === selectedTimelineId);
 
   // Simulate upload and attach report to timeline
-  const handleReportUpload = (timelineId, file) => {
+  const handleReportUpload = async (timelineId, file) => {
     setUploading(true);
-    // Simulate upload delay
-    setTimeout(() => {
+    try {
+      // 1. Get the current session and access token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        toaster.create({
+          title: "Upload failed",
+          description: "Not authenticated.",
+          type: "error",
+        });
+        setUploading(false);
+        return;
+      }
+      const accessToken = session.access_token;
+
+      // 2. Request a signed upload URL from the Edge Function
+      const getUrlRes = await fetch(`${EDGE_URL}/get-upload-url`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          projectId: selectedProjectId,
+          category: "reports", // Save under reports folder
+        }),
+      });
+      const getUrlData = await getUrlRes.json();
+      if (!getUrlRes.ok || !getUrlData.uploadUrl || !getUrlData.filePath || !getUrlData.fileUrl) {
+        toaster.create({
+          title: "Upload failed",
+          description: getUrlData.error || "Could not get upload URL.",
+          type: "error",
+        });
+        setUploading(false);
+        return;
+      }
+
+      // 3. Upload the file to the signed URL
+      const uploadRes = await fetch(getUrlData.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type,
+        },
+        body: file,
+      });
+      if (!uploadRes.ok) {
+        toaster.create({
+          title: "Upload failed",
+          description: "Failed to upload file to storage.",
+          type: "error",
+        });
+        setUploading(false);
+        return;
+      }
+
+      // 4. Notify the Edge Function to record the upload in the database
+      const completeRes = await fetch(`${EDGE_URL}/upload-complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          filePath: getUrlData.filePath,
+          fileUrl: getUrlData.fileUrl,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          projectId: selectedProjectId,
+          category: "report", // file_category in DB
+          description: `Report for timeline ${timelineId}`,
+        }),
+      });
+      const completeData = await completeRes.json();
+      if (!completeRes.ok) {
+        toaster.create({
+          title: "Upload failed",
+          description: completeData.error || "Failed to record file in database.",
+          type: "error",
+        });
+        setUploading(false);
+        return;
+      }
+
       setReportFiles((prev) => ({
         ...prev,
-        [timelineId]: file,
+        [timelineId]: {
+          name: file.name,
+          url: getUrlData.fileUrl,
+        },
       }));
-      // Optionally, update the timeline to indicate report is attached
-      setProjects((prev) =>
-        prev.map((project) =>
-          project.id === selectedProjectId
-            ? {
-                ...project,
-                timelines: project.timelines.map((t) =>
-                  t.id === timelineId
-                    ? { ...t, reportAttached: true }
-                    : t
-                ),
-              }
-            : project
-        )
-      );
-      setUploading(false);
-    }, 1000);
+
+      toaster.create({
+        title: "Report uploaded",
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Upload failed",
+        description: err.message,
+        type: "error",
+      });
+    }
+    setUploading(false);
   };
 
-  const handleCheckoff = (timelineId) => {
-    // Only allow marking as completed if report is attached
+  const handleCheckoff = async (timelineId) => {
     const hasReport = !!reportFiles[timelineId];
     const timeline = timelines.find((t) => t.id === timelineId);
+
+    // Prevent marking as completed without a report, unless it's already completed and being reverted
     if (timeline.status !== "completed" && !hasReport) {
-      alert("You must attach a report before marking as completed.");
+      toaster.create({
+        title: "Attach a report before marking as completed.",
+        type: "warning",
+      });
       return;
     }
-    setProjects((prev) =>
-      prev.map((project) => ({
-        ...project,
-        timelines: project.timelines.map((timeline) =>
-          timeline.id === timelineId
+
+    const newStatus = timeline.status === "completed" ? "pending" : "completed";
+
+    try {
+      const { error } = await supabase
+        .from("project_timelines")
+        .update({ status: newStatus })
+        .eq("id", timelineId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setTimelines((prev) =>
+        prev.map((timelineItem) =>
+          timelineItem.id === timelineId
             ? {
-                ...timeline,
-                status: timeline.status === "completed" ? "pending" : "completed",
+                ...timelineItem,
+                status: newStatus,
               }
-            : timeline
-        ),
-      }))
-    );
+            : timelineItem
+        )
+      );
+
+      toaster.create({
+        title: `Timeline item marked as ${newStatus}.`,
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to update timeline status",
+        description: err.message,
+        type: "error",
+      });
+    }
   };
 
-  const handleAddTimeline = () => {
+
+  const handleAddTimeline = async () => {
     if (!newTimeline.title || !newTimeline.contractor || !newTimeline.date) {
-      alert("Title, contractor, and date are required.");
+      toaster.create({
+        title: "Title, contractor, and date are required.",
+        type: "warning",
+      });
       return;
     }
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === selectedProjectId
-          ? {
-              ...project,
-              timelines: [
-                ...project.timelines,
-                {
-                  ...newTimeline,
-                  id: Math.max(0, ...project.timelines.map((t) => t.id)) + 1,
-                },
-              ],
-            }
-          : project
-      )
-    );
-    
-    // Reset form and close dialog
+    const { data, error } = await supabase
+      .from("project_timelines")
+      .insert([{ ...newTimeline, project_id: selectedProjectId }])
+      .select();
+    if (error) {
+      toaster.create({
+        title: "Failed to add timeline",
+        description: error.message,
+        type: "error",
+      });
+      return;
+    }
+    setTimelines((prev) => [...prev, data[0]]);
     setNewTimeline({
       title: "",
       contractor: "",
@@ -170,12 +309,14 @@ const TimelineView = () => {
       description: "",
     });
     setShowAddTimeline(false);
-    console.log("Timeline item added successfully");
+    toaster.create({
+      title: "Timeline item added successfully",
+      type: "success",
+    });
   };
 
   const handleCloseDialog = () => {
     setShowAddTimeline(false);
-    // Reset form when closing
     setNewTimeline({
       title: "",
       contractor: "",
@@ -205,27 +346,35 @@ const TimelineView = () => {
             <Heading size="md">My Projects</Heading>
           </HStack>
           <VStack spacing={0} align="stretch" flexGrow={1} overflowY="auto">
-            {projects.map((project) => (
-              <Box
-                key={project.id}
-                p={4}
-                cursor="pointer"
-                bg={selectedProjectId === project.id ? "blue.50" : "white"}
-                _hover={{ bg: "gray.100" }}
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setSelectedTimelineId(null);
-                }}
-                borderBottomWidth="1px"
-                borderColor="gray.100"
-              >
-                <Text fontWeight="bold">{project.name}</Text>
-                <Text fontSize="sm" color="gray.600">{project.location}</Text>
-                <Badge colorScheme={project.status === "In Progress" ? "blue" : project.status === "Pending" ? "yellow" : "green"} mt={2}>
-                  {project.status}
-                </Badge>
-              </Box>
-            ))}
+            {loadingProjects ? (
+              <Spinner m={8} />
+            ) : projects.length === 0 ? (
+              <Text color="gray.400" p={8} textAlign="center">
+                No projects found.
+              </Text>
+            ) : (
+              projects.map((project) => (
+                <Box
+                  key={project.id}
+                  p={4}
+                  cursor="pointer"
+                  bg={selectedProjectId === project.id ? "blue.50" : "white"}
+                  _hover={{ bg: "gray.100" }}
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    setSelectedTimelineId(null);
+                  }}
+                  borderBottomWidth="1px"
+                  borderColor="gray.100"
+                >
+                  <Text fontWeight="bold">{project.name || project.project_name}</Text>
+                  <Text fontSize="sm" color="gray.600">{project.location}</Text>
+                  <Badge colorScheme={project.status === "In Progress" ? "blue" : project.status === "Pending" ? "yellow" : "green"} mt={2}>
+                    {project.status}
+                  </Badge>
+                </Box>
+              ))
+            )}
           </VStack>
         </Box>
 
@@ -244,7 +393,7 @@ const TimelineView = () => {
           <Box p={6}>
             <HStack justify="space-between" mb={4}>
               <Heading size="lg">
-                {selectedProject ? selectedProject.name : "Select a project"}
+                {selectedProject ? (selectedProject.name || selectedProject.project_name) : "Select a project"}
               </Heading>
               <Button
                 leftIcon={<Plus size={18} />}
@@ -256,53 +405,56 @@ const TimelineView = () => {
               </Button>
             </HStack>
             <VStack spacing={0} align="stretch">
-              {timelines.length === 0 && (
+              {loadingTimelines ? (
+                <Spinner m={8} />
+              ) : timelines.length === 0 ? (
                 <Text color="gray.400" p={8} textAlign="center">
                   No timeline items for this project.
                 </Text>
-              )}
-              {timelines.map((item) => (
-                <Box
-                  key={item.id}
-                  p={4}
-                  cursor="pointer"
-                  bg={selectedTimelineId === item.id ? "blue.50" : "white"}
-                  _hover={{ bg: "gray.100" }}
-                  onClick={() => setSelectedTimelineId(item.id)}
-                  borderBottomWidth="1px"
-                  borderColor="gray.100"
-                >
-                  <HStack justify="space-between" mb={2}>
-                    <VStack align="start" spacing={1}>
-                      <Text fontWeight="semibold">{item.title}</Text>
-                      <Text fontSize="sm" color="gray.600">{item.contractor}</Text>
-                    </VStack>
-                    <Badge colorScheme={statusColorPalette[item.status] || "gray"}>
-                      {item.status.replace("_", " ")}
-                    </Badge>
-                  </HStack>
-                  <Text fontSize="sm" color="gray.600" mb={2}>
-                    {item.description}
-                  </Text>
-                  <HStack justify="space-between" align="center">
-                    <Text fontSize="sm" color="gray.500">
-                      <Clock size={16} style={{ display: "inline", marginRight: "4px" }} />
-                      {item.date}
+              ) : (
+                timelines.map((item) => (
+                  <Box
+                    key={item.id}
+                    p={4}
+                    cursor="pointer"
+                    bg={selectedTimelineId === item.id ? "blue.50" : "white"}
+                    _hover={{ bg: "gray.100" }}
+                    onClick={() => setSelectedTimelineId(item.id)}
+                    borderBottomWidth="1px"
+                    borderColor="gray.100"
+                  >
+                    <HStack justify="space-between" mb={2}>
+                      <VStack align="start" spacing={1}>
+                        <Text fontWeight="semibold">{item.title}</Text>
+                        <Text fontSize="sm" color="gray.600">{item.contractor}</Text>
+                      </VStack>
+                      <Badge colorScheme={statusColorPalette[item.status] || "gray"}>
+                        {item.status?.replace("_", " ")}
+                      </Badge>
+                    </HStack>
+                    <Text fontSize="sm" color="gray.600" mb={2}>
+                      {item.description}
                     </Text>
-                    {item.status_description && (
-                      <Text fontSize="sm" color="blue.500">
-                        {item.status_description}
+                    <HStack justify="space-between" align="center">
+                      <Text fontSize="sm" color="gray.500">
+                        <Clock size={16} style={{ display: "inline", marginRight: "4px" }} />
+                        {item.date}
                       </Text>
-                    )}
-                  </HStack>
-                </Box>
-              ))}
+                      {item.status_description && (
+                        <Text fontSize="sm" color="blue.500">
+                          {item.status_description}
+                        </Text>
+                      )}
+                    </HStack>
+                  </Box>
+                ))
+              )}
             </VStack>
           </Box>
         </Box>
       </Flex>
 
-      {/* Add Timeline Dialog - Fixed Modal Implementation */}
+      {/* Add Timeline Dialog */}
       {showAddTimeline && (
         <Box
           position="fixed"
@@ -428,7 +580,7 @@ const TimelineView = () => {
         </Box>
       )}
 
-      {/* Timeline Item Details - full width, below */}
+      {/* Timeline Item Details */}
       <Box
         mt={6}
         borderWidth="1px"
@@ -442,7 +594,7 @@ const TimelineView = () => {
             <Heading size="md" mb={2}>{selectedTimeline.title}</Heading>
             <HStack mb={2}>
               <Badge colorScheme={statusColorPalette[selectedTimeline.status] || "gray"}>
-                {selectedTimeline.status.replace("_", " ")}
+                {selectedTimeline.status?.replace("_", " ")}
               </Badge>
               <Text color="gray.500">{selectedTimeline.date}</Text>
             </HStack>
