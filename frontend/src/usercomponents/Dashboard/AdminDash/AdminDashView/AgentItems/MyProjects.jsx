@@ -30,16 +30,155 @@ import { ChevronRight, FileText, Construction, Check, Package, Ship, Upload } fr
 import { LuUpload } from "react-icons/lu";
 import { toaster } from "@/components/ui/toaster"; // Assuming toaster is in this path
 
-// Define file constraints
-const allowedTypes = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/png",
-  "image/jpeg",
-  "image/jpg"
-];
+// Allowed types for each section
+const allowedTypes = {
+  report: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/png",
+    "image/jpeg",
+    "image/jpg"
+  ],
+  photos: [
+    "image/png",
+    "image/jpeg",
+    "image/jpg"
+  ],
+  documents: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ]
+};
 const maxSize = 10 * 1024 * 1024; // 10MB
+
+// Reusable Upload Section
+const UploadSection = ({
+  title,
+  description,
+  acceptTypes,
+  maxFiles,
+  files,
+  setFiles,
+  errors,
+  setErrors,
+  isSubmitting,
+  setIsSubmitting,
+  fileUploadKey,
+  setFileUploadKey,
+  onUploadSuccess
+}) => {
+  const handleFileChange = (acceptedFiles) => {
+    setFiles(acceptedFiles);
+    if (acceptedFiles?.length > 0) {
+      setErrors((prev) => ({ ...prev, documents: undefined }));
+    }
+  };
+
+  const validate = () => {
+    const errs = {};
+    if (!files || files.length === 0) {
+      errs.documents = `At least one ${title.toLowerCase()} is required.`;
+    } else {
+      if (files.length > maxFiles) {
+        errs.documents = `You can upload a maximum of ${maxFiles} files.`;
+      } else {
+        for (const file of files) {
+          if (!acceptTypes.includes(file.type)) {
+            errs.documents = `Only ${acceptTypes.map(t => t.split('/')[1].toUpperCase()).join(', ')} files are allowed.`;
+            break;
+          }
+          if (file.size > maxSize) {
+            errs.documents = "Each file must not exceed 10MB.";
+            break;
+          }
+        }
+      }
+    }
+    setErrors(errs);
+    return errs;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      toaster.create({
+        description: Object.values(errs)[0],
+        type: "error",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toaster.create({
+        description: `Your ${title.toLowerCase()} has been uploaded successfully.`,
+        type: "success",
+        duration: 4000,
+      });
+      onUploadSuccess(files);
+      setFiles([]);
+      setFileUploadKey(Date.now());
+    } catch (error) {
+      toaster.create({
+        description: error.message || "An unexpected error occurred.",
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Box w="100%" p={4} borderWidth="1px" borderRadius="lg" boxShadow="md" as="form" onSubmit={handleSubmit} mb={6}>
+      <Heading size="xl" mb={4}>{title}</Heading>
+      <VStack spacing={4} align="stretch">
+        <Text fontSize="sm" color="gray.500">{description}</Text>
+        <FileUpload.Root maxW="xl" alignItems="stretch" maxFiles={maxFiles} key={fileUploadKey}>
+          <FileUpload.HiddenInput />
+          <FileUpload.Dropzone>
+            <Icon as={LuUpload} boxSize={8} color="gray.400" />
+            <FileUpload.DropzoneContent>
+              <Box>Drag and drop files here, or click to select</Box>
+              <Box color="gray.400">{acceptTypes.map(t => t.split('/')[1].toUpperCase()).join(', ')} up to 10MB</Box>
+            </FileUpload.DropzoneContent>
+          </FileUpload.Dropzone>
+          <FileUpload.ItemGroup mt={2}>
+            <FileUpload.Context>
+              {({ acceptedFiles }) => {
+                useEffect(() => {
+                  handleFileChange(acceptedFiles);
+                }, [acceptedFiles]);
+                return acceptedFiles.map((file, index) => (
+                  <FileUpload.Item key={index} file={file}>
+                    <HStack spacing={2} p={2} borderWidth="1px" borderColor="gray.200" borderRadius="md" justifyContent="space-between" alignItems="center" width="100%" bg="white">
+                      <HStack spacing={2} flex="1">
+                        <Icon as={FileText} boxSize={4} color="gray.600" />
+                        <Box fontSize="sm" isTruncated flex="1">{file.name}</Box>
+                      </HStack>
+                      <FileUpload.ItemDeleteTrigger asChild>
+                        <CloseButton size="sm" aria-label={`Remove file ${file.name}`} />
+                      </FileUpload.ItemDeleteTrigger>
+                    </HStack>
+                  </FileUpload.Item>
+                ));
+              }}
+            </FileUpload.Context>
+          </FileUpload.ItemGroup>
+          {errors.documents && (<Text color="red.500" fontSize="sm" mt={2}>{errors.documents}</Text>)}
+        </FileUpload.Root>
+        <Button type="submit" alignSelf="flex-start" isLoading={isSubmitting} disabled={isSubmitting || files.length === 0}>
+          {isSubmitting ? "Submitting..." : `Submit ${title}`}
+        </Button>
+      </VStack>
+    </Box>
+  );
+};
 
 const MyProjects = () => {
   const { id } = useParams();
@@ -53,6 +192,17 @@ const MyProjects = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileUploadKey, setFileUploadKey] = useState(Date.now());
   const [handoffOpen, setHandoffOpen] = useState(false);
+
+  // Add state for photos and documents
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [photoErrors, setPhotoErrors] = useState({});
+  const [isPhotoSubmitting, setIsPhotoSubmitting] = useState(false);
+  const [photoUploadKey, setPhotoUploadKey] = useState(Date.now());
+
+  const [docFiles, setDocFiles] = useState([]);
+  const [docErrors, setDocErrors] = useState({});
+  const [isDocSubmitting, setIsDocSubmitting] = useState(false);
+  const [docUploadKey, setDocUploadKey] = useState(Date.now());
 
   // Simulate fetching project data based on the ID
   useEffect(() => {
@@ -78,80 +228,33 @@ const MyProjects = () => {
           milestone.phase.toLowerCase().includes(filter.toLowerCase())
         );
 
-  const handleFileChange = (acceptedFiles) => {
-    setReportFiles(acceptedFiles);
-    if (acceptedFiles?.length > 0) {
-      setReportErrors((prev) => ({ ...prev, documents: undefined }));
-    }
+  // Add uploaded files to the "Project Documents" list for display
+  const handleReportUploadSuccess = (files) => {
+    const newUploads = files.map((file, index) => ({
+      id: Date.now() + index,
+      name: file.name,
+      source: "You",
+      date: new Date().toLocaleDateString(),
+    }));
+    setFileUploads(prev => [...prev, ...newUploads]);
   };
-
-  const validate = () => {
-    const errs = {};
-    if (!reportFiles || reportFiles.length === 0) {
-      errs.documents = "At least one project report is required.";
-    } else {
-      if (reportFiles.length > 5) {
-        errs.documents = "You can upload a maximum of 5 files.";
-      } else {
-        for (const file of reportFiles) {
-          if (!allowedTypes.includes(file.type)) {
-            errs.documents = "Only PDF, DOCX, PNG, and JPG files are allowed.";
-            break;
-          }
-          if (file.size > maxSize) {
-            errs.documents = "Each file must not exceed 10MB.";
-            break;
-          }
-        }
-      }
-    }
-    setReportErrors(errs);
-    return errs;
+  const handlePhotoUploadSuccess = (files) => {
+    const newUploads = files.map((file, index) => ({
+      id: Date.now() + index,
+      name: file.name,
+      source: "You (Photo)",
+      date: new Date().toLocaleDateString(),
+    }));
+    setFileUploads(prev => [...prev, ...newUploads]);
   };
-
-  const handleReportSubmit = async (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      toaster.create({
-        description: Object.values(errs)[0],
-        type: "error",
-        duration: 4000,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      console.log("Uploading files:", reportFiles.map(f => f.name));
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toaster.create({
-        description: "Your project report has been uploaded successfully.",
-        type: "success",
-        duration: 4000,
-      });
-      
-      // Add the uploaded files to the "Project Documents" list for display
-      const newUploads = reportFiles.map((file, index) => ({
-        id: Date.now() + index,
-        name: file.name,
-        source: "You",
-        date: new Date().toLocaleDateString(),
-      }));
-      setFileUploads(prev => [...prev, ...newUploads]);
-
-      setReportFiles([]);
-      setFileUploadKey(Date.now());
-    } catch (error) {
-      toaster.create({
-        description: error.message || "An unexpected error occurred.",
-        type: "error",
-        duration: 4000,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDocUploadSuccess = (files) => {
+    const newUploads = files.map((file, index) => ({
+      id: Date.now() + index,
+      name: file.name,
+      source: "You (Document)",
+      date: new Date().toLocaleDateString(),
+    }));
+    setFileUploads(prev => [...prev, ...newUploads]);
   };
 
   if (!project) {
@@ -309,52 +412,40 @@ const MyProjects = () => {
 
       {/* Report Upload & Personnel Section */}
       <Flex w="100%" gap={4} flexDirection={{ base: "column", md: "row" }}>
-        <Box w={{ base: "100%", md: "80%" }} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md" as="form" onSubmit={handleReportSubmit}>
-          <Heading size="xl" mb={4}>Upload Project Report</Heading>
-          <VStack spacing={4} align="stretch">
-            <Text fontSize="sm" color="gray.500">
-              Please upload up to 5 report documents.<br />
-              Accepted formats: PDF, DOCX, JPG, PNG. Max size: 10MB each.
-            </Text>
-            <FileUpload.Root maxW="xl" alignItems="stretch" maxFiles={5} key={fileUploadKey}>
-              <FileUpload.HiddenInput />
-              <FileUpload.Dropzone>
-                <Icon as={LuUpload} boxSize={8} color="gray.400" />
-                <FileUpload.DropzoneContent>
-                  <Box>Drag and drop files here, or click to select</Box>
-                  <Box color="gray.400">.pdf, .docx, .png, .jpg up to 10MB</Box>
-                </FileUpload.DropzoneContent>
-              </FileUpload.Dropzone>
-              <FileUpload.ItemGroup mt={2}>
-                <FileUpload.Context>
-                  {({ acceptedFiles }) => {
-                    useEffect(() => {
-                      handleFileChange(acceptedFiles);
-                    }, [acceptedFiles]);
-                    return acceptedFiles.map((file, index) => (
-                      <FileUpload.Item key={index} file={file}>
-                        <HStack spacing={2} p={2} borderWidth="1px" borderColor="gray.200" borderRadius="md" justifyContent="space-between" alignItems="center" width="100%" bg="white">
-                          <HStack spacing={2} flex="1">
-                            <Icon as={FileText} boxSize={4} color="gray.600" />
-                            <Box fontSize="sm" isTruncated flex="1">{file.name}</Box>
-                          </HStack>
-                          <FileUpload.ItemDeleteTrigger asChild>
-                            <CloseButton size="sm" aria-label={`Remove file ${file.name}`} />
-                          </FileUpload.ItemDeleteTrigger>
-                        </HStack>
-                      </FileUpload.Item>
-                    ));
-                  }}
-                </FileUpload.Context>
-              </FileUpload.ItemGroup>
-              {reportErrors.documents && (<Text color="red.500" fontSize="sm" mt={2}>{reportErrors.documents}</Text>)}
-            </FileUpload.Root>
-            <Button type="submit" alignSelf="flex-start" isLoading={isSubmitting} disabled={isSubmitting || reportFiles.length === 0}>
-              {isSubmitting ? "Submitting..." : "Submit Report"}
-            </Button>
-          </VStack>
+        <Box w={{ base: "100%", md: "80%" }}>
+          {/* Upload Project Photos */}
+          <UploadSection
+            title="Upload Project Photos"
+            description="Upload up to 5 project photos. Accepted formats: JPG, PNG. Max size: 10MB each."
+            acceptTypes={allowedTypes.photos}
+            maxFiles={5}
+            files={photoFiles}
+            setFiles={setPhotoFiles}
+            errors={photoErrors}
+            setErrors={setPhotoErrors}
+            isSubmitting={isPhotoSubmitting}
+            setIsSubmitting={setIsPhotoSubmitting}
+            fileUploadKey={photoUploadKey}
+            setFileUploadKey={setPhotoUploadKey}
+            onUploadSuccess={handlePhotoUploadSuccess}
+          />
+          {/* Upload Project Documents */}
+          <UploadSection
+            title="Upload Project Documents"
+            description="Please upload up to 5 report documents. Accepted formats: PDF, DOCX. Max size: 10MB each."
+            acceptTypes={allowedTypes.documents}
+            maxFiles={5}
+            files={docFiles}
+            setFiles={setDocFiles}
+            errors={docErrors}
+            setErrors={setDocErrors}
+            isSubmitting={isDocSubmitting}
+            setIsSubmitting={setIsDocSubmitting}
+            fileUploadKey={docUploadKey}
+            setFileUploadKey={setDocUploadKey}
+            onUploadSuccess={handleDocUploadSuccess}
+          />
         </Box>
-
         <Box w={{ base: "100%", md: "20%" }} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md" display="flex" flexDirection="column" alignItems="center" textAlign="center">
           <Heading size="lg" mb={4}>Personnel Details</Heading>
           <Avatar.Root>
@@ -373,36 +464,6 @@ const MyProjects = () => {
           </Box>
         </Box>
       </Flex>
-
-      {/* Project Documents Section */}
-      <Box>
-        <Box p={4} borderWidth="1px" borderRadius="lg" boxShadow="md">
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="xl">Project Documents</Heading>
-          </Flex>
-          {fileUploads.length > 0 ? (
-            <VStack spacing={4} align="stretch">
-              {fileUploads.map((file) => (
-                <Box key={file.id} p={3} borderWidth="1px" borderRadius="md" _hover={{ bg: "gray.50" }}>
-                  <HStack spacing={4} align="center">
-                    <FileText size={20} />
-                    <VStack align="start" spacing={0}>
-                      <Text fontSize="sm" fontWeight="bold">{file.name}</Text>
-                      <Text fontSize="xs" color="gray.500">Sent by {file.source}</Text>
-                    </VStack>
-                    <Text fontSize="xs" color="gray.500" ml="auto">{file.date}</Text>
-                  </HStack>
-                </Box>
-              ))}
-              <Button size="sm" rightIcon={<ChevronRight size={16} />} alignSelf="flex-end">
-                See all files
-              </Button>
-            </VStack>
-          ) : (
-            <Text fontSize="sm" color="gray.500">No files uploaded yet.</Text>
-          )}
-        </Box>
-      </Box>
     </VStack>
   );
 };
