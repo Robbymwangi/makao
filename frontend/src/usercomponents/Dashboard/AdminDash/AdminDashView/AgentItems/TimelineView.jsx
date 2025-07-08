@@ -41,12 +41,16 @@ const TimelineView = () => {
     status: "pending",
     date: "",
     description: "",
+    estimated_cost: "", // Added missing field
   });
   const [reportFiles, setReportFiles] = useState({});
   const [uploading, setUploading] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingTimelines, setLoadingTimelines] = useState(false);
   const [timelines, setTimelines] = useState([]);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completeData, setCompleteData] = useState({ expenditure: "", date: "" });
+  const [pendingTimelineId, setPendingTimelineId] = useState(null);
 
   const fileInputRef = useRef();
 
@@ -230,11 +234,9 @@ const TimelineView = () => {
     setUploading(false);
   };
 
-  const handleCheckoff = async (timelineId) => {
+  const handleCheckoff = (timelineId) => {
     const hasReport = !!reportFiles[timelineId];
     const timeline = timelines.find((t) => t.id === timelineId);
-
-    // Prevent marking as completed without a report, unless it's already completed and being reverted
     if (timeline.status !== "completed" && !hasReport) {
       toaster.create({
         title: "Attach a report before marking as completed.",
@@ -242,32 +244,36 @@ const TimelineView = () => {
       });
       return;
     }
+    if (timeline.status !== "completed") {
+      setPendingTimelineId(timelineId);
+      setShowCompleteDialog(true);
+    } else {
+      updateTimelineStatus(timelineId, "pending");
+    }
+  };
 
-    const newStatus = timeline.status === "completed" ? "pending" : "completed";
-
+  const updateTimelineStatus = async (timelineId, status, expenditure, date) => {
     try {
+      const updateObj = { status };
+      if (status === "completed") {
+        updateObj.actual_expenditure = expenditure;
+        updateObj.completed_at = date;
+      }
       const { error } = await supabase
         .from("project_timelines")
-        .update({ status: newStatus })
+        .update(updateObj)
         .eq("id", timelineId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
 
       setTimelines((prev) =>
         prev.map((timelineItem) =>
           timelineItem.id === timelineId
-            ? {
-                ...timelineItem,
-                status: newStatus,
-              }
+            ? { ...timelineItem, ...updateObj }
             : timelineItem
         )
       );
-
       toaster.create({
-        title: `Timeline item marked as ${newStatus}.`,
+        title: `Timeline item marked as ${status}.`,
         type: "success",
       });
     } catch (err) {
@@ -278,7 +284,6 @@ const TimelineView = () => {
       });
     }
   };
-
 
   const handleAddTimeline = async () => {
     if (!newTimeline.title || !newTimeline.contractor || !newTimeline.date) {
@@ -307,6 +312,7 @@ const TimelineView = () => {
       status: "pending",
       date: "",
       description: "",
+      estimated_cost: "", // Reset the new field as well
     });
     setShowAddTimeline(false);
     toaster.create({
@@ -323,6 +329,7 @@ const TimelineView = () => {
       status: "pending",
       date: "",
       description: "",
+      estimated_cost: "",
     });
   };
 
@@ -474,11 +481,11 @@ const TimelineView = () => {
               to: { opacity: 1 }
             },
             '@keyframes slideIn': {
-              from: { 
+              from: {
                 opacity: 0,
                 transform: 'translateY(-20px) scale(0.95)'
               },
-              to: { 
+              to: {
                 opacity: 1,
                 transform: 'translateY(0) scale(1)'
               }
@@ -504,7 +511,7 @@ const TimelineView = () => {
                 onClick={handleCloseDialog}
               />
             </HStack>
-            
+
             <VStack spacing={4} align="stretch">
               <Box>
                 <Text mb={1} fontWeight="medium">Title</Text>
@@ -551,6 +558,19 @@ const TimelineView = () => {
                     setNewTimeline(t => ({ ...t, description: e.target.value }))
                   }
                   placeholder="Description"
+                  bg="white"
+                />
+              </Box>
+              <Box>
+                <Text mb={1} fontWeight="medium">Estimated Cost</Text>
+                <Input
+                  name="estimated_cost"
+                  type="number"
+                  value={newTimeline.estimated_cost} // Ensure this is controlled
+                  onChange={e =>
+                    setNewTimeline(t => ({ ...t, estimated_cost: e.target.value }))
+                  }
+                  placeholder="Estimated Cost"
                   bg="white"
                 />
               </Box>
@@ -603,6 +623,24 @@ const TimelineView = () => {
             {selectedTimeline.status_description && (
               <Text color="blue.500" mb={2}>{selectedTimeline.status_description}</Text>
             )}
+            <Text fontWeight="medium" mb={2}>
+              Estimated Cost:{" "}
+              <span style={{ color: "#3182ce" }}>
+                {selectedTimeline.estimated_cost ? `Ksh ${selectedTimeline.estimated_cost}` : "N/A"}
+              </span>
+            </Text>
+            <Text fontWeight="medium" mb={2}>
+              Actual Expenditure:{" "}
+              <span style={{ color: "#38a169" }}>
+                {selectedTimeline.actual_expenditure ? `Ksh ${selectedTimeline.actual_expenditure}` : "N/A"}
+              </span>
+            </Text>
+            <Text fontWeight="medium" mb={2}>
+              Date Completed:{" "}
+              <span style={{ color: "#805ad5" }}>
+                {selectedTimeline.completed_at ? selectedTimeline.completed_at : "N/A"}
+              </span>
+            </Text>
             <HStack spacing={4} mt={4}>
               <Button
                 leftIcon={<CheckCircle size={20} />}
@@ -648,6 +686,111 @@ const TimelineView = () => {
           </Flex>
         )}
       </Box>
+
+      {/* Complete Timeline Dialog */}
+      {showCompleteDialog && (
+        <Box
+          position="fixed"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          bg="rgba(0, 0, 0, 0.7)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          zIndex={1000}
+          animation="fadeIn 0.2s ease-out"
+          sx={{
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            },
+            '@keyframes slideIn': {
+              from: {
+                opacity: 0,
+                transform: 'translateY(-20px) scale(0.95)'
+              },
+              to: {
+                opacity: 1,
+                transform: 'translateY(0) scale(1)'
+              }
+            }
+          }}
+        >
+          <Box
+            bg="white"
+            borderRadius="lg"
+            p={6}
+            maxW="sm"
+            w="90%"
+            maxH="90vh"
+            overflowY="auto"
+            position="relative"
+            animation="slideIn 0.2s ease-out"
+            boxShadow="0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          >
+            <HStack justify="space-between" mb={4}>
+              <Heading size="md">Complete Timeline Item</Heading>
+              <CloseButton
+                size="sm"
+                onClick={() => setShowCompleteDialog(false)}
+              />
+            </HStack>
+
+            <VStack spacing={4} align="stretch">
+              <Box>
+                <Text mb={1} fontWeight="medium">Expenditure</Text>
+                <Input
+                  name="expenditure"
+                  type="number"
+                  value={completeData.expenditure}
+                  onChange={e =>
+                    setCompleteData(d => ({ ...d, expenditure: e.target.value }))
+                  }
+                  placeholder="Actual Expenditure"
+                  bg="white"
+                />
+              </Box>
+              <Box>
+                <Text mb={1} fontWeight="medium">Completion Date</Text>
+                <Input
+                  type="date"
+                  name="date"
+                  value={completeData.date}
+                  onChange={e =>
+                    setCompleteData(d => ({ ...d, date: e.target.value }))
+                  }
+                  bg="white"
+                />
+              </Box>
+              <HStack pt={4} spacing={4}>
+                <Button
+                  onClick={() => setShowCompleteDialog(false)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    updateTimelineStatus(pendingTimelineId, "completed", completeData.expenditure, completeData.date);
+                    setShowCompleteDialog(false);
+                  }}
+                  size="sm"
+                  colorScheme="blue"
+                  isDisabled={
+                    !completeData.expenditure ||
+                    !completeData.date
+                  }
+                >
+                  Complete
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };
