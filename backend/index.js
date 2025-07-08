@@ -90,17 +90,20 @@ import agentsRoutes from './src/routes/agents.js';
 // Register agent routes
 app.use('/agents', agentsRoutes);
 
-
-
 // Register staff routes
 app.use('/', staffRoutes);
 
 // Import projects routes
-
 import projectsRoutes from './src/routes/projects.js';
 
 // Register projects routes
 app.use('/projects', projectsRoutes);
+
+// Import timelines routes
+import timelinesRouter from './src/routes/timelines.js';
+
+// Register timelines routes
+app.use("/api/timelines", timelinesRouter);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
