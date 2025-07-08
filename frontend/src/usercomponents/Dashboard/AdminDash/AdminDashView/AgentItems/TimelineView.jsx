@@ -410,7 +410,20 @@ const TimelineView = () => {
                 leftIcon={<Plus size={18} />}
                 colorScheme="blue"
                 size="sm"
-                onClick={() => setShowAddTimeline(true)}
+                onClick={async () => {
+                  // Refetch projects to get the latest status
+                  await fetchProjects();
+                  const updatedProject = projects.find((p) => p.id === selectedProjectId);
+                  if (updatedProject?.progress_status === "completed") {
+                    toaster.create({
+                      title: "Project is completed",
+                      description: "You cannot add new timeline items to a completed project.",
+                      type: "warning",
+                    });
+                    return;
+                  }
+                  setShowAddTimeline(true);
+                }}
                 isDisabled={selectedProject?.progress_status === "completed"}
               >
                 Add Timeline Item
