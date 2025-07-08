@@ -14,8 +14,8 @@ import {
 } from "@chakra-ui/react";
 import { CSSTransition } from "react-transition-group";
 import { useAuthStore } from "@/store/useAuthStore";
+import supabase from "@/utils/supabaseClient";
 // Dashboard Components
-import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
 import ProjectTimeline from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/Timeline";
 import PhotoProgress from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/PhotoProgress";
@@ -35,6 +35,8 @@ const UserDashboard = () => {
   const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
   const [userProjects, setUserProjects] = useState([]);
   const [userRole, setUserRole] = useState('user');
+  const [timelines, setTimelines] = useState([]);
+  const [photoFiles, setPhotoFiles] = useState([]);
   const headingTextAlign = useBreakpointValue({ base: "center", md: "left" });
 
   useEffect(() => {
@@ -74,6 +76,35 @@ const UserDashboard = () => {
       setLoading(false);
     }
   }, [user, jwt]);
+
+  useEffect(() => {
+    // Use the first project as the current project (customize as needed)
+    const currentProjectId = userProjects[0]?.id;
+    if (!currentProjectId) return;
+    supabase
+      .from("project_timelines")
+      .select("*")
+      .eq("project_id", currentProjectId)
+      .eq("status", "pending")
+      .order("date", { ascending: true })
+      .then(({ data, error }) => {
+        if (!error) setTimelines(data || []);
+      });
+  }, [userProjects]);
+
+  useEffect(() => {
+    const currentProjectId = userProjects[0]?.id;
+    if (!currentProjectId) return;
+    supabase
+      .from("project_files")
+      .select("*")
+      .eq("project_id", currentProjectId)
+      .eq("file_category", "photo")
+      .order("uploaded_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (!error) setPhotoFiles(data || []);
+      });
+  }, [userProjects]);
 
   const welcomeName = user?.name || "User";
 
@@ -218,14 +249,29 @@ const UserDashboard = () => {
           </Heading>
         </CSSTransition>
 
-        <StatsCards />
+        <Box
+          bg="white"
+          p={8}
+          borderRadius="md"
+          boxShadow="sm"
+          textAlign="center"
+          mb={4}
+        >
+          <Heading size="lg" fontWeight="bold" mb={2}>
+            Welcome to Makao!
+          </Heading>
+          <Text fontSize="lg" color="gray.700">
+            Here you can track your project progress, view updates, and manage your construction journey with ease.
+          </Text>
+        </Box>
+
         <HStack spacing={8} align="start" mt={8}>
-          <FinancialOverview />
-          <ProjectTimeline />
+          {/* <FinancialOverview /> */}
+          {/* <ProjectTimeline timelines={timelines} /> */}
         </HStack>
-        <PhotoProgress />
-        <QuickLinks />
-        <AgentReport />
+        <PhotoProgress files={photoFiles} />
+        {/* <QuickLinks /> */}
+        {/* <AgentReport /> */}
       </VStack>
     </>
   );
