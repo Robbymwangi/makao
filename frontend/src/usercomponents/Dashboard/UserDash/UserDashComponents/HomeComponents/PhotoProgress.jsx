@@ -1,32 +1,49 @@
 import React from "react";
-import { Box, Text, HStack, Flex } from "@chakra-ui/react";
-import { Image, Plus } from "lucide-react";
+import { Box, Text, HStack, Flex, Link, Image as ChakraImage } from "@chakra-ui/react";
+import { Image as LucideImage, Plus, Download } from "lucide-react";
 
-const PhotoProgress = () => {
+const PhotoProgress = ({ files }) => {
+  if (!files || files.length === 0) {
+    return <div>No photos found for this project.</div>;
+  }
+
   return (
     <Box p={4} borderWidth="1px" borderRadius="xl" boxShadow="sm" mt={4}>
       <Flex justify="space-between" align="center" mb={4}>
         <Text fontSize="lg" fontWeight="semibold">Photo Progress</Text>
-        <Flex as="button" align="center" gap={2} px={4} py={2} borderRadius="md" _hover={{ bg: "gray.100" }}>
-          <Plus size={16} />
-          <Text>See All Reports</Text>
-        </Flex>
       </Flex>
       <HStack spacing={6} overflowX="auto" pb={2}>
-        {["3 weeks ago", "2 months ago", "3 months ago"].map((label) => (
+        {files.map((file) => (
           <Box
-            key={label}
+            key={file.id}
             minW="240px"
             borderWidth="1px"
             borderRadius="xl"
             p={4}
             flexShrink={0}
             boxShadow="xl"
+            bg="gray.50"
           >
-            <Box bg="gray.100" h="160px" borderRadius="md" mb={4} />
-            <HStack spacing={2}>
-              <Image size={16} />
-              <Text fontSize="sm">{label}</Text>
+            {/* Show the actual image */}
+            <ChakraImage
+              src={file.file_url}
+              alt={file.file_name}
+              h="160px"
+              w="100%"
+              objectFit="cover"
+              borderRadius="md"
+              mb={4}
+              fallbackSrc="https://via.placeholder.com/240x160?text=No+Image"
+            />
+            <HStack spacing={2} justify="space-between">
+              <HStack spacing={2}>
+                <LucideImage size={16} />
+                <Text fontSize="sm" isTruncated maxW="120px">{file.file_name}</Text>
+              </HStack>
+              {/* Download button */}
+              <Link href={file.file_url} download target="_blank" rel="noopener noreferrer">
+                <Download size={18} />
+              </Link>
             </HStack>
           </Box>
         ))}
