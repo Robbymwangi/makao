@@ -16,8 +16,8 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
-import { useAuthStore } from "@/store/useAuthStore"; // adjust path as needed
-import supabase from "@/utils/supabaseClient"; // Make sure you have this
+import { useAuthStore } from "@/store/useAuthStore"; 
+import supabase from "@/utils/supabaseClient";
 
 const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-agent-projects";
 
