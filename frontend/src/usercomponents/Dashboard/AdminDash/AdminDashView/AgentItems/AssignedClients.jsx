@@ -231,15 +231,6 @@ const AssignedClients = () => {
                         <Text fontWeight="bold">{project.project_name}</Text>
                         <Text fontSize="sm" color="gray.500">{project.location}</Text>
                       </Box>
-                      <Badge colorScheme={
-                        project.progress >= 75
-                          ? "green"
-                          : project.progress >= 50
-                            ? "yellow"
-                            : "orange"
-                      }>
-                        {project.progress}% Complete
-                      </Badge>
                     </Flex>
                   </Card.Root>
                 ))
