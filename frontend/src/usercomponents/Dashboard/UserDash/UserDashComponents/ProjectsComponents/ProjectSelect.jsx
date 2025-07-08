@@ -236,7 +236,7 @@ const ProjectSelect = () => {
                     Location: {project.location}
                   </Text>
                   <Stack direction="row" spacing={2} mb={4}>
-                    <Badge colorScheme="blue">Progress: {project.progress_status || "N/A"}</Badge>
+                    <Badge colorScheme="blue"> {project.progress_status || "N/A"}</Badge>
                   </Stack>
                 </Box>
               </Box>

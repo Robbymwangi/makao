@@ -7,7 +7,6 @@ import {
   Text,
   VStack,
   HStack,
-  Badge,
   Button,
   Heading,
   Avatar,
@@ -39,13 +38,14 @@ const statusIconMap = {
 const MyProjects = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const jwt = useAuthStore((state) => state.token); // Get JWT from store
+  const jwt = useAuthStore((state) => state.token);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fileUploads, setFileUploads] = useState([]);
   const [filter, setFilter] = useState("All");
   const [timelines, setTimelines] = useState([]);
   const [agentName, setAgentName] = useState(""); // For agent name
+  const [agentEmail, setAgentEmail] = useState(""); // For agent email
 
   // Fetch project data
   useEffect(() => {
@@ -61,24 +61,34 @@ const MyProjects = () => {
         });
         const data = await res.json();
         setProject(data.project || null);
-        // Fetch agent name if agent_id exists
+
+        // Fetch agent name and email via Supabase Edge Function if agent_id exists
         if (data.project?.agent_id) {
-          const { data: agentData, error: agentError } = await supabase
-            .from("users")
-            .select("name")
-            .eq("id", data.project.agent_id)
-            .single();
-          if (!agentError && agentData && agentData.name) {
-            setAgentName(agentData.name);
-          } else {
+          try {
+            const { data: agentData, error: agentError } = await supabase.functions.invoke('get-agent-details', {
+              body: { client_id: data.project.agent_id }
+            });
+            if (agentData && agentData.agent) {
+              setAgentName(agentData.agent.name || "Makao Agent");
+              setAgentEmail(agentData.agent.email || "");
+              console.log('Agent name:', agentData.agent.name);
+              console.log('Agent email:', agentData.agent.email);
+            } else {
+              setAgentName("Makao Agent");
+              setAgentEmail("");
+            }
+          } catch {
             setAgentName("Makao Agent");
+            setAgentEmail("");
           }
         } else {
           setAgentName("Makao Agent");
+          setAgentEmail("");
         }
       } catch (error) {
         setProject(null);
         setAgentName("Makao Agent");
+        setAgentEmail("");
       } finally {
         setLoading(false);
       }
@@ -98,6 +108,51 @@ const MyProjects = () => {
       if (!error) setTimelines(data || []);
     }
     fetchTimelines();
+  }, [id]);
+
+  // Fetch project documents
+  useEffect(() => {
+    async function fetchProjectDocuments() {
+      if (!id) return;
+      // Fetch all document files for this project
+      const { data: files, error } = await supabase
+        .from("project_files")
+        .select("*, uploaded_by")
+        .eq("project_id", id)
+        .eq("file_category", "document");
+
+      if (!error && files && files.length > 0) {
+        // Get unique agent IDs
+        const agentIds = [
+          ...new Set(files.map(file => file.uploaded_by).filter(Boolean))
+        ];
+        let agentMap = {};
+        if (agentIds.length > 0) {
+          // Fetch agent names from the agents table
+          const { data: agents } = await supabase
+            .from("agents")
+            .select("id, name")
+            .in("id", agentIds);
+          agentMap = (agents || []).reduce((acc, agent) => {
+            acc[agent.id] = agent.name;
+            return acc;
+          }, {});
+        }
+        setFileUploads(
+          files.map(file => ({
+            id: file.id,
+            name: file.file_name || file.name,
+            source: agentMap[file.uploaded_by] || "Unknown",
+            date: file.created_at
+              ? new Date(file.created_at).toLocaleDateString()
+              : "",
+          }))
+        );
+      } else {
+        setFileUploads([]);
+      }
+    }
+    fetchProjectDocuments();
   }, [id]);
 
   const uniquePhases = Array.from(new Set(timelines.map(t => t.title))).filter(Boolean);
@@ -191,16 +246,6 @@ const MyProjects = () => {
             <Text fontSize="md" color="gray.300" mb={4}>
               {project.location || "No location specified"}
             </Text>
-            <Stack direction="row" spacing={2} mb={4}>
-              <Badge colorPalette="green" fontSize="sm">
-                <Construction />
-                Ongoing
-              </Badge>
-              <Badge colorPalette="blue" fontSize="sm">
-                <Check />
-                On Track
-              </Badge>
-            </Stack>
           </Box>
         </Card.Root>
       </Box>
@@ -262,8 +307,45 @@ const MyProjects = () => {
                             </Timeline.Connector>
                             <Timeline.Content>
                               <Timeline.Title>{milestone.title}</Timeline.Title>
-                              <Timeline.Description>{milestone.date}</Timeline.Description>
-                              <Text textStyle="sm">{milestone.description}</Text>
+                              {filter === "All" ? (
+                                // All: Only show name, date, description
+                                <>
+                                  <Timeline.Description>
+                                    {milestone.created_at
+                                      ? new Date(milestone.created_at).toLocaleDateString()
+                                      : milestone.date || "N/A"}
+                                  </Timeline.Description>
+                                  <Text textStyle="sm">{milestone.description}</Text>
+                                </>
+                              ) : (
+                                // Per-milestone: Show all details
+                                <>
+                                  <Timeline.Description>
+                                    <b>Created:</b>{" "}
+                                    {milestone.created_at
+                                      ? new Date(milestone.created_at).toLocaleDateString()
+                                      : milestone.date || "N/A"}
+                                    <br />
+                                    {milestone.completed_at && (
+                                      <>
+                                        <b>Completed:</b>{" "}
+                                        {new Date(milestone.completed_at).toLocaleDateString()}
+                                        <br />
+                                      </>
+                                    )}
+                                    <b>Estimated Cost:</b>{" "}
+                                    {milestone.estimated_cost !== undefined && milestone.estimated_cost !== null
+                                      ? `KES ${milestone.estimated_cost.toLocaleString()}`
+                                      : "N/A"}
+                                    <br />
+                                    <b>Total Expenditure:</b>{" "}
+                                    {milestone.actual_expenditure !== undefined && milestone.actual_expenditure !== null
+                                      ? `KES ${milestone.actual_expenditure.toLocaleString()}`
+                                      : "N/A"}
+                                  </Timeline.Description>
+                                  <Text textStyle="sm">{milestone.description}</Text>
+                                </>
+                              )}
                             </Timeline.Content>
                           </Timeline.Item>
                         );
@@ -298,38 +380,6 @@ const MyProjects = () => {
           </Timeline.Root>
         </Box>
       </Box>
-
-      {/* Agent Section Only */}
-      <Flex w="100%" gap={4} flexDirection={{ base: "column", md: "row" }}>
-        <Box
-          w={{ base: "100%", md: "20%" }}
-          p={4}
-          borderWidth="1px"
-          borderRadius="lg"
-          boxShadow="md"
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          textAlign="center"
-        >
-          <Heading size="lg" mb={4}>
-            Personnel Details
-          </Heading>
-          {/* Makao Agent Section */}
-          <Box mt={6} textAlign="center">
-            <Avatar.Root>
-              <Avatar.Fallback name={agentName || "Makao Agent"} />
-              <Avatar.Image src="https://via.placeholder.com/150" />
-            </Avatar.Root>
-            <Text fontSize="lg" fontWeight="bold" mt={4}>
-              {agentName || "Makao Agent"}
-            </Text>
-            <Text fontSize="sm" color="gray.500" mt={2}>
-              Current Agent
-            </Text>
-          </Box>
-        </Box>
-      </Flex>
 
       {/* File Uploads Section */}
       <Box>
