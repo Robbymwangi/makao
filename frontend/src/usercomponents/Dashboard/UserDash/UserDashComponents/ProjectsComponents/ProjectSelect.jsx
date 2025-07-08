@@ -10,16 +10,23 @@ import {
   Spinner,
   Portal,
   Input,
+  SimpleGrid,
+  Flex,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
+import { submitProjectApproval } from "@/api/projectApproval";
+
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/check-user-projects";
 
 const ProjectSelect = () => {
   const jwt = useAuthStore((state) => state.token);
-  const [status, setStatus] = useState(null);
+  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [userRole, setUserRole] = useState('user');
   const [form, setForm] = useState({
     project_name: '',
     location: '',
@@ -31,12 +38,60 @@ const ProjectSelect = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!jwt) return;
-    setLoading(true);
-    getProjectStatus(jwt)
-      .then(setStatus)
-      .finally(() => setLoading(false));
-  }, [jwt]);
+    async function checkUserProjects() {
+      setLoading(true);
+      try {
+        if (!jwt) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(EDGE_URL, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!res.ok) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+        setUserProjects(data.existingProjects || []);
+        setUserRole(data.userRole || 'user');
+      } catch (error) {
+        setShowSubmissionOverlay(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user && jwt) {
+      checkUserProjects();
+    } else {
+      setLoading(false);
+    }
+  }, [user, jwt]);
+
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (!jwt) return;
+      // Submit the project approval
+      await submitProjectApproval(jwt, formData);
+      setIsFormOpen(false);
+      setLoading(true);
+      // Refresh the project status
+      const res = await fetch(EDGE_URL, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await res.json();
+      setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+      setUserProjects(data.existingProjects || []);
+      setUserRole(data.userRole || 'user');
+    } catch (error) {
+      // handle error if needed
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -55,53 +110,7 @@ const ProjectSelect = () => {
     );
   }
 
-  // Show pending projects grayed out
-  if (status?.pending_projects?.length > 0) {
-    return (
-      <VStack spacing={6} p={4}>
-        <Text fontSize="2xl" fontWeight="bold" mb={4}>
-          Your Projects
-        </Text>
-        {status.pending_projects.map((project) => (
-          <Box
-            key={project.id}
-            borderWidth="1px"
-            borderRadius="lg"
-            overflow="hidden"
-            boxShadow="md"
-            opacity={0.5}
-            cursor="not-allowed"
-            onClick={() => setShowDialog(true)}
-            w="100%"
-            _hover={{ bg: "gray.50" }}
-            p={4}
-          >
-            <Text fontWeight="bold" fontSize="lg">{project.project_name}</Text>
-            <Text color="gray.500">{project.location}</Text>
-            <Stack direction="row" spacing={2} mt={2}>
-              <Badge colorScheme="orange">Pending Approval</Badge>
-            </Stack>
-          </Box>
-        ))}
-        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
-          <Dialog.Content maxW="sm">
-            <Dialog.Body>
-              <Text fontSize="lg" fontWeight="bold" mb={2}>
-                Project is due for approval.
-              </Text>
-              <Text>Please try again later.</Text>
-              <Button mt={4} onClick={() => setShowDialog(false)}>
-                Close
-              </Button>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Root>
-      </VStack>
-    );
-  }
-
-  // Use the same empty project logic as UserDashboard
-  if (!status?.has_approved_project) {
+  if (showSubmissionOverlay) {
     return (
       <Box
         display="flex"
@@ -132,10 +141,13 @@ const ProjectSelect = () => {
             team.
           </Text>
         </Box>
-        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+        <Button colorScheme="blue" mt={4} onClick={() => setIsFormOpen(true)}>
           Submit Project Details
         </Button>
-        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+        <Dialog.Root
+          open={isFormOpen}
+          onOpenChange={(details) => setIsFormOpen(details.open)}
+        >
           <Portal>
             <Dialog.Backdrop />
             <Dialog.Positioner>
@@ -143,7 +155,7 @@ const ProjectSelect = () => {
                 <Dialog.Header>
                   <Dialog.Title>Submit Project Details</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    <Button onClick={() => setShowDialog(false)}>Close</Button>
+                    <Button onClick={() => setIsFormOpen(false)}>Close</Button>
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body>
@@ -180,14 +192,7 @@ const ProjectSelect = () => {
                     />
                     <Button
                       colorScheme="blue"
-                      onClick={async () => {
-                        await submitProjectApproval(jwt, form);
-                        setShowDialog(false);
-                        setLoading(true);
-                        getProjectStatus(jwt)
-                          .then(setStatus)
-                          .finally(() => setLoading(false));
-                      }}
+                      onClick={() => handleFormSubmit(form)}
                       isDisabled={
                         !form.project_name ||
                         !form.location ||
@@ -205,6 +210,96 @@ const ProjectSelect = () => {
           </Portal>
         </Dialog.Root>
       </Box>
+    );
+  }
+
+  // Show pending projects grayed out
+  const pendingProjects = userProjects.filter(
+    project => project.status && project.status.toLowerCase() === 'pending'
+  );
+
+  // Show approved projects that can be selected
+  const approvedProjects = userProjects.filter(
+    project => project.status && project.status.toLowerCase() === 'approved'
+  );
+
+  if (pendingProjects.length > 0) {
+    return (
+      <VStack spacing={6} p={4}>
+        <Text fontSize="2xl" fontWeight="bold" mb={4}>
+          Your Projects
+        </Text>
+        {pendingProjects.map((project) => (
+          <Box
+            key={project.id}
+            borderWidth="1px"
+            borderRadius="lg"
+            overflow="hidden"
+            boxShadow="md"
+            opacity={0.5}
+            cursor="not-allowed"
+            w="100%"
+            _hover={{ bg: "gray.50" }}
+            p={4}
+          >
+            <Text fontWeight="bold" fontSize="lg">{project.project_name}</Text>
+            <Text color="gray.500">{project.location}</Text>
+            <Stack direction="row" spacing={2} mt={2}>
+              <Badge colorScheme="orange">Pending Approval</Badge>
+            </Stack>
+          </Box>
+        ))}
+        <Text color="gray.500" mt={4}>
+          Your projects are pending approval. Please wait for admin review.
+        </Text>
+      </VStack>
+    );
+  }
+
+  if (approvedProjects.length > 0) {
+    return (
+      <VStack spacing={6} p={4} align="stretch">
+        <Flex justify="space-between" align="center" w="100%">
+          <Text
+            fontSize="4xl"
+            fontWeight="bold"
+            mb={8}
+            fontFamily={"Playfair Display, serif"}
+          >
+            Select a Project
+          </Text>
+          <Button colorScheme="blue" onClick={() => setIsFormOpen(true)}>
+            New Project
+          </Button>
+        </Flex>
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          {approvedProjects.map((project) => (
+            <Box
+              key={project.id}
+              borderWidth="1px"
+              borderRadius="lg"
+              overflow="hidden"
+              boxShadow="md"
+              cursor="pointer"
+              _hover={{ transform: "translateY(-2px)", boxShadow: "lg", bg: "blue.50" }}
+              transition="all 0.2s"
+              onClick={() => navigate(`/dashboard/myprojects/${project.id}`)}
+            >
+              <Box p={4}>
+                <Text fontSize="xl" fontWeight="bold" mb={2}>
+                  {project.project_name}
+                </Text>
+                <Text fontSize="sm" color="gray.500" mb={4}>
+                  Location: {project.location}
+                </Text>
+                <Stack direction="row" spacing={2} mb={4}>
+                  <Badge colorScheme="green">Status: {project.status}</Badge>
+                </Stack>
+              </Box>
+            </Box>
+          ))}
+        </SimpleGrid>
+      </VStack>
     );
   }
 

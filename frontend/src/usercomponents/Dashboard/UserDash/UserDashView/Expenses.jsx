@@ -177,72 +177,20 @@ const ReceiptsList = ({ data }) => {
   );
 };
 
-// Add this above the Expenses component or in a suitable place in the file
-const estimatedActualChart = (selectedFilter) => {
-  // Example data for estimated vs actual expenses per month
-  const data = [
-    { month: "Jan", estimated: 12000, actual: 11000 },
-    { month: "Feb", estimated: 15000, actual: 14000 },
-    { month: "Mar", estimated: 17000, actual: 17500 },
-    { month: "Apr", estimated: 16000, actual: 15500 },
-    { month: "May", estimated: 18000, actual: 18500 },
-  ];
-
-  const chart = useChart({
-    data,
-    series: [
-      { name: "estimated", color: "blue.solid" },
-      { name: "actual", color: "green.solid" },
-    ],
-  });
-
-  return (
-    <Chart.Root maxH="md" chart={chart}>
-      <BarChart data={chart.data}>
-        <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
-        <XAxis
-          tickLine={false}
-          dataKey={chart.key("month")}
-          stroke={chart.color("border")}
-        />
-        <YAxis tickLine={false} stroke={chart.color("border")} />
-        <Tooltip
-          cursor={{ fill: chart.color("bg.muted") }}
-          animationDuration={100}
-          content={<Chart.Tooltip />}
-        />
-        {/* Move Legend to the bottom and make it horizontal */}
-        <Legend
-          layout="horizontal"
-          align="center"
-          verticalAlign="bottom"
-          wrapperStyle={{ paddingTop: 16 }}
-          content={<Chart.Legend orientation="horizontal" />}
-        />
-        {chart.series.map((item) => (
-          <Bar
-            isAnimationActive={false}
-            key={item.name}
-            dataKey={chart.key(item.name)}
-            fill={chart.color(item.color)}
-            barSize={58} // Decrease the width of the bars only
-            radius={[4, 4, 0, 0]}
-          />
-        ))}
-      </BarChart>
-    </Chart.Root>
-  );
-};
-
 // Main Expenses component
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/check-user-projects";
+
 const Expenses = () => {
   const [activeMenu, setActiveMenu] = useState("Overview");
   const [selectedFilter, setSelectedFilter] = useState("This Month");
-  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [error, setError] = useState("");
-  const jwt = useAuthStore((state) => state.token); // <-- Use the same selector as UserDashboard
+  const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const jwt = useAuthStore((state) => state.token);
+
+  const isMobile = useBreakpointValue({ base: true, md: false }); // <-- Add this line
 
   const menuItems = [
     { label: "Overview", value: "overview" },
@@ -314,20 +262,86 @@ const Expenses = () => {
     if (!jwt) return;
     setLoading(true);
     setError("");
-    getProjectStatus(jwt)
-      .then(setStatus)
+    fetch(EDGE_URL, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+        setUserProjects(data.existingProjects || []);
+      })
       .catch((err) => setError(err.message || "Failed to load project status"))
       .finally(() => setLoading(false));
   }, [jwt]);
 
   const handleFormSubmit = async (formData) => {
-    await submitProjectApproval(jwt, formData);
+    // You may want to call your submitProjectApproval here if needed
     setIsFormOpen(false);
     setLoading(true);
-    getProjectStatus(jwt)
-      .then(setStatus)
+    fetch(EDGE_URL, {
+      headers: { Authorization: `Bearer ${jwt}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+        setUserProjects(data.existingProjects || []);
+      })
       .finally(() => setLoading(false));
   };
+
+  const estimatedActualChartData = [
+    { month: "Jan", estimated: 12000, actual: 11000 },
+    { month: "Feb", estimated: 15000, actual: 14000 },
+    { month: "Mar", estimated: 17000, actual: 17500 },
+    { month: "Apr", estimated: 16000, actual: 15500 },
+    { month: "May", estimated: 18000, actual: 18500 },
+  ];
+
+  const estimatedActualChart = useChart({
+    data: estimatedActualChartData,
+    series: [
+      { name: "estimated", color: "blue.solid" },
+      { name: "actual", color: "green.solid" },
+    ],
+  });
+
+  function EstimatedActualChart({ chart }) {
+    return (
+      <Chart.Root maxH="md" chart={chart}>
+        <BarChart data={chart.data}>
+          <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
+          <XAxis
+            tickLine={false}
+            dataKey={chart.key("month")}
+            stroke={chart.color("border")}
+          />
+          <YAxis tickLine={false} stroke={chart.color("border")} />
+          <Tooltip
+            cursor={{ fill: chart.color("bg.muted") }}
+            animationDuration={100}
+            content={<Chart.Tooltip />}
+          />
+          <Legend
+            layout="horizontal"
+            align="center"
+            verticalAlign="bottom"
+            wrapperStyle={{ paddingTop: 16 }}
+            content={<Chart.Legend orientation="horizontal" />}
+          />
+          {chart.series.map((item) => (
+            <Bar
+              isAnimationActive={false}
+              key={item.name}
+              dataKey={chart.key(item.name)}
+              fill={chart.color(item.color)}
+              barSize={58}
+              radius={[4, 4, 0, 0]}
+            />
+          ))}
+        </BarChart>
+      </Chart.Root>
+    );
+  }
 
   if (loading) {
     return (
@@ -353,7 +367,7 @@ const Expenses = () => {
     );
   }
 
-  if (!status?.has_approved_project) {
+  if (showSubmissionOverlay) {
     return (
       <Box
         display="flex"
@@ -973,7 +987,7 @@ const Expenses = () => {
             </Menu.Root>
           </Flex>
           {/* Bar Chart */}
-          {estimatedActualChart(selectedFilter)}
+          <EstimatedActualChart chart={estimatedActualChart} />
           <Text fontSize="sm" color="gray.600" mt={6}>
             This chart shows the estimated versus actual expenses per month for your project.
           </Text>

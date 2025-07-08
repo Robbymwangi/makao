@@ -103,60 +103,66 @@ const ProjectApprovals = () => {
           flexGrow={1}
           overflowY="auto"
         >
-          {loading
-            ? Array.from({ length: 4 }).map((_, idx) => (
-                <Box
-                  key={idx}
-                  p={4}
-                  borderBottom="1px solid"
-                  borderColor="gray.200"
-                  borderRadius="md"
-                  bg="white"
-                  mb={3}
-                >
-                  <Skeleton height="24px" mb={2} />
-                  <Skeleton height="16px" mb={1} />
-                  <Skeleton height="16px" width="40%" />
-                </Box>
-              ))
-            : projects.map((project) => (
-                <Box
-                  key={project.id}
-                  p={4}
-                  borderWidth="1px"
-                  borderColor="gray.200"
-                  borderRadius="md"
-                  bg="white"
-                  mb={3}
-                  cursor="pointer"
-                  _hover={{ bg: "gray.50", boxShadow: "md" }}
-                  onClick={() => openDialog(project)}
-                  transition="box-shadow 0.2s"
-                >
-                  <HStack justify="space-between" align="center">
-                    <Box>
-                      <Text fontWeight="bold">{project.project_name}</Text>
-                      <Text fontSize="sm" color="gray.500">
-                        Client: <b>
-                          {project.users?.full_name ||
-                            project.users?.email ||
-                            project.user_id ||
-                            "Unknown"}
-                        </b>
-                      </Text>
-                      <Text fontSize="sm" color="gray.500">
-                        Submitted on{" "}
-                        {project.created_at
-                          ? new Date(project.created_at).toLocaleString()
-                          : "Unknown"}
-                      </Text>
-                    </Box>
-                    <Badge colorScheme={statusColor[project.status] || "gray"}>
-                      {project.status}
-                    </Badge>
-                  </HStack>
-                </Box>
-              ))}
+          {loading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <Box
+                key={idx}
+                p={4}
+                borderBottom="1px solid"
+                borderColor="gray.200"
+                borderRadius="md"
+                bg="white"
+                mb={3}
+              >
+                <Skeleton height="24px" mb={2} />
+                <Skeleton height="16px" mb={1} />
+                <Skeleton height="16px" width="40%" />
+              </Box>
+            ))
+          ) : projects.length === 0 ? (
+            <Box p={12} textAlign="center" color="gray.500">
+              No projects available to approve.
+            </Box>
+          ) : (
+            projects.map((project) => (
+              <Box
+                key={project.id}
+                p={4}
+                borderWidth="1px"
+                borderColor="gray.200"
+                borderRadius="md"
+                bg="white"
+                mb={3}
+                cursor="pointer"
+                _hover={{ bg: "gray.50", boxShadow: "md" }}
+                onClick={() => openDialog(project)}
+                transition="box-shadow 0.2s"
+              >
+                <HStack justify="space-between" align="center">
+                  <Box>
+                    <Text fontWeight="bold">{project.project_name}</Text>
+                    <Text fontSize="sm" color="gray.500">
+                      Client: <b>
+                        {project.users?.full_name ||
+                          project.users?.email ||
+                          project.user_id ||
+                          "Unknown"}
+                      </b>
+                    </Text>
+                    <Text fontSize="sm" color="gray.500">
+                      Submitted on{" "}
+                      {project.created_at
+                        ? new Date(project.created_at).toLocaleString()
+                        : "Unknown"}
+                    </Text>
+                  </Box>
+                  <Badge colorScheme={statusColor[project.status] || "gray"}>
+                    {project.status}
+                  </Badge>
+                </HStack>
+              </Box>
+            ))
+          )}
         </VStack>
       </Box>
 
