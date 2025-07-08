@@ -791,6 +791,33 @@ const TimelineView = () => {
           </Box>
         </Box>
       )}
+
+      {/* Delete Timeline Button - Shown only when a timeline is selected */}
+      {selectedTimelineId && (
+        <HStack spacing={4} mt={4} justify="flex-end">
+          <Button
+            colorScheme="red"
+            variant="outline"
+            onClick={async () => {
+              if (window.confirm("Are you sure you want to delete this timeline item?")) {
+                const { error } = await supabase
+                  .from("project_timelines")
+                  .delete()
+                  .eq("id", selectedTimeline.id);
+                if (!error) {
+                  setTimelines((prev) => prev.filter(t => t.id !== selectedTimeline.id));
+                  setSelectedTimelineId(null);
+                  toaster.create({ title: "Timeline deleted", type: "success" });
+                } else {
+                  toaster.create({ title: "Delete failed", description: error.message, type: "error" });
+                }
+              }
+            }}
+          >
+            Delete Timeline
+          </Button>
+        </HStack>
+      )}
     </Box>
   );
 };
