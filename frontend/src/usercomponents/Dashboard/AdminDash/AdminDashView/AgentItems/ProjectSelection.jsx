@@ -19,28 +19,24 @@ import { Plus } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore"; 
 import supabase from "@/utils/supabaseClient";
 
-const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-agent-projects";
-
 const ProjectSelection = () => {
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Move all hooks to the top level, including useBreakpointValue
   const align = useBreakpointValue({ base: "center", md: "stretch" });
   const textAlign = useBreakpointValue({ base: "center", md: "left" });
 
   useEffect(() => {
     async function fetchProjects() {
       setLoading(true);
-      // Get the latest session and access token
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) {
         setLoading(false);
         return;
       }
-      const res = await fetch(EDGE_URL, {
+      const res = await fetch("https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-agent-projects", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
@@ -101,30 +97,30 @@ const ProjectSelection = () => {
               </Text>
             </HStack>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-              {client.projects.map((project) => (
-                <Box
-                  key={project.id}
-                  borderWidth="1px"
-                  borderRadius="lg"
-                  overflow="hidden"
-                  boxShadow="md"
-                  onClick={() => navigate(`/admin-dashboard/projects/${project.id}`)}
-                  cursor="pointer"
-                  _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
-                  transition="all 0.2s"
-                >
-                  {/* You may want to add a project image if available */}
-                  <Box p={4}>
-                    <Text fontSize="xl" fontWeight="bold" mb={2}>{project.project_name}</Text>
-                    <Text fontSize="sm" color="gray.500" mb={4}>
-                      Location: {project.location}
-                    </Text>
-                    <Stack direction="row" spacing={2} mb={4}>
-                      <Badge colorScheme="green">Status: {project.status}</Badge>
-                    </Stack>
+              {client.projects
+                .filter(project => project.status !== "rejected")
+                .map((project) => (
+                  <Box
+                    key={project.id}
+                    borderWidth="1px"
+                    borderRadius="lg"
+                    overflow="hidden"
+                    boxShadow="md"
+                    onClick={() => navigate(`/admin-dashboard/projects/${project.id}`)}
+                    cursor="pointer"
+                    _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
+                    transition="all 0.2s"
+                  >
+                    <Box p={4}>
+                      <Text fontSize="xl" fontWeight="bold" mb={2}>
+                        {project.project_name}
+                      </Text>
+                      <Text fontSize="sm" color="gray.500" mb={4}>
+                        Location: {project.location}
+                      </Text>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                ))}
             </SimpleGrid>
           </Box>
         ))}
