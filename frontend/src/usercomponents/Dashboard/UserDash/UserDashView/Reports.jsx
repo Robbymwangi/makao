@@ -33,8 +33,8 @@ import {
 } from "lucide-react";
 import { toaster } from "@/components/ui/toaster";
 import { LuChevronRight } from "react-icons/lu";
-import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
 import { useAuthStore } from "@/store/useAuthStore";
+import ProjectApprovalForm from "@/usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectApprovalForm";
 
 function withTimeout(promise, ms = 8000) {
   return Promise.race([
@@ -42,6 +42,9 @@ function withTimeout(promise, ms = 8000) {
     new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms)),
   ]);
 }
+
+// Same edge function URL pattern as UserDashboard
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/check-user-projects";
 
 const initialFolders = [
   { id: 1, name: "Tech Innovations" },
@@ -103,27 +106,74 @@ const Reports = () => {
   const [folderMenuOpenId, setFolderMenuOpenId] = useState(null);
   const [fileMenuOpenId, setFileMenuOpenId] = useState(null);
 
-  // Use the same selector as UserDashboard for JWT
+  // Same auth store pattern as UserDashboard
+  const user = useAuthStore((state) => state.user);
   const jwt = useAuthStore((state) => state.token);
-  const [status, setStatus] = useState(null);
+  
+  // Same state variables as UserDashboard
   const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [form, setForm] = useState({
-    project_name: "",
-    location: "",
-    estimated_budget: "",
-    estimated_timeline: "",
-    client_address: "",
-    additional_details: "",
-  });
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [userRole, setUserRole] = useState('user');
 
+  // Same useEffect logic as UserDashboard
   useEffect(() => {
-    if (!jwt) return;
-    setLoading(true);
-    getProjectStatus(jwt)
-      .then(setStatus)
-      .finally(() => setLoading(false));
-  }, [jwt]);
+    async function checkUserProjects() {
+      setLoading(true);
+      try {
+        if (!jwt) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(EDGE_URL, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!res.ok) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+        setUserProjects(data.existingProjects || []);
+        setUserRole(data.userRole || 'user');
+      } catch (error) {
+        setShowSubmissionOverlay(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user && jwt) {
+      checkUserProjects();
+    } else {
+      setLoading(false);
+    }
+  }, [user, jwt]);
+
+  // Same form submission handler as UserDashboard
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (!jwt) return;
+      // Submit the project approval (replace with your actual API call)
+      await submitProjectApproval(jwt, formData);
+      setIsFormOpen(false);
+      setLoading(true);
+      // Refresh the project status
+      const res = await fetch(EDGE_URL, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await res.json();
+      setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+      setUserProjects(data.existingProjects || []);
+      setUserRole(data.userRole || 'user');
+    } catch (error) {
+      // handle error if needed
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleItemClick = (item) => {
     toaster.create({ description: `Clicked: ${item.name}`, type: "info" });
@@ -156,7 +206,7 @@ const Reports = () => {
             if (type === "folder") setFolderMenuOpenId(id);
             else setFileMenuOpenId(id);
           }}
-          _hover={{ cursor: "pointer", bg: "gray.100" }} // <-- Add pointer and subtle bg on hover
+          _hover={{ cursor: "pointer", bg: "gray.100" }}
         >
           <EllipsisVertical size={20} color="#A0AEC0" />
         </Box>
@@ -164,7 +214,6 @@ const Reports = () => {
       <Portal>
         <Menu.Positioner>
           <Menu.Content minW="180px" position="relative">
-            {/* Close Icon */}
             <Box
               position="absolute"
               top="3"
@@ -180,8 +229,7 @@ const Reports = () => {
             >
               <CloseIcon size={18} />
             </Box>
-            {/* Padding below the X icon */}
-            <Box h="25px" /> {/* Adjust height as needed for desired spacing */}
+            <Box h="25px" />
             <Menu.Item
               onClick={() => toaster.create({ description: "Open clicked", type: "info" })}
               cursor="pointer"
@@ -246,6 +294,7 @@ const Reports = () => {
     </Menu.Root>
   );
 
+  // Same loading screen as UserDashboard
   if (loading) {
     return (
       <Box
@@ -263,7 +312,8 @@ const Reports = () => {
     );
   }
 
-  if (!status?.has_approved_project) {
+  // Same submission overlay screen as UserDashboard
+  if (showSubmissionOverlay) {
     return (
       <Box
         display="flex"
@@ -294,10 +344,13 @@ const Reports = () => {
             team.
           </Text>
         </Box>
-        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+        <Button colorScheme="blue" mt={4} onClick={() => setIsFormOpen(true)}>
           Submit Project Details
         </Button>
-        <Dialog.Root open={showDialog} onOpenChange={setShowDialog}>
+        <Dialog.Root
+          open={isFormOpen}
+          onOpenChange={(details) => setIsFormOpen(details.open)}
+        >
           <Portal>
             <Dialog.Backdrop />
             <Dialog.Positioner>
@@ -305,62 +358,15 @@ const Reports = () => {
                 <Dialog.Header>
                   <Dialog.Title>Submit Project Details</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    <Button onClick={() => setShowDialog(false)}>Close</Button>
+                    <Button onClick={() => setIsFormOpen(false)}>Close</Button>
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body>
-                  <VStack spacing={4} align="stretch">
-                    <Input
-                      placeholder="Project Name"
-                      value={form.project_name}
-                      onChange={e => setForm(f => ({ ...f, project_name: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Location"
-                      value={form.location}
-                      onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Estimated Budget"
-                      value={form.estimated_budget}
-                      onChange={e => setForm(f => ({ ...f, estimated_budget: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Estimated Timeline"
-                      value={form.estimated_timeline}
-                      onChange={e => setForm(f => ({ ...f, estimated_timeline: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Client Address"
-                      value={form.client_address}
-                      onChange={e => setForm(f => ({ ...f, client_address: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Additional Details"
-                      value={form.additional_details}
-                      onChange={e => setForm(f => ({ ...f, additional_details: e.target.value }))}
-                    />
-                    <Button
-                      colorScheme="blue"
-                      onClick={async () => {
-                        await submitProjectApproval(jwt, form);
-                        setShowDialog(false);
-                        setLoading(true);
-                        getProjectStatus(jwt)
-                          .then(setStatus)
-                          .finally(() => setLoading(false));
-                      }}
-                      isDisabled={
-                        !form.project_name ||
-                        !form.location ||
-                        !form.estimated_budget ||
-                        !form.estimated_timeline ||
-                        !form.client_address
-                      }
-                    >
-                      Submit
-                    </Button>
-                  </VStack>
+                  <ProjectApprovalForm
+                    loading={loading}
+                    onClose={() => setIsFormOpen(false)}
+                    onSubmit={handleFormSubmit}
+                  />
                 </Dialog.Body>
               </Dialog.Content>
             </Dialog.Positioner>
@@ -370,6 +376,7 @@ const Reports = () => {
     );
   }
 
+  // Main Reports content - only shown if user has approved project
   return (
     <Box p={2}>
       {/* Page Title */}
@@ -380,10 +387,11 @@ const Reports = () => {
         fontFamily="'Playfair Display', serif"
         letterSpacing="tight"
         color="gray.800"
-        textAlign={{ base: "center", lg: "left" }} // Responsive alignment
+        textAlign={{ base: "center", lg: "left" }}
       >
         Reports
       </Heading>
+      
       {/* Responsive Action Menu */}
       {isMobile ? (
         <Menu.Root>
@@ -469,6 +477,7 @@ const Reports = () => {
           View All
         </Button>
       </HStack>
+      
       {foldersListView ? (
         <VStack spacing={4} align="stretch" mb={10}>
           {initialFolders.map((folder) => (
@@ -630,6 +639,7 @@ const Reports = () => {
           </Button>
         </HStack>
       </HStack>
+      
       {isMobile || fileView === "list" ? (
         <VStack spacing={4} align="stretch">
           {initialFiles.map((file) => (
@@ -642,8 +652,8 @@ const Reports = () => {
               _hover={{ 
                 boxShadow: "md", 
                 cursor: "pointer", 
-                transform: "translateY(-2px) scale(1.03)"}}
-              
+                transform: "translateY(-2px) scale(1.03)"
+              }}
               spacing={4}
               align="center"
             >

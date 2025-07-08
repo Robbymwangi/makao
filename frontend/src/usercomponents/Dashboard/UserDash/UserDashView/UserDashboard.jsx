@@ -14,7 +14,6 @@ import {
 } from "@chakra-ui/react";
 import { CSSTransition } from "react-transition-group";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
 // Dashboard Components
 import StatsCards from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/StatsCards";
 import FinancialOverview from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/FinancialOverview";
@@ -24,36 +23,80 @@ import QuickLinks from "@/usercomponents/Dashboard/UserDash/UserDashComponents/H
 import AgentReport from "@/usercomponents/Dashboard/UserDash/UserDashComponents/HomeComponents/AgentReport";
 import ProjectApprovalForm from "@/usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectApprovalForm";
 
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/check-user-projects";
+
 const UserDashboard = () => {
   const headingRef = useRef(null);
   const [showName, setShowName] = useState(false);
   const user = useAuthStore((state) => state.user);
   const jwt = useAuthStore((state) => state.token);
-  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [userRole, setUserRole] = useState('user');
+  const headingTextAlign = useBreakpointValue({ base: "center", md: "left" });
 
   useEffect(() => {
     if (user) setShowName(true);
   }, [user]);
 
   useEffect(() => {
-    if (!jwt) return;
-    setLoading(true);
-    getProjectStatus(jwt)
-      .then(setStatus)
-      .finally(() => setLoading(false));
-  }, [jwt]);
+    async function checkUserProjects() {
+      setLoading(true);
+      try {
+        if (!jwt) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(EDGE_URL, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!res.ok) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+        setUserProjects(data.existingProjects || []);
+        setUserRole(data.userRole || 'user');
+      } catch (error) {
+        setShowSubmissionOverlay(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user && jwt) {
+      checkUserProjects();
+    } else {
+      setLoading(false);
+    }
+  }, [user, jwt]);
 
   const welcomeName = user?.name || "User";
 
   const handleFormSubmit = async (formData) => {
-    await submitProjectApproval(jwt, formData);
-    setIsFormOpen(false);
-    setLoading(true);
-    getProjectStatus(jwt)
-      .then(setStatus)
-      .finally(() => setLoading(false));
+    try {
+      if (!jwt) return;
+      // Submit the project approval (replace with your actual API call)
+      await submitProjectApproval(jwt, formData);
+      setIsFormOpen(false);
+      setLoading(true);
+      // Refresh the project status
+      const res = await fetch(EDGE_URL, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await res.json();
+      setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+      setUserProjects(data.existingProjects || []);
+      setUserRole(data.userRole || 'user');
+    } catch (error) {
+      // handle error if needed
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -73,7 +116,7 @@ const UserDashboard = () => {
     );
   }
 
-  if (!status?.has_approved_project) {
+  if (showSubmissionOverlay) {
     return (
       <Box
         display="flex"
@@ -169,7 +212,7 @@ const UserDashboard = () => {
             fontWeight="bold"
             paddingBottom="8"
             fontFamily="Playfair Display"
-            textAlign={useBreakpointValue({ base: "center", md: "left" })}
+            textAlign={headingTextAlign}
           >
             {user ? `Welcome back, ${welcomeName}` : "Welcome to your Dashboard!"}
           </Heading>
@@ -189,4 +232,3 @@ const UserDashboard = () => {
 };
 
 export default UserDashboard;
-

@@ -26,11 +26,15 @@ import {
   ProgressCircle,
 } from "@chakra-ui/react";
 import { ChevronRight, FileText, Construction, Check, Package, Ship } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore"; // Add this import
+
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-project-details";
 
 const MyProjects = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const jwt = useAuthStore((state) => state.token); // Get JWT from store
   const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
   const [fileUploads, setFileUploads] = useState([]);
   const [filter, setFilter] = useState("All");
@@ -54,14 +58,27 @@ const MyProjects = () => {
 
   // Simulate fetching project data based on the ID
   useEffect(() => {
-    const projects = [
-      { id: 1, name: "Residential Casa du Panel", description: "A modern residential project." },
-      { id: 2, name: "Urban Skyline Apartments", description: "Luxury apartments in the city." },
-    ];
-    // Convert both to string for comparison
-    const selectedProject = projects.find((p) => String(p.id) === String(id));
-    setProject(selectedProject);
-  }, [id]);
+    async function fetchProject() {
+      setLoading(true);
+      if (!jwt || !id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${EDGE_URL}?id=${id}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const data = await res.json();
+        setProject(data.project || null);
+      } catch (error) {
+        setProject(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProject();
+  }, [id, jwt]);
 
   // Demo milestones
   const milestonesData = [
@@ -95,7 +112,7 @@ const MyProjects = () => {
           milestone.phase.toLowerCase().includes(filter.toLowerCase())
         );
 
-  if (!project) {
+  if (loading) {
     return (
       <VStack spacing={4} align="center" justify="center" minH="300px">
         <ProgressCircle.Root value={null} size="md" aria-label="Loading project details">
@@ -105,6 +122,23 @@ const MyProjects = () => {
           </ProgressCircle.Circle>
         </ProgressCircle.Root>
         <Text>Loading project details...</Text>
+      </VStack>
+    );
+  }
+
+  if (!project) {
+    return (
+      <VStack spacing={4} align="center" justify="center" minH="300px">
+        <Text fontSize="lg" color="red.500">
+          Project not found
+        </Text>
+        <Button
+          onClick={() => navigate("/dashboard/myprojects")}
+          colorScheme="blue"
+          size="sm"
+        >
+          Back to My Projects
+        </Button>
       </VStack>
     );
   }

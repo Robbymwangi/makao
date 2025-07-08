@@ -78,7 +78,10 @@ function withTimeout(promise, ms = 8000) {
   ]);
 }
 
+const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/check-user-projects";
+
 const Support = () => {
+  // ALL HOOKS MUST BE CALLED AT THE TOP, BEFORE ANY CONDITIONAL RETURNS
   const [tickets, setTickets] = useState(initialTickets);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTicket, setDialogTicket] = useState(null);
@@ -89,7 +92,8 @@ const Support = () => {
   const jwt = useAuthStore((state) => state.token);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState({
     project_name: "",
     location: "",
@@ -99,6 +103,41 @@ const Support = () => {
     additional_details: "",
   });
 
+  const isMobileView = useBreakpointValue({ base: true, md: false });
+
+  // ALL useEffect HOOKS
+  useEffect(() => {
+    async function checkUserProjects() {
+      setLoading(true);
+      try {
+        if (!jwt) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(EDGE_URL, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!res.ok) {
+          setShowSubmissionOverlay(false);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+      } catch (error) {
+        setShowSubmissionOverlay(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (jwt) {
+      checkUserProjects();
+    } else {
+      setLoading(false);
+    }
+  }, [jwt]);
+
   useEffect(() => {
     if (!jwt) return;
     setLoading(true);
@@ -107,6 +146,7 @@ const Support = () => {
       .finally(() => setLoading(false));
   }, [jwt]);
 
+  // EVENT HANDLERS
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -141,7 +181,7 @@ const Support = () => {
     setDialogTicket(null);
   }
 
-  // Onboarding: block access if not approved
+  // CONDITIONAL RENDERING - NOW AFTER ALL HOOKS
   if (loading) {
     return (
       <Box
@@ -159,7 +199,7 @@ const Support = () => {
     );
   }
 
-  if (!status?.has_approved_project) {
+  if (showSubmissionOverlay) {
     return (
       <Box
         display="flex"
@@ -190,12 +230,12 @@ const Support = () => {
             team.
           </Text>
         </Box>
-        <Button colorScheme="blue" mt={4} onClick={() => setShowDialog(true)}>
+        <Button colorScheme="blue" mt={4} onClick={() => setIsFormOpen(true)}>
           Submit Project Details
         </Button>
         <Dialog.Root
-          open={showDialog}
-          onOpenChange={setShowDialog}
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
         >
           <Portal>
             <Dialog.Backdrop />
@@ -204,7 +244,7 @@ const Support = () => {
                 <Dialog.Header>
                   <Dialog.Title>Submit Project Details</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    <Button onClick={() => setShowDialog(false)}>Close</Button>
+                    <Button onClick={() => setIsFormOpen(false)}>Close</Button>
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
                 <Dialog.Body>
@@ -219,7 +259,17 @@ const Support = () => {
                       colorScheme="blue"
                       onClick={async () => {
                         await submitProjectApproval(jwt, form);
-                        setShowDialog(false);
+                        setIsFormOpen(false);
+                        setLoading(true);
+                        // Re-check project status after submission
+                        const res = await fetch(EDGE_URL, {
+                          headers: { Authorization: `Bearer ${jwt}` },
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setShowSubmissionOverlay(data.shouldShowSubmissionOverlay);
+                        }
+                        setLoading(false);
                       }}
                       isDisabled={
                         !form.project_name ||
@@ -241,6 +291,7 @@ const Support = () => {
     );
   }
 
+  // MAIN COMPONENT RENDER
   return (
     <Flex direction="column" h="100vh" maxH="100vh" overflow="hidden">
       {/* Add Toaster here */}
@@ -588,6 +639,6 @@ const Support = () => {
       </Flex>
     </Flex>
   );
-}
+};
 
 export default Support;
