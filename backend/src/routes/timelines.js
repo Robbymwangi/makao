@@ -55,4 +55,16 @@ router.patch("/:id/complete", async (req, res) => {
   res.json(data[0]);
 });
 
+// Delete a timeline
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("project_timelines")
+    .delete()
+    .eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
 export default router;
