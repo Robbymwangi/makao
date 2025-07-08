@@ -42,4 +42,34 @@ router.post("/:id/status", async (req, res) => {
   res.json({ success: true });
 });
 
+// Update project progress_status
+router.patch("/:id/progress-status", async (req, res) => {
+  const { id } = req.params;
+  const { progress_status } = req.body;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ progress_status })
+    .eq("id", id)
+    .select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+});
+
+// When updating status, also update progress_status if needed
+router.patch("/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const supabase = createServiceClient();
+  let updateObj = { status };
+  if (status === "approved") updateObj.progress_status = "in_progress";
+  const { data, error } = await supabase
+    .from("projects")
+    .update(updateObj)
+    .eq("id", id)
+    .select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+});
+
 export default router;

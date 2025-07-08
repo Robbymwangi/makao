@@ -29,9 +29,8 @@ import {
 import { ChevronRight, FileText, Construction, Check, Package, Ship, Upload } from "lucide-react";
 import { LuUpload } from "react-icons/lu";
 import { toaster } from "@/components/ui/toaster";
-import supabase from "@/utils/supabaseClient"; // Use supabase client for session
+import supabase from "@/utils/supabaseClient";
 
-// Allowed types for each section
 const allowedTypes = {
   report: [
     "application/pdf",
@@ -54,9 +53,7 @@ const allowedTypes = {
 };
 const maxSize = 10 * 1024 * 1024; // 10MB
 
-// Example upload handler for a single file
 async function handleFileUpload(file, category, projectId, accessToken) {
-  // 1. Get a signed upload URL
   const uploadUrlRes = await fetch(
     "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/storage-upload/get-upload-url",
     {
@@ -67,7 +64,7 @@ async function handleFileUpload(file, category, projectId, accessToken) {
       },
       body: JSON.stringify({
         projectId,
-        category, // use 'photo', 'document', etc.
+        category,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
@@ -77,14 +74,12 @@ async function handleFileUpload(file, category, projectId, accessToken) {
   const uploadUrlData = await uploadUrlRes.json();
   if (!uploadUrlRes.ok) throw new Error(uploadUrlData.error);
 
-  // 2. Upload the file to the signed URL
   await fetch(uploadUrlData.uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": file.type },
     body: file,
   });
 
-  // 3. Register the file in the database (upload-complete)
   const registerRes = await fetch(
     "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/storage-upload/upload-complete",
     {
@@ -111,7 +106,6 @@ async function handleFileUpload(file, category, projectId, accessToken) {
   return registerData.file;
 }
 
-// Reusable Upload Section
 const UploadSection = ({
   title,
   description,
@@ -174,17 +168,14 @@ const UploadSection = ({
 
     setIsSubmitting(true);
     try {
-      // Get latest access token
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) throw new Error("No access token found");
 
-      // Determine category for upload
       let category = "report";
       if (title.toLowerCase().includes("photo")) category = "photo";
       else if (title.toLowerCase().includes("document")) category = "document";
 
-      // Upload each file using your real upload logic
       for (const file of files) {
         await handleFileUpload(file, category, projectId, accessToken);
       }
@@ -260,26 +251,23 @@ const statusIconMap = {
   completed: Check,
   pending: Package,
   in_progress: Ship,
-  // fallback
   default: Construction,
 };
 
 const MyProjects = () => {
   const { id } = useParams();
-  const [project, setProject] = useState(null);
+  const [project, setProject] = useState({});
   const [loading, setLoading] = useState(true);
   const [fileUploads, setFileUploads] = useState([]);
   const [timelines, setTimelines] = useState([]);
   const [filter, setFilter] = useState("All");
 
-  // State for the report upload section
   const [reportFiles, setReportFiles] = useState([]);
   const [reportErrors, setReportErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileUploadKey, setFileUploadKey] = useState(Date.now());
   const [handoffOpen, setHandoffOpen] = useState(false);
 
-  // Add state for photos and documents
   const [photoFiles, setPhotoFiles] = useState([]);
   const [photoErrors, setPhotoErrors] = useState({});
   const [isPhotoSubmitting, setIsPhotoSubmitting] = useState(false);
@@ -290,11 +278,9 @@ const MyProjects = () => {
   const [isDocSubmitting, setIsDocSubmitting] = useState(false);
   const [docUploadKey, setDocUploadKey] = useState(Date.now());
 
-  // Fetch project data based on the ID and latest access token
   useEffect(() => {
     async function fetchProject() {
       setLoading(true);
-      // Get the latest session and access token
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) {
         setLoading(false);
@@ -304,13 +290,12 @@ const MyProjects = () => {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
-      setProject(data.project || null);
+      setProject(data.project || {});
       setLoading(false);
     }
     if (id) fetchProject();
   }, [id]);
 
-  // Fetch project timelines from Supabase
   useEffect(() => {
     async function fetchTimelines() {
       if (!id) return;
@@ -324,16 +309,13 @@ const MyProjects = () => {
     fetchTimelines();
   }, [id]);
 
-  // Get unique timeline titles (phases)
   const uniquePhases = Array.from(new Set(timelines.map(t => t.title))).filter(Boolean);
 
-  // Filtered milestones by phase
   const filteredMilestones =
     filter === "All"
       ? timelines
       : timelines.filter((milestone) => milestone.title === filter);
 
-  // Add uploaded files to the "Project Documents" list for display
   const handleReportUploadSuccess = (files) => {
     const newUploads = files.map((file, index) => ({
       id: Date.now() + index,
@@ -360,6 +342,30 @@ const MyProjects = () => {
       date: new Date().toLocaleDateString(),
     }));
     setFileUploads(prev => [...prev, ...newUploads]);
+  };
+
+  // Updated: Use Supabase directly to update progress_status
+  const handleToggleProgressStatus = async () => {
+    const newStatus = project.progress_status === "completed" ? "in_progress" : "completed";
+    const { error } = await supabase
+      .from("projects")
+      .update({ progress_status: newStatus })
+      .eq("id", project.id);
+
+    if (!error) {
+      setProject((prev) => ({ ...prev, progress_status: newStatus }));
+      setHandoffOpen(false);
+      toaster.create({
+        title: `Project marked as ${newStatus.replace("_", " ")}`,
+        type: "success",
+      });
+    } else {
+      toaster.create({
+        title: "Failed to update project status",
+        description: error.message,
+        type: "error",
+      });
+    }
   };
 
   if (loading) {
@@ -397,13 +403,17 @@ const MyProjects = () => {
 
       {/* Handoff Project Button */}
       <Flex justify={{ base: "center", md: "flex-start" }} mb={2}>
-        <Dialog.Root
-          open={handoffOpen}
-          onOpenChange={(open) => setHandoffOpen(open)}
-        >
+        <Dialog.Root open={handoffOpen} onOpenChange={setHandoffOpen}>
           <Dialog.Trigger asChild>
-            <Button colorScheme="red" variant="outline" size="sm">
-              Mark Project as Finished
+            <Button
+              colorScheme={project.progress_status === "completed" ? "yellow" : "red"}
+              variant="outline"
+              size="sm"
+              isDisabled={project.status !== "approved"}
+            >
+              {project.progress_status === "completed"
+                ? "Revert to In Progress"
+                : "Mark Project as Finished"}
             </Button>
           </Dialog.Trigger>
           <Portal>
@@ -411,33 +421,38 @@ const MyProjects = () => {
             <Dialog.Positioner>
               <Dialog.Content>
                 <Dialog.Header>
-                  <Dialog.Title>Mark Project as Finished?</Dialog.Title>
+                  <Dialog.Title>
+                    {project.progress_status === "completed"
+                      ? "Revert Project to In Progress?"
+                      : "Mark Project as Finished?"}
+                  </Dialog.Title>
                 </Dialog.Header>
                 <Dialog.Body>
                   <Text color="red.500" fontWeight="bold" mb={2}>
-                    Warning: This action will mark the project as finished and hand it off. You will no longer be able to upload new reports or make changes.
+                    {project.progress_status === "completed"
+                      ? "This will allow you to add new timelines and reports again."
+                      : "Warning: This action will mark the project as finished and hand it off. You will no longer be able to upload new reports or make changes."}
                   </Text>
                   <Text>
-                    Are you sure you want to continue? This cannot be undone.
+                    Are you sure you want to continue? 
                   </Text>
                 </Dialog.Body>
                 <Dialog.Footer>
-                  <Dialog.ActionTrigger asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </Dialog.ActionTrigger>
-                  <Button colorScheme="red" ml={2} onClick={() => {
-                    setHandoffOpen(false);
-                    toaster.create({
-                      description: "Project marked as finished.",
-                      type: "success",
-                      duration: 4000,
-                    });
-                  }}>
-                    Confirm &amp; Finish
+                  <Button variant="outline" onClick={() => setHandoffOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    colorScheme={project.progress_status === "completed" ? "yellow" : "red"}
+                    ml={2}
+                    onClick={handleToggleProgressStatus}
+                  >
+                    {project.progress_status === "completed"
+                      ? "Revert to In Progress"
+                      : "Confirm & Finish"}
                   </Button>
                 </Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
-                  <CloseButton size="sm" />
+                  <CloseButton size="sm" onClick={() => setHandoffOpen(false)} />
                 </Dialog.CloseTrigger>
               </Dialog.Content>
             </Dialog.Positioner>
@@ -445,7 +460,6 @@ const MyProjects = () => {
         </Dialog.Root>
       </Flex>
 
-      
       {/* Project Card with actual location and status */}
       <Card.Root w="100%" position="relative" mt={10} borderRadius="lg" overflow="hidden">
         <Image
@@ -578,7 +592,6 @@ const MyProjects = () => {
       {/* Report Upload & Photos/Documents Section */}
       <Flex w="100%" gap={4} flexDirection={{ base: "column", md: "row" }}>
         <Box w={{ base: "100%", md: "50%" }}>
-          {/* Upload Project Photos */}
           <UploadSection
             title="Upload Project Photos"
             description="Upload up to 5 project photos. Accepted formats: JPG, PNG. Max size: 10MB each."
@@ -596,7 +609,6 @@ const MyProjects = () => {
           />
         </Box>
         <Box w={{ base: "100%", md: "50%" }}>
-          {/* Upload Project Documents */}
           <UploadSection
             title="Upload Project Documents"
             description="Please upload up to 5 project documents. Accepted formats: PDF, DOCX. Max size: 10MB each."
