@@ -1,8 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import Calendar from "react-calendar";
-import 'react-calendar/dist/Calendar.css';
 import {
   Box,
   Flex,
@@ -26,37 +24,30 @@ import {
   ProgressCircle,
 } from "@chakra-ui/react";
 import { ChevronRight, FileText, Construction, Check, Package, Ship } from "lucide-react";
-import { useAuthStore } from "@/store/useAuthStore"; // Add this import
+import { useAuthStore } from "@/store/useAuthStore"; 
+import supabase from "@/utils/supabaseClient";
 
 const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-project-details";
 
+const statusIconMap = {
+  completed: Check,
+  pending: Package,
+  in_progress: Ship,
+  default: Construction,
+};
+
 const MyProjects = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const jwt = useAuthStore((state) => state.token); // Get JWT from store
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(null);
   const [fileUploads, setFileUploads] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [timelines, setTimelines] = useState([]);
+  const [agentName, setAgentName] = useState(""); // For agent name
 
-  // Demo events for the calendar
-  const events = {
-    "2025-05-07": ["Team meeting at 10:00 AM", "Review design documents"],
-    "2025-05-08": ["Submit project proposal", "Client feedback session"],
-  };
-
-  const formatDate = (date) => {
-    if (!date) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const formattedDate = formatDate(selectedDate);
-  const eventList = events[formattedDate] || null;
-
-  // Simulate fetching project data based on the ID
+  // Fetch project data
   useEffect(() => {
     async function fetchProject() {
       setLoading(true);
@@ -70,46 +61,52 @@ const MyProjects = () => {
         });
         const data = await res.json();
         setProject(data.project || null);
+        // Fetch agent name if agent_id exists
+        if (data.project?.agent_id) {
+          const { data: agentData, error: agentError } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", data.project.agent_id)
+            .single();
+          if (!agentError && agentData && agentData.name) {
+            setAgentName(agentData.name);
+          } else {
+            setAgentName("Makao Agent");
+          }
+        } else {
+          setAgentName("Makao Agent");
+        }
       } catch (error) {
         setProject(null);
+        setAgentName("Makao Agent");
       } finally {
         setLoading(false);
       }
     }
-
     fetchProject();
   }, [id, jwt]);
 
-  // Demo milestones
-  const milestonesData = [
-    {
-      id: 1,
-      phase: "Phase 1 Started",
-      date: "21st February 2023",
-      description: "Initial phase of the project began with planning and design.",
-      icon: Ship,
-    },
-    {
-      id: 2,
-      phase: "Phase 1 Completed",
-      date: "4th April 2023",
-      description: "Phase 1 completed with 70% progress achieved.",
-      icon: Check,
-    },
-    {
-      id: 3,
-      phase: "Next Phase Preparation",
-      date: "Ongoing",
-      description: "Preparing for the next phase of the project.",
-      icon: Package,
-    },
-  ];
+  // Fetch timelines from Supabase
+  useEffect(() => {
+    async function fetchTimelines() {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from("project_timelines")
+        .select("*")
+        .eq("project_id", id)
+        .order("date", { ascending: true });
+      if (!error) setTimelines(data || []);
+    }
+    fetchTimelines();
+  }, [id]);
+
+  const uniquePhases = Array.from(new Set(timelines.map(t => t.title))).filter(Boolean);
 
   const filteredMilestones =
     filter === "All"
-      ? milestonesData
-      : milestonesData.filter((milestone) =>
-          milestone.phase.toLowerCase().includes(filter.toLowerCase())
+      ? timelines
+      : timelines.filter((milestone) =>
+          milestone.title && milestone.title.toLowerCase().includes(filter.toLowerCase())
         );
 
   if (loading) {
@@ -169,7 +166,7 @@ const MyProjects = () => {
         <Card.Root w="100%" position="relative" mt={10} borderRadius="lg" overflow="hidden">
           <Image
             src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80"
-            alt="Residential Casa du Panel"
+            alt={project.name}
             objectFit="cover"
             w="100%"
             h="300px"
@@ -192,7 +189,7 @@ const MyProjects = () => {
               {project.name}
             </Text>
             <Text fontSize="md" color="gray.300" mb={4}>
-              Madrid, Lisbon
+              {project.location || "No location specified"}
             </Text>
             <Stack direction="row" spacing={2} mb={4}>
               <Badge colorPalette="green" fontSize="sm">
@@ -239,31 +236,38 @@ const MyProjects = () => {
                       >
                         All
                       </Button>
-                      <Button
-                        size="sm"
-                        variant={filter === "Phase 1" ? "solid" : "outline"}
-                        onClick={() => setFilter("Phase 1")}
-                      >
-                        Phase 1
-                      </Button>
+                      {uniquePhases.map((phase) => (
+                        <Button
+                          key={phase}
+                          size="sm"
+                          variant={filter === phase ? "solid" : "outline"}
+                          onClick={() => setFilter(phase)}
+                          mr={2}
+                        >
+                          {phase}
+                        </Button>
+                      ))}
                     </Box>
                     {/* Timeline Content */}
                     <Timeline.Root>
-                      {filteredMilestones.map((milestone) => (
-                        <Timeline.Item key={milestone.id}>
-                          <Timeline.Connector>
-                            <Timeline.Separator />
-                            <Timeline.Indicator>
-                              <milestone.icon />
-                            </Timeline.Indicator>
-                          </Timeline.Connector>
-                          <Timeline.Content>
-                            <Timeline.Title>{milestone.phase}</Timeline.Title>
-                            <Timeline.Description>{milestone.date}</Timeline.Description>
-                            <Text textStyle="sm">{milestone.description}</Text>
-                          </Timeline.Content>
-                        </Timeline.Item>
-                      ))}
+                      {filteredMilestones.map((milestone) => {
+                        const IconComponent = statusIconMap[milestone.status] || statusIconMap.default;
+                        return (
+                          <Timeline.Item key={milestone.id}>
+                            <Timeline.Connector>
+                              <Timeline.Separator />
+                              <Timeline.Indicator>
+                                <IconComponent />
+                              </Timeline.Indicator>
+                            </Timeline.Connector>
+                            <Timeline.Content>
+                              <Timeline.Title>{milestone.title}</Timeline.Title>
+                              <Timeline.Description>{milestone.date}</Timeline.Description>
+                              <Text textStyle="sm">{milestone.description}</Text>
+                            </Timeline.Content>
+                          </Timeline.Item>
+                        );
+                      })}
                     </Timeline.Root>
                   </Dialog.Body>
                 </Dialog.Content>
@@ -273,118 +277,30 @@ const MyProjects = () => {
         </Flex>
         <Box maxH="300px" overflowY="auto" pr={2}>
           <Timeline.Root>
-            <Timeline.Item>
-              <Timeline.Connector>
-                <Timeline.Separator />
-                <Timeline.Indicator>
-                  <Ship />
-                </Timeline.Indicator>
-              </Timeline.Connector>
-              <Timeline.Content>
-                <Timeline.Title>Phase 1 Started</Timeline.Title>
-                <Timeline.Description>21st February 2023</Timeline.Description>
-                <Text textStyle="sm">
-                  Initial phase of the project began with planning and design.
-                </Text>
-              </Timeline.Content>
-            </Timeline.Item>
-            <Timeline.Item>
-              <Timeline.Connector>
-                <Timeline.Separator />
-                <Timeline.Indicator>
-                  <Check />
-                </Timeline.Indicator>
-              </Timeline.Connector>
-              <Timeline.Content>
-                <Timeline.Title>Phase 1 Completed</Timeline.Title>
-                <Timeline.Description>4th April 2023</Timeline.Description>
-                <Text textStyle="sm">
-                  Phase 1 completed with 70% progress achieved.
-                </Text>
-              </Timeline.Content>
-            </Timeline.Item>
-            <Timeline.Item>
-              <Timeline.Connector>
-                <Timeline.Separator />
-                <Timeline.Indicator>
-                  <Package />
-                </Timeline.Indicator>
-              </Timeline.Connector>
-              <Timeline.Content>
-                <Timeline.Title>Next Phase Preparation</Timeline.Title>
-                <Timeline.Description>Ongoing</Timeline.Description>
-                <Text textStyle="sm">
-                  Preparing for the next phase of the project.
-                </Text>
-              </Timeline.Content>
-            </Timeline.Item>
+            {timelines.map((milestone) => {
+              const IconComponent = statusIconMap[milestone.status] || statusIconMap.default;
+              return (
+                <Timeline.Item key={milestone.id}>
+                  <Timeline.Connector>
+                    <Timeline.Separator />
+                    <Timeline.Indicator>
+                      <IconComponent />
+                    </Timeline.Indicator>
+                  </Timeline.Connector>
+                  <Timeline.Content>
+                    <Timeline.Title>{milestone.title}</Timeline.Title>
+                    <Timeline.Description>{milestone.date}</Timeline.Description>
+                    <Text textStyle="sm">{milestone.description}</Text>
+                  </Timeline.Content>
+                </Timeline.Item>
+              );
+            })}
           </Timeline.Root>
         </Box>
       </Box>
 
-      {/* Timeline Section */}
+      {/* Agent Section Only */}
       <Flex w="100%" gap={4} flexDirection={{ base: "column", md: "row" }}>
-        {/* Main Box (80% width) */}
-        <Box w={{ base: "100%", md: "80%" }} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md">
-          <Heading size="xl" mb={4}>
-            Timeline
-          </Heading>
-          <Flex gap={4} flexDirection={{ base: "column", md: "row" }}>
-            {/* Calendar on the left */}
-            <Box w={{ base: "100%", md: "45%" }} fontFamily={"Arial, sans-serif"}>
-              <Calendar
-                onChange={setSelectedDate}
-                value={selectedDate}
-                tileContent={({ date }) => {
-                  const formatted = formatDate(date);
-                  return events[formatted] ? (
-                    <Box
-                      w="6px"
-                      h="6px"
-                      bg="blue.500"
-                      borderRadius="full"
-                      mx="auto"
-                      mt="1"
-                    />
-                  ) : null;
-                }}
-              />
-            </Box>
-            {/* Event Display on the right */}
-            <Box
-              w={{ base: "100%", md: "90%" }}
-              p={4}
-              borderWidth="1px"
-              borderRadius="lg"
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              bg="gray.50"
-            >
-              {selectedDate ? (
-                eventList ? (
-                  <VStack spacing={2}>
-                    {eventList.map((event, index) => (
-                      <Text key={index} fontSize="sm">
-                        {event}
-                      </Text>
-                    ))}
-                  </VStack>
-                ) : (
-                  <Text fontSize="sm" color="gray.500">
-                    No event on this day
-                  </Text>
-                )
-              ) : (
-                <Text fontSize="sm" color="gray.500">
-                  Select a date to view content
-                </Text>
-              )}
-            </Box>
-          </Flex>
-        </Box>
-
-        {/* Contracting Company Section */}
         <Box
           w={{ base: "100%", md: "20%" }}
           p={4}
@@ -397,30 +313,19 @@ const MyProjects = () => {
           textAlign="center"
         >
           <Heading size="lg" mb={4}>
-            Personelle Details
+            Personnel Details
           </Heading>
-          {/* Company Avatar */}
-          <Avatar.Root>
-            <Avatar.Fallback name="Metano Construction" />
-            <Avatar.Image src="https://via.placeholder.com/150" />
-          </Avatar.Root>
-          <Text fontSize="lg" fontWeight="bold" mt={4}>
-            Metano Construction
-          </Text>
-          <Text fontSize="sm" color="gray.500" mt={2}>
-            Current Contractor
-          </Text>
           {/* Makao Agent Section */}
           <Box mt={6} textAlign="center">
             <Avatar.Root>
-              <Avatar.Fallback name="Makao Agent" />
+              <Avatar.Fallback name={agentName || "Makao Agent"} />
               <Avatar.Image src="https://via.placeholder.com/150" />
             </Avatar.Root>
             <Text fontSize="lg" fontWeight="bold" mt={4}>
-              Jane Smith
+              {agentName || "Makao Agent"}
             </Text>
             <Text fontSize="sm" color="gray.500" mt={2}>
-              Agent ID: 123456
+              Current Agent
             </Text>
           </Box>
         </Box>
