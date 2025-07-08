@@ -55,37 +55,38 @@ const TimelineView = () => {
   const fileInputRef = useRef();
 
   // Fetch projects assigned to this agent (similar to AssignedClients)
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      // Get session and user
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw new Error(`Failed to get session: ${sessionError.message}`);
+      const user = session?.user;
+      if (!user?.id) throw new Error("No user ID available");
+
+      // Fetch projects where agent_id = user.id
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("agent_id", user.id);
+
+      if (error) throw new Error(error.message);
+
+      setProjects(data || []);
+      if (data && data.length > 0) setSelectedProjectId(data[0].id);
+    } catch (err) {
+      toaster.create({
+        title: "Error",
+        description: err.message,
+        type: "error",
+      });
+      setProjects([]);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoadingProjects(true);
-      try {
-        // Get session and user
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw new Error(`Failed to get session: ${sessionError.message}`);
-        const user = session?.user;
-        if (!user?.id) throw new Error("No user ID available");
-
-        // Fetch projects where agent_id = user.id
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("agent_id", user.id);
-
-        if (error) throw new Error(error.message);
-
-        setProjects(data || []);
-        if (data && data.length > 0) setSelectedProjectId(data[0].id);
-      } catch (err) {
-        toaster.create({
-          title: "Error",
-          description: err.message,
-          type: "error",
-        });
-        setProjects([]);
-      } finally {
-        setLoadingProjects(false);
-      }
-    };
     fetchProjects();
   }, []);
 
@@ -312,13 +313,16 @@ const TimelineView = () => {
       status: "pending",
       date: "",
       description: "",
-      estimated_cost: "", // Reset the new field as well
+      estimated_cost: "",
     });
     setShowAddTimeline(false);
     toaster.create({
       title: "Timeline item added successfully",
       type: "success",
     });
+
+    // Refetch projects to update progress_status
+    fetchProjects();
   };
 
   const handleCloseDialog = () => {
@@ -376,8 +380,8 @@ const TimelineView = () => {
                 >
                   <Text fontWeight="bold">{project.name || project.project_name}</Text>
                   <Text fontSize="sm" color="gray.600">{project.location}</Text>
-                  <Badge colorScheme={project.status === "In Progress" ? "blue" : project.status === "Pending" ? "yellow" : "green"} mt={2}>
-                    {project.status}
+                  <Badge colorScheme={project.progress_status === "completed" ? "green" : project.progress_status === "in_progress" ? "blue" : "yellow"} mt={2}>
+                    {project.progress_status ? project.progress_status.replace("_", " ") : "Not Started"}
                   </Badge>
                 </Box>
               ))
@@ -407,6 +411,7 @@ const TimelineView = () => {
                 colorScheme="blue"
                 size="sm"
                 onClick={() => setShowAddTimeline(true)}
+                isDisabled={selectedProject?.progress_status === "completed"}
               >
                 Add Timeline Item
               </Button>
