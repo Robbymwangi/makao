@@ -256,11 +256,20 @@ const UploadSection = ({
 
 const EDGE_URL = "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/get-project-details";
 
+const statusIconMap = {
+  completed: Check,
+  pending: Package,
+  in_progress: Ship,
+  // fallback
+  default: Construction,
+};
+
 const MyProjects = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fileUploads, setFileUploads] = useState([]);
+  const [timelines, setTimelines] = useState([]);
   const [filter, setFilter] = useState("All");
 
   // State for the report upload section
@@ -301,19 +310,28 @@ const MyProjects = () => {
     if (id) fetchProject();
   }, [id]);
 
-  // Demo milestones
-  const milestonesData = [
-    { id: 1, phase: "Phase 1 Started", date: "21st February 2023", description: "Initial phase of the project began with planning and design.", icon: Ship },
-    { id: 2, phase: "Phase 1 Completed", date: "4th April 2023", description: "Phase 1 completed with 70% progress achieved.", icon: Check },
-    { id: 3, phase: "Next Phase Preparation", date: "Ongoing", description: "Preparing for the next phase of the project.", icon: Package },
-  ];
+  // Fetch project timelines from Supabase
+  useEffect(() => {
+    async function fetchTimelines() {
+      if (!id) return;
+      const { data, error } = await supabase
+        .from("project_timelines")
+        .select("*")
+        .eq("project_id", id)
+        .order("date", { ascending: true });
+      if (!error) setTimelines(data || []);
+    }
+    fetchTimelines();
+  }, [id]);
 
+  // Get unique timeline titles (phases)
+  const uniquePhases = Array.from(new Set(timelines.map(t => t.title))).filter(Boolean);
+
+  // Filtered milestones by phase
   const filteredMilestones =
     filter === "All"
-      ? milestonesData
-      : milestonesData.filter((milestone) =>
-          milestone.phase.toLowerCase().includes(filter.toLowerCase())
-        );
+      ? timelines
+      : timelines.filter((milestone) => milestone.title === filter);
 
   // Add uploaded files to the "Project Documents" list for display
   const handleReportUploadSuccess = (files) => {
@@ -476,23 +494,58 @@ const MyProjects = () => {
                   </Dialog.Header>
                   <Dialog.Body>
                     <Box mb={4}>
-                      <Button size="sm" variant={filter === "All" ? "solid" : "outline"} onClick={() => setFilter("All")} mr={2}>All</Button>
-                      <Button size="sm" variant={filter === "Phase 1" ? "solid" : "outline"} onClick={() => setFilter("Phase 1")}>Phase 1</Button>
+                      <Button
+                        size="sm"
+                        variant={filter === "All" ? "solid" : "outline"}
+                        onClick={() => setFilter("All")}
+                        mr={2}
+                      >
+                        All
+                      </Button>
+                      {uniquePhases.map((phase) => (
+                        <Button
+                          key={phase}
+                          size="sm"
+                          variant={filter === phase ? "solid" : "outline"}
+                          onClick={() => setFilter(phase)}
+                          mr={2}
+                        >
+                          {phase}
+                        </Button>
+                      ))}
                     </Box>
                     <Timeline.Root>
-                      {filteredMilestones.map((milestone) => (
-                        <Timeline.Item key={milestone.id}>
-                          <Timeline.Connector>
-                            <Timeline.Separator />
-                            <Timeline.Indicator><milestone.icon /></Timeline.Indicator>
-                          </Timeline.Connector>
-                          <Timeline.Content>
-                            <Timeline.Title>{milestone.phase}</Timeline.Title>
-                            <Timeline.Description>{milestone.date}</Timeline.Description>
-                            <Text textStyle="sm">{milestone.description}</Text>
-                          </Timeline.Content>
-                        </Timeline.Item>
-                      ))}
+                      {filteredMilestones.map((milestone) => {
+                        const IconComponent = statusIconMap[milestone.status] || statusIconMap.default;
+                        return (
+                          <Timeline.Item key={milestone.id}>
+                            <Timeline.Connector>
+                              <Timeline.Separator />
+                              <Timeline.Indicator><IconComponent /></Timeline.Indicator>
+                            </Timeline.Connector>
+                            <Timeline.Content>
+                              <Timeline.Title>{milestone.title}</Timeline.Title>
+                              {filter === "All" ? (
+                                <Text textStyle="sm">{milestone.description}</Text>
+                              ) : (
+                                <>
+                                  <Timeline.Description>
+                                    Created: {milestone.date}
+                                    <br />
+                                    {milestone.completed_at && (
+                                      <>Completed: {milestone.completed_at}<br /></>
+                                    )}
+                                    Estimated Cost: {milestone.estimated_cost ? `Ksh ${milestone.estimated_cost}` : "N/A"}
+                                    <br />
+                                    Actual Expenditure: {milestone.actual_expenditure ? `Ksh ${milestone.actual_expenditure}` : "N/A"}
+                                  </Timeline.Description>
+                                  <Text textStyle="sm">{milestone.description}</Text>
+                                </>
+                              )}
+                            </Timeline.Content>
+                          </Timeline.Item>
+                        );
+                      })}
                     </Timeline.Root>
                   </Dialog.Body>
                 </Dialog.Content>
@@ -502,26 +555,29 @@ const MyProjects = () => {
         </Flex>
         <Box maxH="300px" overflowY="auto" pr={2}>
           <Timeline.Root>
-            {milestonesData.map((milestone) => (
-              <Timeline.Item key={milestone.id}>
-                <Timeline.Connector>
-                  <Timeline.Separator />
-                  <Timeline.Indicator><milestone.icon /></Timeline.Indicator>
-                </Timeline.Connector>
-                <Timeline.Content>
-                  <Timeline.Title>{milestone.phase}</Timeline.Title>
-                  <Timeline.Description>{milestone.date}</Timeline.Description>
-                  <Text textStyle="sm">{milestone.description}</Text>
-                </Timeline.Content>
-              </Timeline.Item>
-            ))}
+            {timelines.map((milestone) => {
+              const IconComponent = statusIconMap[milestone.status] || statusIconMap.default;
+              return (
+                <Timeline.Item key={milestone.id}>
+                  <Timeline.Connector>
+                    <Timeline.Separator />
+                    <Timeline.Indicator><IconComponent /></Timeline.Indicator>
+                  </Timeline.Connector>
+                  <Timeline.Content>
+                    <Timeline.Title>{milestone.title}</Timeline.Title>
+                    <Timeline.Description>{milestone.date}</Timeline.Description>
+                    <Text textStyle="sm">{milestone.description}</Text>
+                  </Timeline.Content>
+                </Timeline.Item>
+              );
+            })}
           </Timeline.Root>
         </Box>
       </Box>
 
-      {/* Report Upload & Personnel Section */}
+      {/* Report Upload & Photos/Documents Section */}
       <Flex w="100%" gap={4} flexDirection={{ base: "column", md: "row" }}>
-        <Box w={{ base: "100%", md: "80%" }}>
+        <Box w={{ base: "100%", md: "50%" }}>
           {/* Upload Project Photos */}
           <UploadSection
             title="Upload Project Photos"
@@ -538,10 +594,12 @@ const MyProjects = () => {
             setFileUploadKey={setPhotoUploadKey}
             onUploadSuccess={handlePhotoUploadSuccess}
           />
+        </Box>
+        <Box w={{ base: "100%", md: "50%" }}>
           {/* Upload Project Documents */}
           <UploadSection
             title="Upload Project Documents"
-            description="Please upload up to 5 report documents. Accepted formats: PDF, DOCX. Max size: 10MB each."
+            description="Please upload up to 5 project documents. Accepted formats: PDF, DOCX. Max size: 10MB each."
             acceptTypes={allowedTypes.documents}
             maxFiles={5}
             files={docFiles}
@@ -554,23 +612,6 @@ const MyProjects = () => {
             setFileUploadKey={setDocUploadKey}
             onUploadSuccess={handleDocUploadSuccess}
           />
-        </Box>
-        <Box w={{ base: "100%", md: "20%" }} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md" display="flex" flexDirection="column" alignItems="center" textAlign="center">
-          <Heading size="lg" mb={4}>Personnel Details</Heading>
-          <Avatar.Root>
-            <Avatar.Fallback name="Metano Construction" />
-            <Avatar.Image src="https://via.placeholder.com/150" />
-          </Avatar.Root>
-          <Text fontSize="lg" fontWeight="bold" mt={4}>Metano Construction</Text>
-          <Text fontSize="sm" color="gray.500" mt={2}>Current Contractor</Text>
-          <Box mt={6} textAlign="center">
-            <Avatar.Root>
-              <Avatar.Fallback name="Jane Smith" />
-              <Avatar.Image src="https://via.placeholder.com/150" />
-            </Avatar.Root>
-            <Text fontSize="lg" fontWeight="bold" mt={4}>Jane Smith</Text>
-            <Text fontSize="sm" color="gray.500" mt={2}>Agent ID: 123456</Text>
-          </Box>
         </Box>
       </Flex>
     </VStack>
