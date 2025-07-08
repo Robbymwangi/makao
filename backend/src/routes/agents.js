@@ -40,10 +40,22 @@ router.get("/:agentId/clients", async (req, res) => {
   const { agentId } = req.params;
   const supabase = createServiceClient();
 
-  // Query users where agent_id matches the agentId
+  // Fetch users (clients) and their projects, including progress_status
   const { data, error } = await supabase
     .from("users")
-    .select("id, full_name, email, address")
+    .select(`
+      id,
+      full_name,
+      email,
+      address,
+      projects (
+        id,
+        project_name,
+        location,
+        status,
+        progress_status
+      )
+    `)
     .eq("agent_id", agentId);
 
   if (error) {
