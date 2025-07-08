@@ -54,6 +54,7 @@ const Reports = () => {
   const [projectFiles, setProjectFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
   const [projectFolders, setProjectFolders] = useState([]);
+  const [selectedFolderId, setSelectedFolderId] = useState(null);
 
   useEffect(() => {
     async function checkUserProjects() {
@@ -180,6 +181,11 @@ const Reports = () => {
   const foldersListView = isMobile;
   const filesListView = isMobile ? fileView === "list" || true : fileView === "list";
 
+  // Filter files for selected folder/project
+  const visibleFiles = selectedFolderId
+    ? projectFiles.filter((file) => file.project_id === selectedFolderId)
+    : [];
+
   if (loading) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minH="100vh" textAlign="center" p={8}>
@@ -229,167 +235,135 @@ const Reports = () => {
         Reports
       </Heading>
 
-      <HStack justify="space-between" align="center" mb={4}>
-        <Heading size="lg" fontWeight="semibold" mb={4}>
-          Your Projects
-        </Heading>
-        <Button size="sm" variant="outline" colorScheme="blue" onClick={() => toaster.create({ description: "View all folders clicked", type: "info" })}>
-          View All
-        </Button>
-      </HStack>
+      {!selectedFolderId && (
+        <>
+          <HStack justify="space-between" align="center" mb={4}>
+            <Heading size="lg" fontWeight="semibold" mb={4}>
+              Your Projects
+            </Heading>
+            <Button size="sm" variant="outline" colorScheme="blue" onClick={() => toaster.create({ description: "View all folders clicked", type: "info" })}>
+              View All
+            </Button>
+          </HStack>
 
-      {foldersListView ? (
-        <VStack spacing={4} align="stretch" mb={10}>
-          {projectFolders.map((folder) => (
-            <HStack key={folder.id} p={4} bg="white" borderRadius="md" boxShadow="sm" transition="all 0.2s" _hover={{ boxShadow: "lg", cursor: "pointer", transform: "translateY(-2px) scale(1.03)", zIndex: 1 }} spacing={4} align="center">
-              <Box bg="gray.100" borderRadius="md" p={2} display="flex" alignItems="center" justifyContent="center">
-                <LucideImage size={32} color="#A0AEC0" />
-              </Box>
-              <Folder size={28} color="#4A5568" />
-              <Box as="button" onClick={() => handleItemClick(folder)} cursor="pointer" p={0} bg="transparent" border="none" textAlign="left" flex="1" _hover={{ textDecoration: "underline" }}>
-                <VStack align="flex-start" spacing={0} w="100%">
-                  <Text fontSize="sm" fontWeight="medium" textAlign="left" isTruncated w="100%">
-                    {folder.name}
-                  </Text>
-                  <Text fontSize="xs" color="gray.500" textAlign="left" w="100%">
-                    FOLDER
-                  </Text>
-                </VStack>
-              </Box>
-            </HStack>
-          ))}
-        </VStack>
-      ) : (
-        <SimpleGrid columns={{ base: 2, md: 4 }} columnGap={6} mb={10}>
-          {projectFolders.map((folder) => (
-            <Box key={folder.id} display="flex" flexDirection="column" alignItems="center">
-              <Box p={4} bg="white" borderRadius="md" boxShadow="sm" _hover={{ boxShadow: "md", cursor: "pointer" }} display="flex" flexDirection="column" alignItems="center" w="100%">
-                <Box bg="gray.100" h="200px" w="100%" borderRadius="md" mb={4} display="flex" alignItems="center" justifyContent="center" padding={10}>
-                  <LucideImage size={40} color="#A0AEC0" />
-                </Box>
-              </Box>
-              <HStack align="center" justify="flex-start" w="90%" mt={2} spacing={3}>
-                <Box display="flex" alignItems="center">
+          {foldersListView ? (
+            <VStack spacing={4} align="stretch" mb={10}>
+              {projectFolders.map((folder) => (
+                <HStack key={folder.id} p={4} bg="white" borderRadius="md" boxShadow="sm" transition="all 0.2s" _hover={{ boxShadow: "lg", cursor: "pointer", transform: "translateY(-2px) scale(1.03)", zIndex: 1 }} spacing={4} align="center">
+                  <Box bg="gray.100" borderRadius="md" p={2} display="flex" alignItems="center" justifyContent="center">
+                    <LucideImage size={32} color="#A0AEC0" />
+                  </Box>
                   <Folder size={28} color="#4A5568" />
+                  <Box
+                    as="button"
+                    onClick={() => setSelectedFolderId(folder.id)}
+                    cursor="pointer"
+                    p={0}
+                    bg="transparent"
+                    border="none"
+                    textAlign="left"
+                    flex="1"
+                    _hover={{ textDecoration: "underline" }}
+                  >
+                    <VStack align="flex-start" spacing={0} w="100%">
+                      <Text fontSize="sm" fontWeight="medium" textAlign="left" isTruncated w="100%">
+                        {folder.name}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500" textAlign="left" w="100%">
+                        FOLDER
+                      </Text>
+                    </VStack>
+                  </Box>
+                </HStack>
+              ))}
+            </VStack>
+          ) : (
+            <SimpleGrid columns={{ base: 2, md: 4 }} columnGap={6} mb={10}>
+              {projectFolders.map((folder) => (
+                <Box key={folder.id} display="flex" flexDirection="column" alignItems="center">
+                  <Box p={4} bg="white" borderRadius="md" boxShadow="sm" _hover={{ boxShadow: "md", cursor: "pointer" }} display="flex" flexDirection="column" alignItems="center" w="100%">
+                    <Box bg="gray.100" h="200px" w="100%" borderRadius="md" mb={4} display="flex" alignItems="center" justifyContent="center" padding={10}>
+                      <LucideImage size={40} color="#A0AEC0" />
+                    </Box>
+                  </Box>
+                  <HStack align="center" justify="flex-start" w="90%" mt={2} spacing={3}>
+                    <Box display="flex" alignItems="center">
+                      <Folder size={28} color="#4A5568" />
+                    </Box>
+                    <Box
+                      as="button"
+                      onClick={() => setSelectedFolderId(folder.id)}
+                      cursor="pointer"
+                      p={0}
+                      bg="transparent"
+                      border="none"
+                      textAlign="left"
+                      flex="1"
+                      _hover={{ textDecoration: "underline" }}
+                    >
+                      <VStack align="flex-start" spacing={0} w="100%">
+                        <Text fontSize="sm" fontWeight="medium" isTruncated w="100%">
+                          {folder.name}
+                        </Text>
+                        <Text fontSize="xs" color="gray.500" w="100%">
+                          FOLDER
+                        </Text>
+                      </VStack>
+                    </Box>
+                  </HStack>
                 </Box>
-                <Box as="button" onClick={() => handleItemClick(folder)} cursor="pointer" p={0} bg="transparent" border="none" textAlign="left" flex="1" _hover={{ textDecoration: "underline" }}>
-                  <VStack align="flex-start" spacing={0} w="100%">
-                    <Text fontSize="sm" fontWeight="medium" isTruncated w="100%">
-                      {folder.name}
-                    </Text>
-                    <Text fontSize="xs" color="gray.500" w="100%">
-                      FOLDER
-                    </Text>
-                  </VStack>
-                </Box>
-              </HStack>
-            </Box>
-          ))}
-        </SimpleGrid>
+              ))}
+            </SimpleGrid>
+          )}
+        </>
       )}
 
-      <HStack justify="space-between" align="center" mb={8} mt={10}>
-        <Heading size="lg" fontWeight="semibold">
-          Suggested Files
-        </Heading>
-        <HStack spacing={2}>
-          <Button size="sm" variant={fileView === "grid" ? "solid" : "ghost"} colorScheme="blue" onClick={() => setFileView("grid")} aria-label="Grid view" isDisabled={isMobile}>
-            <LayoutGrid size={18} />
+      {selectedFolderId && (
+        <>
+          <Button mb={6} onClick={() => setSelectedFolderId(null)} variant="ghost" colorScheme="blue">
+            ← Back to all folders
           </Button>
-          <Button size="sm" variant={fileView === "list" ? "solid" : "ghost"} colorScheme="blue" onClick={() => setFileView("list")} aria-label="List view">
-            <List size={18} />
-          </Button>
-        </HStack>
-      </HStack>
-
-      {(isMobile || fileView === "list") ? (
-        <VStack spacing={4} align="stretch">
-          {projectFiles.map((file) => (
-            <HStack key={file.id} p={4} bg="white" borderRadius="md" boxShadow="sm" _hover={{ boxShadow: "md", cursor: "pointer", transform: "translateY(-2px) scale(1.03)" }} spacing={4} align="center">
-              <Box bg="gray.100" borderRadius="md" p={2} display="flex" alignItems="center" justifyContent="center">
-                <LucideImage size={32} color="#A0AEC0" />
-              </Box>
-              <File size={28} color="#4A5568" />
-              <Box
-                as="a"
-                href={file.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                cursor="pointer"
-                p={0}
-                bg="transparent"
-                border="none"
-                textAlign="left"
-                flex="1"
-                _hover={{ textDecoration: "underline" }}
-                download
-              >
-                <VStack align="flex-start" spacing={0} w="100%">
-                  <Text fontSize="sm" fontWeight="medium" isTruncated w="100%">
-                    {file.file_name.replace(/\.[^/.]+$/, "")}
-                  </Text>
-                  <Text fontSize="xs" color="gray.500" w="100%">
-                    {file.file_name.split(".").pop().toUpperCase()}
-                    {file.uploader?.full_name
-                      ? ` • ${file.uploader.full_name}`
-                      : file.agent_name
-                        ? ` • ${file.agent_name}`
-                        : file.uploader_name
-                          ? ` • ${file.uploader_name}`
-                          : ""}
-                  </Text>
-                </VStack>
-              </Box>
-            </HStack>
-          ))}
-        </VStack>
-      ) : (
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} columnGap={6}>
-          {projectFiles.map((file) => (
-            <Box key={file.id} display="flex" flexDirection="column" alignItems="center">
-              <Box p={4} bg="white" borderRadius="md" boxShadow="sm" _hover={{ boxShadow: "md", cursor: "pointer" }} display="flex" flexDirection="column" alignItems="center" gap={3} w="100%">
-                <Box bg="gray.100" h="200px" w="90%" borderRadius="md" display="flex" alignItems="center" justifyContent="center">
-                  <LucideImage size={40} color="#A0AEC0" />
-                </Box>
-              </Box>
-              <HStack align="center" justify="flex-start" w="90%" mt={2} spacing={3}>
-                <Box display="flex" alignItems="center">
+          <Heading size="lg" fontWeight="semibold" mb={4}>
+            Files in {projectFolders.find(f => f.id === selectedFolderId)?.name}
+          </Heading>
+          {visibleFiles.length === 0 ? (
+            <Text color="gray.500">No files in this folder.</Text>
+          ) : (
+            <VStack spacing={4} align="stretch">
+              {visibleFiles.map((file) => (
+                <HStack key={file.id} p={4} bg="white" borderRadius="md" boxShadow="sm" _hover={{ boxShadow: "md", cursor: "pointer", transform: "translateY(-2px) scale(1.03)" }} spacing={4} align="center">
+                  <Box bg="gray.100" borderRadius="md" p={2} display="flex" alignItems="center" justifyContent="center">
+                    <LucideImage size={32} color="#A0AEC0" />
+                  </Box>
                   <File size={28} color="#4A5568" />
-                </Box>
-                <Box
-                  as="a"
-                  href={file.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  cursor="pointer"
-                  p={0}
-                  bg="transparent"
-                  border="none"
-                  textAlign="left"
-                  flex="1"
-                  _hover={{ textDecoration: "underline" }}
-                  download
-                >
-                  <VStack align="flex-start" spacing={0} w="100%">
-                    <Text fontSize="sm" fontWeight="medium" isTruncated w="100%">
-                      {file.file_name.replace(/\.[^/.]+$/, "")}
-                    </Text>
-                    <Text fontSize="xs" color="gray.500" w="100%">
-                      {file.file_name.split(".").pop().toUpperCase()}
-                      {file.uploader?.full_name
-                        ? ` • ${file.uploader.full_name}`
-                        : file.agent_name
-                          ? ` • ${file.agent_name}`
-                          : file.uploader_name
-                            ? ` • ${file.uploader_name}`
-                            : ""}
-                    </Text>
-                  </VStack>
-                </Box>
-              </HStack>
-            </Box>
-          ))}
-        </SimpleGrid>
+                  <Box
+                    as="a"
+                    href={file.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    cursor="pointer"
+                    p={0}
+                    bg="transparent"
+                    border="none"
+                    textAlign="left"
+                    flex="1"
+                    _hover={{ textDecoration: "underline" }}
+                    download
+                  >
+                    <VStack align="flex-start" spacing={0} w="100%">
+                      <Text fontSize="sm" fontWeight="medium" isTruncated w="100%">
+                        {file.file_name.replace(/\.[^/.]+$/, "")}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500" w="100%">
+                        {file.file_name.split(".").pop().toUpperCase()}
+                      </Text>
+                    </VStack>
+                  </Box>
+                </HStack>
+              ))}
+            </VStack>
+          )}
+        </>
       )}
     </Box>
   );
