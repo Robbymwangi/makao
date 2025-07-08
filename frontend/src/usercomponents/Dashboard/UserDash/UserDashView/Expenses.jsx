@@ -36,6 +36,8 @@ import { ChevronDown, Expand } from "lucide-react";
 import { getProjectStatus, submitProjectApproval } from "@/api/projectApproval";
 import { useAuthStore } from "@/store/useAuthStore";
 import ProjectApprovalForm from "@/usercomponents/Dashboard/UserDash/UserDashComponents/ProjectsComponents/ProjectApprovalForm";
+import supabase from "@/utils/supabaseClient";
+import { useParams } from "react-router"; // or your routing solution
 
 // ExpensesList component for Team Expenses (color bullets)
 const ExpensesList = ({ data }) => {
@@ -72,7 +74,7 @@ const ExpensesList = ({ data }) => {
               px={2}
               py={1}
             >
-              ${item.value.toLocaleString()}{" "}
+              KES {item.value.toLocaleString()}{" "}
               <Text as="span" fontWeight="normal" color="gray.500" fontSize="xs">
                 ({percent}%)
               </Text>
@@ -169,7 +171,7 @@ const ReceiptsList = ({ data }) => {
             flex="1"
             textAlign="right"
           >
-            ${item.cost.toLocaleString()}
+            KES {item.cost.toLocaleString()}
           </Text>
         </HStack>
       ))}
@@ -188,36 +190,35 @@ const Expenses = () => {
   const [error, setError] = useState("");
   const [showSubmissionOverlay, setShowSubmissionOverlay] = useState(false);
   const [userProjects, setUserProjects] = useState([]);
+  const [timelines, setTimelines] = useState([]);
+  const [loadingTimelines, setLoadingTimelines] = useState(true);
   const jwt = useAuthStore((state) => state.token);
+  const { id: projectId } = useParams();
 
   const isMobile = useBreakpointValue({ base: true, md: false }); // <-- Add this line
 
-  const menuItems = [
-    { label: "Overview", value: "overview" },
-    { label: "Monthly Breakdown", value: "monthly-breakdown" },
-    { label: "Yearly Trends", value: "yearly-trends" },
-    { label: "Custom Reports", value: "custom-reports" },
-  ];
 
-  const chart = useChart({
-    data: [
-      { labor: 5000, materials: 8000, equipment: 3000, month: "January" },
-      { labor: 4500, materials: 7500, equipment: 2800, month: "February" },
-      { labor: 5200, materials: 8200, equipment: 3100, month: "March" },
-      { labor: 4800, materials: 7700, equipment: 2900, month: "April" },
-      { labor: 5300, materials: 8500, equipment: 3200, month: "May" },
-    ],
+  const estimatedActualChartData = timelines.map(tl => ({
+    milestone: tl.title,
+    estimated: Number(tl.estimated_cost) || 0,
+    actual: Number(tl.actual_expenditure) || 0,
+  }));
+
+  const estimatedActualChart = useChart({
+    data: estimatedActualChartData,
     series: [
-      { name: "labor", color: "teal.solid" },
-      { name: "materials", color: "purple.solid" },
-      { name: "equipment", color: "blue.solid" },
+      { name: "estimated", color: "blue.solid" },
+      { name: "actual", color: "green.solid" },
     ],
   });
 
+  // Pie chart for total estimated vs actual
+  const totalEstimated = timelines.reduce((sum, tl) => sum + (Number(tl.estimated_cost) || 0), 0);
+  const totalActual = timelines.reduce((sum, tl) => sum + (Number(tl.actual_expenditure) || 0), 0);
+
   const pieChartData = [
-    { name: "Labor", value: 5000 + 4500 + 5200 + 4800 + 5300, color: "#319795" },
-    { name: "Materials", value: 8000 + 7500 + 8200 + 7700 + 8500, color: "#805AD5" },
-    { name: "Equipment", value: 3000 + 2800 + 3100 + 2900 + 3200, color: "#3182CE" },
+    { name: "Estimated", value: totalEstimated, color: "#3182CE" },
+    { name: "Actual", value: totalActual, color: "#38A169" },
   ];
 
   const barChartData = useChart({
@@ -231,32 +232,12 @@ const Expenses = () => {
     ],
   });
 
-  const receiptsData = [
-    {
-      invoiceId: "#001",
-      company: "ABC Manufacturing",
-      date: "2025-05-01",
-      cost: 1200,
-    },
-    {
-      invoiceId: "#002",
-      company: "XYZ Supplies",
-      date: "2025-05-10",
-      cost: 950,
-    },
-    {
-      invoiceId: "#003",
-      company: "Global Tech",
-      date: "2025-05-15",
-      cost: 2100,
-    },
-    {
-      invoiceId: "#004",
-      company: "Home Builders Inc.",
-      date: "2025-05-20",
-      cost: 1800,
-    },
-  ];
+  const receiptsData = timelines.map((tl, idx) => ({
+    invoiceId: tl.title || `#${idx + 1}`,
+    company: tl.contractor || "N/A",
+    date: tl.date ? new Date(tl.date).toLocaleDateString() : "",
+    cost: Number(tl.actual_expenditure) || 0,
+  }));
 
   useEffect(() => {
     if (!jwt) return;
@@ -274,6 +255,20 @@ const Expenses = () => {
       .finally(() => setLoading(false));
   }, [jwt]);
 
+  useEffect(() => {
+    if (!projectId) return;
+    setLoadingTimelines(true);
+    supabase
+      .from("project_timelines")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("date", { ascending: true })
+      .then(({ data, error }) => {
+        if (!error) setTimelines(data || []);
+        setLoadingTimelines(false);
+      });
+  }, [projectId]);
+
   const handleFormSubmit = async (formData) => {
     // You may want to call your submitProjectApproval here if needed
     setIsFormOpen(false);
@@ -289,22 +284,6 @@ const Expenses = () => {
       .finally(() => setLoading(false));
   };
 
-  const estimatedActualChartData = [
-    { month: "Jan", estimated: 12000, actual: 11000 },
-    { month: "Feb", estimated: 15000, actual: 14000 },
-    { month: "Mar", estimated: 17000, actual: 17500 },
-    { month: "Apr", estimated: 16000, actual: 15500 },
-    { month: "May", estimated: 18000, actual: 18500 },
-  ];
-
-  const estimatedActualChart = useChart({
-    data: estimatedActualChartData,
-    series: [
-      { name: "estimated", color: "blue.solid" },
-      { name: "actual", color: "green.solid" },
-    ],
-  });
-
   function EstimatedActualChart({ chart }) {
     return (
       <Chart.Root maxH="md" chart={chart}>
@@ -312,14 +291,28 @@ const Expenses = () => {
           <CartesianGrid stroke={chart.color("border.muted")} vertical={false} />
           <XAxis
             tickLine={false}
-            dataKey={chart.key("month")}
+            dataKey={chart.key("milestone")}
             stroke={chart.color("border")}
           />
-          <YAxis tickLine={false} stroke={chart.color("border")} />
+          <YAxis
+            tickLine={false}
+            stroke={chart.color("border")}
+            tickFormatter={v => `KES ${v.toLocaleString()}`}
+          />
           <Tooltip
             cursor={{ fill: chart.color("bg.muted") }}
             animationDuration={100}
-            content={<Chart.Tooltip />}
+            content={({ payload, label }) => (
+              <Box p={2}>
+                <Text fontWeight="bold">{label}</Text>
+                {payload &&
+                  payload.map((entry, idx) => (
+                    <Text key={idx} color={entry.color}>
+                      {entry.name}: KES {Number(entry.value).toLocaleString()}
+                    </Text>
+                  ))}
+              </Box>
+            )}
           />
           <Legend
             layout="horizontal"
@@ -455,340 +448,15 @@ const Expenses = () => {
           >
             Expenses Dashboard
           </Heading>
-
-          {/* Menu Section */}
-          {isMobile ? (
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button variant="outline" size="lg" w="50%" mt={4}>
-                  {activeMenu}
-                  {<ChevronDown size={16} />}
-                </Button>
-              </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content>
-                    {menuItems.map((item) => (
-                      <Menu.Item
-                        key={item.value}
-                        value={item.value}
-                        onClick={() => setActiveMenu(item.label)}
-                      >
-                        {item.label}
-                      </Menu.Item>
-                    ))}
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
-            </Menu.Root>
-          ) : (
-            <Flex justifyContent="flex-end" ml={4}>
-              <HStack align="center">
-                {menuItems.map((item) => (
-                  <Text
-                    key={item.value}
-                    fontSize="sm"
-                    fontWeight={activeMenu === item.label ? "bold" : "normal"}
-                    color={activeMenu === item.label ? "black.500" : "gray.600"}
-                    cursor="pointer"
-                    px={2}
-                    onClick={() => setActiveMenu(item.label)}
-                    _hover={{
-                      textDecoration: "underline",
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                ))}
-              </HStack>
-            </Flex>
-          )}
         </Flex>
 
         {/* Main Content Section */}
         <Flex direction={{ base: "column", md: "row" }} gap={4} alignItems="flex-start">
-          {/* Main Box (Area Chart) */}
-          <Box
-            flex={{ base: "none", md: "1" }}
-            w={{ base: "100%", md: "auto" }}
-            p={4}
-            bg="white.600"
-            borderRadius="lg"
-            boxShadow="sm"
-            textAlign="center"
-            h="450px"
-            borderWidth="2px"
-          >
-            {/* Chart Title and Filter Button */}
-            <Flex justifyContent="space-between" alignItems="center" mb={8}>
-              <Text fontSize="xl" fontWeight="bold" textAlign={"left"}>
-                Construction Expenses Overview
-              </Text>
-
-              {/* Filter Menu Button */}
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <Flex
-                    as="button"
-                    align="center"
-                    gap={2}
-                    px={4}
-                    py={2}
-                    borderRadius="md"
-                    _hover={{ bg: "gray.100" }}
-                    boxShadow="sm"
-                  >
-                    <ChevronDown size={16} />
-                    <Text>{selectedFilter}</Text> {/* Display selected filter */}
-                  </Flex>
-                </Menu.Trigger>
-                <Portal>
-                  <Menu.Positioner>
-                    <Menu.Content minW="200px" boxShadow="xl">
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("This Month")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        This Month
-                      </Menu.Item>
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("Quarterly")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        Quarterly
-                      </Menu.Item>
-                      <Menu.Item
-                        onClick={() => setSelectedFilter("Yearly")} // Update filter
-                        _hover={{ bg: "gray.100" }}
-                      >
-                        Yearly
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Portal>
-              </Menu.Root>
-            </Flex>
-
-            {/* Area Chart */}
-            <Chart.Root maxH="xs" chart={chart}>
-              <AreaChart
-                data={chart.data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-              >
-                <CartesianGrid
-                  stroke={chart.color("border")}
-                  vertical={true}
-                  horizontal={true}
-                  strokeDasharray="3 3"
-                />
-                <XAxis
-                  dataKey={chart.key("month")}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <YAxis tickLine={false} axisLine={false} />
-                <Tooltip
-                  cursor={false}
-                  animationDuration={100}
-                  content={<Chart.Tooltip />}
-                />
-                <Legend content={<Chart.Legend />} />
-
-                {chart.series.map((item) => (
-                  <defs key={item.name}>
-                    <Chart.Gradient
-                      id={`${item.name}-gradient`}
-                      stops={[
-                        { offset: "0%", color: item.color, opacity: 0.3 },
-                        { offset: "100%", color: item.color, opacity: 0.05 },
-                      ]}
-                    />
-                  </defs>
-                ))}
-
-                {chart.series.map((item) => (
-                  <Area
-                    key={item.name}
-                    type="natural"
-                    isAnimationActive={true}
-                    animationDuration={1000}
-                    animationEasing="ease-in-out"
-                    dataKey={chart.key(item.name)}
-                    fill={`url(#${item.name}-gradient)`}
-                    stroke={chart.color(item.color)}
-                    strokeWidth={2}
-                    stackId="a"
-                  />
-                ))}
-              </AreaChart>
-            </Chart.Root>
-          </Box>
-
-          {/* Right Box (Hidden on smaller displays) */}
-          {!isMobile && (
-            <Box
-              w="300px"
-              p={5}
-              bg="white.600"
-              textAlign="center"
-              h="auto"
-              position="relative"
-              borderWidth="2px"
-              borderRadius="md"
-            >
-              {/* Pie Chart Heading */}
-              <Text fontSize="lg" fontWeight="bold" mb={3}>
-                Expense Distribution
-              </Text>
-
-              {/* Pie Chart */}
-              <Chart.Root
-                boxSize="200px"
-                position="relative"
-                mx="auto"
-                chart={chart}
-              >
-                <PieChart>
-                  <Tooltip
-                    cursor={false}
-                    animationDuration={100}
-                    content={<Chart.Tooltip hideLabel />}
-                  />
-                  <Pie
-                    isAnimationActive={true} 
-                    animationDuration={800} 
-                    animationEasing="ease-in-out" 
-                    data={pieChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    labelLine={{ stroke: chart.color("border.emphasized") }}
-                    label={{
-                      fill: chart.color("fg.muted"),
-                      style: { fontWeight: "600" },
-                    }}
-                  >
-                    {pieChartData.map((item) => (
-                      <Cell key={item.name} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    layout="horizontal"
-                    align="center"
-                    verticalAlign="bottom"
-                    wrapperStyle={{
-                      fontSize: "12px",
-                      marginTop: "10px",
-                    }}
-                    formatter={(value, entry) => (
-                      <span style={{ color: entry.color, fontWeight: "bold" }}>
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </Chart.Root>
-
-              {/* Stat Elements Below the Chart */}
-              <Box mt={6}>
-                <SimpleGrid
-                  columns={{ base: 1, md: 2 }}
-                  spacing={4}
-                  textAlign="center"
-                >
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Labor Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$25,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Material Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$39,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={1}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Equipment Cost
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$15,000</Stat.ValueText>
-                  </Stat.Root>
-
-                  <Stat.Root
-                    p={2}
-                    bg="transparent"
-                    _dark={{ bg: "transparent" }}
-                  >
-                    <Stat.Label fontSize="xs" color="gray.600">
-                      Total Expenses
-                    </Stat.Label>
-                    <Stat.ValueText fontSize="sm">$79,000</Stat.ValueText>
-                  </Stat.Root>
-                </SimpleGrid>
-              </Box>
-            </Box>
-          )}
+          {/* The Construction Expenses Overview and Expense Distribution boxes have been removed */}
         </Flex>
 
         {/* Grid Section */}
-        <SimpleGrid columns={{ base: 1, md: 3 }} columnGap={6} rowGap={6} mt={8}>
-          {/* Team Expenses */}
-          <Box
-            bg="white.600"
-            p={6}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="left"
-            h="auto"
-            minH="150px"
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-          >
-            <Flex justifyContent="space-between" alignItems="center" mb={6}>
-              <Heading size="lg" fontWeight="bold">
-                Team Expenses
-              </Heading>
-              <Button
-                variant="ghost"
-                size="sm"
-                px={2}
-                py={1}
-                fontWeight="normal"
-                color="black.700"
-                _hover={{ textDecoration: "underline", bg: "transparent" }}
-                _active={{ bg: "transparent" }}
-                boxShadow="none"
-                bg="transparent"
-              >
-                <Expand size={20} />
-              </Button>
-            </Flex>
-            {/* BarSegment Chart */}
-            <BarSegment.Root chart={barChartData} barSize="3">
-              <BarSegment.Content>
-                <BarSegment.Bar gap="0.5" />
-              </BarSegment.Content>
-            </BarSegment.Root>
-            {/* Expenses List */}
-            <ExpensesList data={barChartData.data} />
-          </Box>
-
+        <SimpleGrid columns={{ base: 1, md: 1 }} columnGap={6} rowGap={6} mt={8}>
           {/* Receipts */}
           <Box
             bg="white.600"
@@ -801,7 +469,6 @@ const Expenses = () => {
             w="100%"
             minWidth={{ base: "250px", md: "350px" }}
           >
-
             <Flex justifyContent="space-between" alignItems="center" mb={6}>
               <Heading size="lg" fontWeight="bold">
                 Receipts
@@ -823,105 +490,6 @@ const Expenses = () => {
             </Flex>
             {/* Receipts List */}
             <ReceiptsList data={receiptsData} />
-          </Box>
-
-          {/* Advertisements */}
-          <Box
-            p={0}
-            borderRadius="md"
-            boxShadow="sm"
-            textAlign="center"
-            h={{ base: "200px", md: "400px" }}
-            w="100%"
-            minWidth={{ base: "250px", md: "350px" }}
-            position="relative"
-            overflow="hidden"
-          >
-            {/* Gradient background with waves */}
-            <Box
-              position="absolute"
-              inset={0}
-              zIndex={0}
-              as="span"
-              display="block"
-              w="100%"
-              h="100%"
-              sx={{
-                // Stronger, more saturated gradient colors
-                background: "linear-gradient(135deg,rgb(255, 153, 0) 0%,rgb(255, 233, 125) 100%)",
-              }}
-            />
-            {/* SVG Waves */}
-            <Box
-              as="span"
-              position="absolute"
-              left={0}
-              bottom={0}
-              w="100%"
-              zIndex={1}
-              pointerEvents="none"
-            >
-              <svg viewBox="0 0 400 80" width="100%" height="80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#fffbe6" fillOpacity="0.7" d="M0 40 Q100 80 200 40 T400 40 V80 H0Z"/>
-                <path fill="#fffbe6" fillOpacity="0.5" d="M0 60 Q100 100 200 60 T400 60 V80 H0Z"/>
-              </svg>
-            </Box>
-            {/* Ripple effect */}
-            <Box
-              as="span"
-              position="absolute"
-              top="60%"
-              left="50%"
-              transform="translate(-50%, -50%)"
-              zIndex={2}
-              pointerEvents="none"
-            >
-              <svg width="120" height="120">
-                <circle cx="60" cy="60" r="30" fill="#fffbe6" fillOpacity="0.3">
-                  <animate attributeName="r" from="30" to="55" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="60" cy="60" r="15" fill="#fffbe6" fillOpacity="0.5">
-                  <animate attributeName="r" from="15" to="35" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
-                </circle>
-              </svg>
-            </Box>
-            {/* Card Content */}
-            <Box
-              position="relative"
-              zIndex={3}
-              p={8}
-              color="gray.800"
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              h="100%"
-            >
-              <Text fontSize="2xl" fontWeight="bold" mb={2} color="gray.900" letterSpacing="wide">
-                Makao Bank Mortgage
-              </Text>
-              <Text fontSize="md" mb={4} color="gray.700">
-                Unlock your dream home with <b>Makao Bank</b>! Enjoy flexible mortgage financing, low rates, and fast approval.
-              </Text>
-              <Button
-                bgGradient="linear(to-r, #ff9800, #ffd600)"
-                color="white"
-                fontWeight="bold"
-                px={8}
-                py={2}
-                borderRadius="full"
-                boxShadow="md"
-                _hover={{
-                  bgGradient: "linear(to-r, #ffd600, #ff9800)",
-                  transform: "scale(1.05)",
-                }}
-                zIndex={4}
-              >
-                Apply Now
-              </Button>
-            </Box>
           </Box>
         </SimpleGrid>
 
