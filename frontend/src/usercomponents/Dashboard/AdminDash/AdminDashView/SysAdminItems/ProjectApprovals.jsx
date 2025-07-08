@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { FileText } from "lucide-react";
 import supabase from "@/utils/supabaseClient";
+import { useAuthStore } from "@/store/useAuthStore"; 
 
 const statusColor = {
   Pending: "orange",
@@ -27,6 +28,7 @@ const ProjectApprovals = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const jwt = useAuthStore((state) => state.token); // Get JWT
 
   // Fetch pending approvals, joining users table for client info
   useEffect(() => {
@@ -45,27 +47,55 @@ const ProjectApprovals = () => {
     fetchApprovals();
   }, []);
 
-  // Approve handler: move to projects table and remove from approvals
+  // Approve handler: call Edge Function
   const handleApprove = async (project) => {
-    await supabase
-      .from("projects")
-      .insert([{ ...project, status: "Approved" }]);
-    await supabase
-      .from("project_approvals")
-      .delete()
-      .eq("id", project.id);
-    setProjects((prev) => prev.filter((p) => p.id !== project.id));
-    setDialogOpen(false);
+    const res = await fetch(
+      "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/project-approval/process",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approval_id: project.id,
+          status: "Approved",
+          // Optionally: agent_id: ...
+        }),
+      }
+    );
+    const data = await res.json();
+    if (data.success) {
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      setDialogOpen(false);
+    } else {
+      alert(data.error || "Failed to approve project");
+    }
   };
 
-  // Reject handler: update status in project_approvals
+  // Reject handler: call Edge Function
   const handleReject = async (project) => {
-    await supabase
-      .from("project_approvals")
-      .update({ status: "Rejected" })
-      .eq("id", project.id);
-    setProjects((prev) => prev.filter((p) => p.id !== project.id));
-    setDialogOpen(false);
+    const res = await fetch(
+      "https://plkrxatjphebkphmhvze.supabase.co/functions/v1/project-approvals/process",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approval_id: project.id,
+          status: "Rejected",
+        }),
+      }
+    );
+    const data = await res.json();
+    if (data.success) {
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      setDialogOpen(false);
+    } else {
+      alert(data.error || "Failed to reject project");
+    }
   };
 
   const openDialog = (project) => {
