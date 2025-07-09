@@ -28,10 +28,8 @@ const Login = () => {
     try {
       const role = await login(email, password);
       toaster.create({ title: "Welcome Back", description: "", type: "success", duration: 2000 });
-      // route by role
-      if (role === "user") navigate("/otp-challengesend");
-      else if (["systemAdmin","consultantAdmin","agentAdmin"].includes(role)) navigate("/staff/otp-challengesend");
-      else navigate("/dashboard");
+      // Redirect directly to dashboard for all roles
+      navigate("/dashboard");
     } catch (err) {
       const code = err.code;
       if (code === 'pending_verification') {
