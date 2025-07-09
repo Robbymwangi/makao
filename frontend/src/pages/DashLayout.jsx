@@ -242,7 +242,6 @@ const DashLayout = () => {
             <ColorModeButton />
             <Avatar.Root>
               <Avatar.Fallback name={user?.email || "User"} />
-              <Avatar.Image src="https://i.pravatar.cc/300?u=iu" />
             </Avatar.Root>
             {showDetails && (
               <Stack gap={0}>
