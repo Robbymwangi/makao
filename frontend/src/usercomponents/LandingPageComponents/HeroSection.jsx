@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { keyframes } from "@emotion/react";
-
+import { useNavigate } from "react-router-dom";
 
 // Create a MotionBox component from Chakra UI's Box
 const MotionBox = motion.create(Box);
@@ -84,6 +84,8 @@ const AnimatedText = ({
 };
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
   return (
     <Container maxW="7xl" pt={"60px"} pb={12} fontFamily="Playfair Display, serif">
       <Flex
@@ -225,7 +227,12 @@ const HeroSection = () => {
               Welcome to Makao, an experience where we will help curate, build and manage the home of your dreams, anywhere and anytime.
             </Text>
 
-            <Button colorScheme="blackAlpha" size="lg"  mt={4}>
+            <Button
+              colorScheme="blackAlpha"
+              size="lg"
+              mt={4}
+              onClick={() => navigate("/signup")}
+            >
               Click to start your journey
             </Button>
           </VStack>
